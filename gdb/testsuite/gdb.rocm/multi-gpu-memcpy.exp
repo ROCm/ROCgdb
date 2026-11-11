@@ -1,0 +1,425 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test one process that, for each visible GPU, copies memory from that
+# GPU to the next GPU, wrapping around to GPU 0.  The host stops before
+# and after hipMemcpyPeer, while hipMemcpyPeerAsync is held behind a
+# kernel on its stream, after it completes, and after hipMemcpy2D and
+# hipMemcpy3DPeer.  A wave stays running on both GPUs, and at each stop
+# the data is read from both.  A watchpoint set on the async
+# destination while the copy is in flight must report a later kernel
+# store of the copied value plus BUMP.
+#
+# Results are aggregated over all GPUs, so the test names and count do
+# not depend on how many GPUs are visible.  Per-GPU details go to the
+# log.  Each step uses gdb_test -nopass or gdb_test_multiple, which
+# only record a result when GDB's output is wrong, so a failing step
+# records its own FAIL.  The aggregated pass or fail for each check is
+# recorded after the GPU loop.
+
+load_lib rocm.exp
+
+require allow_hip_tests
+
+standard_testfile .cpp
+
+# BUMP and COLS are the macros in the .cpp.  Passing them here keeps the
+# expected values and the program on the same definitions.
+set bump 1000
+set cols 8
+set options [list debug hip \
+		 additional_flags=-DBUMP=$bump \
+		 additional_flags=-DCOLS=$cols]
+if {[build_executable "failed to prepare" $testfile $srcfile $options]} {
+    return
+}
+
+# Return 1 when the agent marked current by "info agents" is the agent
+# of the current wave in "info threads".  When LOC is not empty, that
+# agent's PCI location, without the function, must also be LOC.
+
+proc current_agent_matches { loc } {
+    set agent -1
+    set agent_loc ""
+    set agent_re "\r\n\\*\[ \t\]+($::decimal) \[^\r\n\]*"
+    append agent_re " (\[0-9a-f\]+:\[0-9a-f\]+:\[0-9a-f\]+)\\.\[0-7\]"
+    append agent_re "\[^\r\n\]*"
+    gdb_test_multiple "info agents" "" -lbl {
+	-re $agent_re {
+	    set agent $expect_out(1,string)
+	    set agent_loc $expect_out(2,string)
+	    exp_continue
+	}
+	-re -wrap "" {
+	}
+    }
+
+    set wave_agent -1
+    set wave_re "\r\n\\*\[ \t\]+$::decimal\[ \t\]+AMDGPU Wave ($::decimal):"
+    append wave_re "\[^\r\n\]*"
+    gdb_test_multiple "info threads" "" -lbl {
+	-re $wave_re {
+	    set wave_agent $expect_out(1,string)
+	    exp_continue
+	}
+	-re -wrap "" {
+	}
+    }
+
+    verbose -log "current agent $agent at $agent_loc, wave agent $wave_agent"
+    if {$agent < 0 || $agent != $wave_agent} {
+	return 0
+    }
+    if {$loc ne "" && $agent_loc ne $loc} {
+	verbose -log "expected destination device location $loc"
+	return 0
+    }
+    return 1
+}
+
+# Return a dict from "current" and each kernel in KERNELS to its GDB
+# thread number, or -1 when there is no such thread.
+
+proc find_threads { kernels } {
+    set tids [dict create current -1]
+    foreach kernel $kernels {
+	dict set tids $kernel -1
+    }
+    gdb_test_multiple "info threads" "" -lbl {
+	-re "\r\n(\\*?)\[ \t\]+($::decimal)\[ \t\]+(\[^\r\n\]*)" {
+	    set tid $expect_out(2,string)
+	    if {$expect_out(1,string) eq "*"} {
+		dict set tids current $tid
+	    }
+	    foreach kernel $kernels {
+		if {[string match "AMDGPU Wave *\"$kernel\"*" \
+			 $expect_out(3,string)]} {
+		    dict set tids $kernel $tid
+		}
+	    }
+	    exp_continue
+	}
+	-re -wrap "" {
+	}
+    }
+    verbose -log "threads: $tids"
+    return $tids
+}
+
+# Return 1 if COMMAND's output matches PATTERN from each thread in
+# TIDS.  Thread HOST_TID is selected again afterwards.
+
+proc print_on_threads { tids command pattern host_tid } {
+    set ok 1
+    foreach tid $tids {
+	if {[gdb_test -nopass "thread $tid" \
+		 "Switching to thread $tid\[ ,\].*"]
+	    || [gdb_test -nopass $command $pattern]} {
+	    set ok 0
+	    break
+	}
+    }
+    gdb_test -nopass "thread $host_tid" \
+	"Switching to thread $host_tid\[ ,\].*"
+    return $ok
+}
+
+# Return a pattern for printing four consecutive ints starting at FIRST.
+# When STEP is 0, all four are FIRST.
+
+proc ints_re { first {step 1} } {
+    set vals {}
+    for {set i 0} {$i < 4} {incr i} {
+	lappend vals [expr {$first + $i * $step}]
+    }
+    return "${::valnum_re} = \\{[join $vals {, }]\\}"
+}
+
+# Return 1 if continuing reports a hardware watchpoint changing OLD to NEW.
+# Matcher is the same as gdb.rocm/watchpoint-basic.exp.
+
+proc continue_to_watchpoint_hit { old new } {
+    set hit_re [multi_line \
+		    "hit Hardware watchpoint $::decimal:.*" \
+		    "" \
+		    "Old value = $old" \
+		    "New value = $new" \
+		    ".*"]
+    return [expr {[gdb_test -nopass "continue" $hit_re] == 0}]
+}
+
+# Return 1 if continuing stops at a breakpoint in main.
+
+proc continue_to_main_breakpoint {} {
+    return [expr {[gdb_test -nopass "continue" \
+		       "hit Breakpoint $::decimal, main .*"] == 0}]
+}
+
+# Continue to the copies from SRC_DEV to the next GPU and test them.
+# DST_LOC is the destination GPU's PCI location, or "" when locations
+# are not unique.  Return the key of the first failing check, or "".
+
+proc test_one_gpu { src_dev dst_loc } {
+    if {![continue_to_main_breakpoint]
+	|| [gdb_test -nopass "print src_dev" "${::valnum_re} = $src_dev"]} {
+	return stop
+    }
+
+    set tids [find_threads {src_kernel dst_kernel}]
+    set host_tid [dict get $tids current]
+    set src_tid [dict get $tids src_kernel]
+    set dst_tid [dict get $tids dst_kernel]
+    if {$host_tid < 0 || $src_tid < 0 || $dst_tid < 0} {
+	return waves
+    }
+    set waves [list $src_tid $dst_tid]
+    set base [expr {($src_dev + 1) * 100}]
+
+    if {![print_on_threads $waves "print src\[0\]@4" [ints_re $base] \
+	      $host_tid]
+	|| ![print_on_threads $waves "print dst\[0\]@4" [ints_re 0 0] \
+		 $host_tid]} {
+	return sync_before
+    }
+
+    if {![continue_to_main_breakpoint]
+	|| ![print_on_threads $waves "print dst\[0\]@4" [ints_re $base] \
+		 $host_tid]} {
+	return sync_copy
+    }
+
+    if {![continue_to_main_breakpoint]
+	|| [gdb_test -nopass "print query_in_flight" \
+		"${::valnum_re} = hipErrorNotReady"]
+	|| ![print_on_threads $waves "print dst_async\[0\]@4" [ints_re 0 0] \
+		 $host_tid]} {
+	return async_in_flight
+    }
+
+    # The copy is queued behind gate_kernel, so gate_kernel's wave shows
+    # which GPU the copy stream belongs to.  An empty DST_LOC means the
+    # PCI locations are not unique.  The caller reports the check
+    # unsupported instead of comparing the wave's agent with itself.
+    if {$dst_loc ne ""} {
+	set gate_tid [dict get [find_threads {gate_kernel}] gate_kernel]
+	if {$gate_tid < 0
+	    || [gdb_test -nopass "thread $gate_tid" \
+		    "Switching to thread $gate_tid\[ ,\].*"]} {
+	    return async_stream
+	}
+	set on_dst [current_agent_matches $dst_loc]
+	gdb_test -nopass "thread $host_tid" \
+	    "Switching to thread $host_tid\[ ,\].*"
+	if {!$on_dst} {
+	    return async_stream
+	}
+    }
+
+    # The copy's stores aren't reported as GPU watchpoint hits, so the
+    # next stop is the breakpoint after the copy.
+    if {[gdb_test -nopass "watch -l dst_async\[0\]" \
+	     "Hardware watchpoint $::decimal: .*"]} {
+	return async_watch
+    }
+
+    if {![continue_to_main_breakpoint]
+	|| [gdb_test -nopass "print query_done" "${::valnum_re} = hipSuccess"]
+	|| ![print_on_threads $waves "print dst_async\[0\]@4" \
+		 [ints_re $base] $host_tid]} {
+	return async_done
+    }
+
+    # bump_kernel adds BUMP.  GDB may still hold the value seen when the
+    # watchpoint was set, so the old value is 0 or the copied value.
+    if {![continue_to_watchpoint_hit "(?:0|$base)" \
+	      [expr {$base + $::bump}]]} {
+	return watch_hit
+    }
+    gdb_test_no_output -nopass "delete \$bpnum"
+
+    # Row 1 of the 2D copy holds source elements from COLS onward.
+    if {![continue_to_main_breakpoint]
+	|| ![print_on_threads $waves "print dst_2d_row\[0\]@4" \
+		 [ints_re [expr {$base + $::cols}]] $host_tid]} {
+	return copy_2d
+    }
+
+    # hipMemset3D filled the source with the byte SRC_DEV + 1, repeated
+    # in each byte of the int.  print /d shows a signed 32-bit value, so
+    # fold the high bit back in once that byte is 128 or more.
+    set byte [expr {$src_dev + 1}]
+    set word [expr {($byte * 0x01010101) & 0xffffffff}]
+    if {$word > 0x7fffffff} {
+	set word [expr {$word - 0x100000000}]
+    }
+    if {![continue_to_main_breakpoint]
+	|| ![print_on_threads $waves "print /d *dst_3d_elem" \
+		 "${::valnum_re} = $word" $host_tid]} {
+	return copy_3d
+    }
+
+    return ""
+}
+
+# NGPUS is the visible GPU count.  SRC_DEVS is the list of source GPUs
+# the program will copy from, and LOCATIONS holds every visible GPU's
+# PCI location, indexed by device.  AMBIGUOUS is true when those
+# locations are not unique.
+
+proc test_gpus { ngpus src_devs locations ambiguous } {
+    set checks [list \
+	stop "stopped before each copy" \
+	waves "wave on each GPU is present" \
+	sync_before "data readable from both GPUs before hipMemcpyPeer" \
+	sync_copy "hipMemcpyPeer data readable from both GPUs" \
+	async_in_flight "hipMemcpyPeerAsync is in flight" \
+	async_stream "copy stream is on the destination GPU's agent" \
+	async_watch "watchpoint set on the async destination" \
+	async_done "hipMemcpyPeerAsync data readable from both GPUs" \
+	watch_hit "watchpoint reports the store after the copy" \
+	copy_2d "hipMemcpy2D data readable from both GPUs" \
+	copy_3d "hipMemcpy3DPeer data readable from both GPUs"]
+
+    with_rocm_gpu_lock {
+	clean_restart $::testfile
+	# Missing this breakpoint is a failure, not "found 0 devices".
+	if {[runto [gdb_get_line_number "Break after device query"]]} {
+	    foreach marker {"before sync copy" "after sync copy"
+			    "while async copy in flight" "after async copy"
+			    "after 2D copy" "after 3D copy"} {
+		gdb_breakpoint [gdb_get_line_number "Break $marker"]
+	    }
+
+	    set failed ""
+	    foreach dev $src_devs {
+		set dst_dev [expr {($dev + 1) % $ngpus}]
+		verbose -log "copy from GPU $dev to GPU $dst_dev"
+		if {$ambiguous} {
+		    set dst_loc ""
+		} else {
+		    set dst_loc [lindex $locations $dst_dev]
+		}
+		set failed [test_one_gpu $dev $dst_loc]
+		if {$failed ne ""} {
+		    verbose -log "check \"$failed\" failed copying from GPU\
+				  $dev to GPU $dst_dev"
+		    break
+		}
+	    }
+
+	    foreach {check name} $checks {
+		if {$check eq "async_stream" && $ambiguous} {
+		    verbose -log "GPUs share PCI locations, can't identify\
+				  agents"
+		    unsupported $name
+		} elseif {$failed eq ""} {
+		    pass $name
+		} elseif {$failed eq $check} {
+		    fail $name
+		} else {
+		    unresolved $name
+		}
+	    }
+
+	    if {$failed eq ""} {
+		delete_breakpoints
+		gdb_continue_to_end "" continue 1
+	    } else {
+		unresolved "continue until exit"
+	    }
+	}
+    }
+}
+
+set ngpus 0
+set src_devs {}
+set locations {}
+set ambiguous 0
+set run_test 0
+
+with_rocm_gpu_lock {
+    clean_restart $::testfile
+    if {![runto [gdb_get_line_number "Break after device query"]]} {
+	# runto already recorded the FAIL.
+    } else {
+	set ngpus [get_integer_valueof "num_devices" -1 \
+		       "read visible GPU count"]
+	verbose -log "visible GPUs: $ngpus"
+	if {$ngpus < 0} {
+	    # get_integer_valueof already recorded the FAIL.
+	} elseif {$ngpus < 2} {
+	    unsupported "need at least 2 visible GPUs"
+	} else {
+	    # Read each GPU's values without recording a PASS, so the
+	    # test count does not depend on the number of GPUs.
+	    set readable 1
+	    for {set dev 0} {$dev < $ngpus} {incr dev} {
+		set access -1
+		gdb_test_multiple "print /d can_access\[$dev\]" "" {
+		    -re -wrap "^$::valnum_re = ($::decimal)" {
+			set access $expect_out(1,string)
+		    }
+		}
+		if {$access < 0} {
+		    # An empty message is replaced with the command, so a
+		    # mismatch or a timeout already recorded a FAIL.
+		    set readable 0
+		    break
+		}
+		set loc -1
+		gdb_test_multiple "print /x pci_location\[$dev\]" "" {
+		    -re -wrap "^$::valnum_re = ($::hex)" {
+			set loc $expect_out(1,string)
+		    }
+		}
+		if {$loc < 0} {
+		    # An empty message is replaced with the command, so a
+		    # mismatch or a timeout already recorded a FAIL.
+		    set readable 0
+		    break
+		}
+
+		# Domain, bus, and device, matching "info agents" without
+		# the function.
+		lappend locations [format "%04x:%02x:%02x" \
+				       [expr {($loc >> 16) & 0xffff}] \
+				       [expr {($loc >> 8) & 0xff}] \
+				       [expr {$loc & 0xff}]]
+		if {$access == 1} {
+		    lappend src_devs $dev
+		} else {
+		    set next [expr {($dev + 1) % $ngpus}]
+		    verbose -log "GPU $dev and GPU $next can't access each\
+				  other, skipping GPU $dev"
+		}
+	    }
+	    if {$readable} {
+		pass "read device information"
+		verbose -log "GPU PCI locations: $locations"
+		if {[llength $src_devs] == 0} {
+		    unsupported "no GPU with peer access to the next GPU"
+		} else {
+		    set ambiguous [expr {[llength [lsort -unique $locations]] \
+					     != [llength $locations]}]
+		    set run_test 1
+		}
+	    }
+	}
+    }
+}
+
+if {$run_test} {
+    test_gpus $ngpus $src_devs $locations $ambiguous
+}
