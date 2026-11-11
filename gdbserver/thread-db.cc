@@ -855,9 +855,9 @@ thread_db_handle_monitor_command (const char *mon)
 	cp = LIBTHREAD_DB_SEARCH_PATH;
       libthread_db_search_path = xstrdup (cp);
 
-      monitor_output ("libthread-db-search-path set to `");
+      monitor_output ("libthread-db-search-path set to \"");
       monitor_output (libthread_db_search_path);
-      monitor_output ("'\n");
+      monitor_output ("\"\n");
       return 1;
     }
 

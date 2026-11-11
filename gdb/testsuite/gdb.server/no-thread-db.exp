@@ -49,7 +49,7 @@ gdbserver_run ""
 
 # Force gdbserver to fail to load libthread_db.
 gdb_test "monitor set libthread-db-search-path ${unresolvable_thread_db_path}" \
-    "libthread-db-search-path set to `${unresolvable_thread_db_path}'" \
+    "libthread-db-search-path set to \"${unresolvable_thread_db_path}\"" \
     "libthread-db is now unresolvable"
 
 # Continue past tls assignment to make sure tls storage is allocated.

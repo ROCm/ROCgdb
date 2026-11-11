@@ -359,10 +359,10 @@ format_pieces::format_pieces (const char **arg, bool gdb_extensions,
 	    break;
 
 	  case '*':
-	    error (_("`*' not supported for precision or width in printf"));
+	    error (_("\"*\" not supported for precision or width in printf"));
 
 	  case 'n':
-	    error (_("Format specifier `n' not supported in printf"));
+	    error (_("Format specifier \"n\" not supported in printf"));
 
 	  case '\0':
 	    error (_("Incomplete format specifier at end of format string"));

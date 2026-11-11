@@ -97,7 +97,7 @@ agent_look_up_symbols (void *arg)
       if (find_minimal_symbol_address (symbol_list[i].name, addrp,
 				       objfile) != 0)
 	{
-	  DEBUG_AGENT ("symbol `%s' not found\n", symbol_list[i].name);
+	  DEBUG_AGENT ("symbol \"%s\" not found\n", symbol_list[i].name);
 	  return -1;
 	}
     }
