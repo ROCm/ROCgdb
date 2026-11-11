@@ -1304,8 +1304,8 @@ stap_probe::parse_arguments (struct gdbarch *gdbarch)
 	      {
 		/* We have an error, because we don't expect anything
 		   except 1, 2, 4 and 8.  */
-		warning (_("unrecognized bitness %s%c' for probe `%s'"),
-			 got_minus ? "`-" : "`", *cur,
+		warning (_("unrecognized bitness \"%s%c\" for probe \"%s\""),
+			 got_minus ? "-" : "", *cur,
 			 this->get_name ().c_str ());
 		return;
 	      }
