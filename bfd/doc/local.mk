@@ -142,9 +142,30 @@ DISTCLEANFILES += %D%/bfd.?? %D%/bfd.??? texput.log
 
 MAINTAINERCLEANFILES += $(DOCFILES)
 
+# The HTML manual is built with the navigation sidebar shared from
+# texinfo/toc-sidebar: toc-sidebar.init drives texi2any and writes the
+# contents tree (toc-sidebar-data.js) into the output directory; copy
+# the static assets in alongside it.  On a texi2any too old for the
+# sidebar the init file disables itself and the plain manual is built.
+TOC_SIDEBAR_DIR = $(srcdir)/../texinfo/toc-sidebar
+TOC_SIDEBAR_ASSETS = $(TOC_SIDEBAR_DIR)/toc-sidebar.css \
+		     $(TOC_SIDEBAR_DIR)/toc-sidebar.js
+
+# List of extra stylesheets to brand the HTML manual.  Each stylesheet
+# is referenced with --css-ref and copied into the output directory.
+# It is empty by default and can be set on the make command line, so a
+# build can theme the manual without editing the sources.
+MANUAL_CSS =
+
+# ROCm branding.
+MANUAL_CSS += $(srcdir)/../rocm-theme.css
+
 html-local: %D%/bfd/index.html
-%D%/bfd/index.html: %D%/bfd.texi $(bfd_TEXINFOS) %D%/$(am__dirstamp)
+%D%/bfd/index.html: %D%/bfd.texi $(bfd_TEXINFOS) %D%/$(am__dirstamp) $(MANUAL_CSS)
 	$(AM_V_at)$(MAKEINFOHTML) $(AM_MAKEINFOHTMLFLAGS) $(MAKEINFOFLAGS) \
+	  --init-file=$(TOC_SIDEBAR_DIR)/toc-sidebar.init \
+	  $(foreach css,$(MANUAL_CSS),--css-ref=$(notdir $(css))) \
 	  --split=node -o %D%/bfd $(srcdir)/%D%/bfd.texi
+	$(AM_V_at)cp $(TOC_SIDEBAR_ASSETS) $(MANUAL_CSS) %D%/bfd
 
 MAINTAINERCLEANFILES += %D%/bfd.info
