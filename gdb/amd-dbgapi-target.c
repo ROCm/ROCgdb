@@ -242,16 +242,24 @@ struct dbgapi_property_t
     }
 };
 
-static gdb::unordered_map<decltype (amd_dbgapi_property_id_t::handle),
-			  dbgapi_property_t>
-  amd_dbgapi_properties;
+/* The properties supported by the library, keyed by property name.
+
+   A property handle is only unique within a single library instance, so it
+   cannot identify a property across the amd_dbgapi_finalize /
+   amd_dbgapi_initialize pair done by maybe_reset_amd_dbgapi.  The name is
+   stable, so it is what everything outliving a library instance refers to;
+   the handle lives in the mapped value and is rebuilt wholesale by
+   fetch_amd_dbgapi_properties.  */
+
+static gdb::unordered_string_map<dbgapi_property_t> amd_dbgapi_properties;
 
 class property_setter
 {
 };
 
-/* Initialize "amd_dbgapi_properties" with the properties that we
-   care about: PROPERTY_{PRECISE_MEMORY,PRECISE_ALU,LDS_EXCEPTION}.  */
+/* Initialize "amd_dbgapi_properties" with every property the library
+   exposes that we know how to drive: those with process scope whose value
+   can be enabled or disabled.  */
 
 static void
 fetch_amd_dbgapi_properties ()
@@ -283,16 +291,6 @@ fetch_amd_dbgapi_properties ()
       /* This will automatically free NAME.  */
       gdb::unique_xmalloc_ptr<char> name_holder (name);
 
-      const char *key;
-      if (strcmp (name, PROPERTY_PRECISE_MEMORY) == 0)
-	key = PROPERTY_PRECISE_MEMORY;
-      else if (strcmp (name, PROPERTY_PRECISE_ALU) == 0)
-	key = PROPERTY_PRECISE_ALU;
-      else if (strcmp (name, PROPERTY_LDS_EXCEPTION) == 0)
-	key = PROPERTY_LDS_EXCEPTION;
-      else
-	continue;
-
       /* Look for process properties that can only be enabled/disabled.
 	 That's all we support for now.  */
       amd_dbgapi_property_type_t type;
@@ -305,7 +303,11 @@ fetch_amd_dbgapi_properties ()
 	error (_("amd-dbgapi failed to get property type (%s)"),
 	       get_status_string (status));
       if (type != AMD_DBGAPI_PROPERTY_TYPE_BOOL)
-	continue;
+	{
+	  warning (_("amd-dbgapi property \"%s\" has an unsupported type, "
+		     "ignoring it."), name);
+	  continue;
+	}
 
       status = amd_dbgapi_property_get_info (properties[i],
 					     AMD_DBGAPI_PROPERTY_INFO_SCOPE,
@@ -313,8 +315,12 @@ fetch_amd_dbgapi_properties ()
       if (status != AMD_DBGAPI_STATUS_SUCCESS)
 	error (_("amd-dbgapi failed to get property scope (%s)"),
 	       get_status_string (status));
-      if (scope != AMD_DBGAPI_PROPERTY_SCOPE_PROCESS)
-	continue;
+      if ((scope & AMD_DBGAPI_PROPERTY_SCOPE_PROCESS) == 0)
+	{
+	  warning (_("amd-dbgapi property \"%s\" does not have process scope, "
+		     "ignoring it."), name);
+	  continue;
+	}
 
       char *descr;
       status = amd_dbgapi_property_get_info (properties[i],
@@ -325,7 +331,7 @@ fetch_amd_dbgapi_properties ()
 	       get_status_string (status));
 
       amd_dbgapi_properties.insert_or_assign
-	(properties[i].handle,
+	(name,
 	 dbgapi_property_t (properties[i], std::move (name_holder),
 			    gdb::unique_xmalloc_ptr<char> (descr),
 			    type));
@@ -376,15 +382,14 @@ struct amd_dbgapi_inferior_info
        dbgapi (it may not be available for the current hardware, for
        instance).  */
     bool enabled = false;
-
-#if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
-    amd_dbgapi_property_id_t property_id;
-#endif
   };
 
 #if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
-  /* Process properties obtained from dbgapi.  */
-  std::list<dbgapi_feature_request> features;
+  /* State of each process property obtained from dbgapi, keyed by property
+     name.  Keyed by name rather than by handle because REQUESTED must
+     survive the library re-initialization done by maybe_reset_amd_dbgapi,
+     which invalidates handles.  */
+  gdb::unordered_string_map<dbgapi_feature_request> features;
 #else
   /* Track the status of precise memory request and enablement.  */
   struct dbgapi_feature_request precise_memory;
@@ -2671,7 +2676,7 @@ amd_dbgapi_target::stopped_by_hw_breakpoint ()
 
 /* Set the process property.
 
-   - First look for PROPERTY_ID.  Warn if it is not found.
+   - First look for PROPERTY_NAME.  Warn if it is not found.
 
    - At the moment, current implementation only supports properties that
      can be enabled or disabled (boolean type).  For any other type, report
@@ -2690,25 +2695,24 @@ amd_dbgapi_target::stopped_by_hw_breakpoint ()
 static void
 set_process_property (
   amd_dbgapi_process_id_t process_id,
-  amd_dbgapi_property_id_t property_id,
+  const char *property_name,
   amd_dbgapi_inferior_info::dbgapi_feature_request &feature)
 {
-  if (amd_dbgapi_properties.find (property_id.handle)
+  if (amd_dbgapi_properties.find (property_name)
       == amd_dbgapi_properties.end ())
     {
-      warning (_("AMDGPU property_id=%s could not be found."),
-	       pulongest (property_id.handle));
+      warning (_("AMDGPU %s property could not be found."), property_name);
       return;
     }
 
-  const dbgapi_property_t &property
-    = amd_dbgapi_properties.at (property_id.handle);
+  const dbgapi_property_t &property = amd_dbgapi_properties.at (property_name);
 
   amd_dbgapi_status_t status;
   if (property.type == AMD_DBGAPI_PROPERTY_TYPE_BOOL)
     {
       amd_dbgapi_property_bool_t value = feature.requested;
-      status = amd_dbgapi_process_set_property (process_id, property_id,
+      status = amd_dbgapi_process_set_property (process_id,
+						property.property_id,
 						sizeof (value), &value);
     }
   else
@@ -2923,8 +2927,8 @@ attach_amd_dbgapi (inferior *inf)
 			   amd_dbgapi_notifier_get_fd (info.notifier));
 
 #if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
-  for (all_the_info_proc_props)
-    set_process_property (info.process_id, info.features.property_id, info.features);
+  for (auto &[property_name, feature] : info.features)
+    set_process_property (info.process_id, property_name.c_str (), feature);
 #else
   set_process_memory_precision (info);
   set_process_alu_exceptions_precision (info);
