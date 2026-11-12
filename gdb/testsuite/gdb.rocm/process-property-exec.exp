@@ -19,7 +19,7 @@
 #
 #   set amdgpu precise-memory
 #   set amdgpu precise-alu-exceptions
-#   set lds-exception
+#   set amdgpu lds-exception
 #
 # settings are inherited by an inferior created following an exec.
 
@@ -33,6 +33,9 @@ if {[build_executable "failed to prepare $testfile" $testfile $srcfile {debug}]}
     return
 }
 
+# Properties to test.
+set properties {precise-memory precise-alu-exceptions lds-exception}
+
 proc do_test { follow-exec-mode } {
     clean_restart
     gdb_load $::binfile
@@ -43,15 +46,13 @@ proc do_test { follow-exec-mode } {
 	}
 
 	# Check that the properties are off (default).
-	foreach property {precise-memory precise-alu-exceptions \
-			  lds-exception} {
+	foreach property $::properties {
 	    gdb_test "show amdgpu $property" " is off.*" \
 		"show amdgpu $property before set"
 	}
 
 	# Set the properties on for the inferior before exec.
-	foreach property {precise-memory precise-alu-exceptions \
-			  lds-exception} {
+	foreach property $::properties {
 	    gdb_test "set amdgpu $property on"
 	    gdb_test "show amdgpu $property" " is on.*" \
 		"show amdgpu $property after set"
@@ -61,8 +62,7 @@ proc do_test { follow-exec-mode } {
 	gdb_test_no_output "set follow-exec-mode ${follow-exec-mode}"
 	gdb_test "break second"
 	gdb_test "continue" "Breakpoint 1(\.$::decimal)?, main .*"
-	foreach property {precise-memory precise-alu-exceptions \
-			  lds-exception} {
+	foreach property $::properties {
 	    gdb_test "show amdgpu $property" " is on.*" \
 		"show amdgpu $property after exec"
 	}
