@@ -21,6 +21,7 @@
 
 #include "amd-dbgapi-target.h"
 #include "amd-dbgapi-hdep.h"
+#include "amd-dbgapi/amd-dbgapi.h"
 #include "amdgpu-tdep.h"
 #include "arch-utils.h"
 #include "async-event.h"
@@ -229,18 +230,25 @@ struct dbgapi_property_t
   amd_dbgapi_property_id_t property_id;
   gdb::unique_xmalloc_ptr<char> name;
   gdb::unique_xmalloc_ptr<char> description;
+  amd_dbgapi_property_type_t type;
 
   dbgapi_property_t (amd_dbgapi_property_id_t property_id,
 		     gdb::unique_xmalloc_ptr<char> name,
-		     gdb::unique_xmalloc_ptr<char> descr)
+		     gdb::unique_xmalloc_ptr<char> descr,
+		     amd_dbgapi_property_type_t type)
     : property_id (property_id), name (std::move (name)),
-      description (std::move (descr))
+      description (std::move (descr)), type (type)
     {
     }
 };
 
-static std::unordered_map<const char *, dbgapi_property_t>
+static gdb::unordered_map<decltype (amd_dbgapi_property_id_t::handle),
+			  dbgapi_property_t>
   amd_dbgapi_properties;
+
+class property_setter
+{
+};
 
 /* Initialize "amd_dbgapi_properties" with the properties that we
    care about: PROPERTY_{PRECISE_MEMORY,PRECISE_ALU,LDS_EXCEPTION}.  */
@@ -317,9 +325,10 @@ fetch_amd_dbgapi_properties ()
 	       get_status_string (status));
 
       amd_dbgapi_properties.insert_or_assign
-	(key, dbgapi_property_t (properties[i],
-				 std::move (name_holder),
-				 gdb::unique_xmalloc_ptr<char> (descr)));
+	(properties[i].handle,
+	 dbgapi_property_t (properties[i], std::move (name_holder),
+			    gdb::unique_xmalloc_ptr<char> (descr),
+			    type));
     }
 }
 #endif /* HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY  */
@@ -367,8 +376,16 @@ struct amd_dbgapi_inferior_info
        dbgapi (it may not be available for the current hardware, for
        instance).  */
     bool enabled = false;
+
+#if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
+    amd_dbgapi_property_id_t property_id;
+#endif
   };
 
+#if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
+  /* Process properties obtained from dbgapi.  */
+  std::list<dbgapi_feature_request> features;
+#else
   /* Track the status of precise memory request and enablement.  */
   struct dbgapi_feature_request precise_memory;
 
@@ -379,6 +396,7 @@ struct amd_dbgapi_inferior_info
   /* Track the status of local memory out-of-range address exception reporting
      request and enablement.  */
   struct dbgapi_feature_request lds_exception;
+#endif
 
   gdb::unordered_map<decltype (amd_dbgapi_breakpoint_id_t::handle),
 		     struct breakpoint *>
@@ -2653,36 +2671,57 @@ amd_dbgapi_target::stopped_by_hw_breakpoint ()
 
 /* Set the process property.
 
-   Warn if the requested feature is not supported by at least one of the agents
-   in the process.  */
+   - First look for PROPERTY_ID.  Warn if it is not found.
+
+   - At the moment, current implementation only supports properties that
+     can be enabled or disabled (boolean type).  For any other type, report
+     a failure.
+
+   - Try to change the property to FEATURE.requested.
+
+   - If the requested feature is not supported (by at least one of the
+     agents in the process), give a warning.
+
+   - If any other error occurs, report a failure.
+
+   - On success, update FEATURE.enabled to reflect the requested value.
+*/
 
 static void
 set_process_property (
   amd_dbgapi_process_id_t process_id,
-  const char *property_name,
+  amd_dbgapi_property_id_t property_id,
   amd_dbgapi_inferior_info::dbgapi_feature_request &feature)
 {
-  if (amd_dbgapi_properties.find (property_name)
+  if (amd_dbgapi_properties.find (property_id.handle)
       == amd_dbgapi_properties.end ())
     {
-      warning (_("AMDGPU %s property could not be found."), property_name);
+      warning (_("AMDGPU property_id=%s could not be found."),
+	       pulongest (property_id.handle));
       return;
     }
 
-  const dbgapi_property_t &property = amd_dbgapi_properties.at (property_name);
-  amd_dbgapi_property_bool_t value = feature.requested;
-  amd_dbgapi_status_t status
-    = amd_dbgapi_process_set_property (process_id, property.property_id,
-				       sizeof (value), &value);
+  const dbgapi_property_t &property
+    = amd_dbgapi_properties.at (property_id.handle);
+
+  amd_dbgapi_status_t status;
+  if (property.type == AMD_DBGAPI_PROPERTY_TYPE_BOOL)
+    {
+      amd_dbgapi_property_bool_t value = feature.requested;
+      status = amd_dbgapi_process_set_property (process_id, property_id,
+						sizeof (value), &value);
+    }
+  else
+    error (_("unexpected type for %s property."), property.name.get ());
 
   if (status == AMD_DBGAPI_STATUS_SUCCESS)
     feature.enabled = feature.requested;
   else if (status == AMD_DBGAPI_STATUS_ERROR_NOT_SUPPORTED)
-    warning (_("AMDGPU %s could not be enabled."),
+    warning (_("AMDGPU %s could not be changed."),
 	     property.description.get ());
   else
     error (_("amd_dbgapi_process_set_property (..., %s, ...) failed (%s)"),
-	   property_name, get_status_string (status));
+	   property.name.get (), get_status_string (status));
 }
 #endif
 
@@ -2883,9 +2922,14 @@ attach_amd_dbgapi (inferior *inf)
 			   pulongest (info.process_id.handle),
 			   amd_dbgapi_notifier_get_fd (info.notifier));
 
+#if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
+  for (all_the_info_proc_props)
+    set_process_property (info.process_id, info.features.property_id, info.features);
+#else
   set_process_memory_precision (info);
   set_process_alu_exceptions_precision (info);
   set_process_lds_exception (info);
+#endif
 
   /* If GDB is attaching to a process that has the runtime loaded, there will
      already be a "runtime loaded" event available.  Consume it and push the
