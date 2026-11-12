@@ -3176,14 +3176,9 @@ interrupt_command (const char *args, int from_tty)
 {
   if (target_can_async_p ())
     {
-      int all_threads = 0;
-
       dont_repeat ();		/* Not for the faint of heart.  */
 
-      if (args != nullptr
-	  && startswith (args, "-a"))
-	all_threads = 1;
-
+      bool all_threads = args != nullptr && startswith (args, "-a");
       interrupt_target_1 (all_threads);
     }
 }

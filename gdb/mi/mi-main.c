@@ -330,14 +330,14 @@ mi_cmd_exec_interrupt (const char *command, const char *const *argv, int argc)
      anything specific.  */
   if (!non_stop)
     {
-      interrupt_target_1 (0);
+      interrupt_target_1 (false);
       return;
     }
 
   if (current_context->all)
     {
       /* This will interrupt all threads in all inferiors.  */
-      interrupt_target_1 (1);
+      interrupt_target_1 (true);
     }
   else if (current_context->thread_group != -1)
     {
@@ -359,7 +359,7 @@ mi_cmd_exec_interrupt (const char *command, const char *const *argv, int argc)
       /* Interrupt just the current thread -- either explicitly
 	 specified via --thread or whatever was current before
 	 MI command was sent.  */
-      interrupt_target_1 (0);
+      interrupt_target_1 (false);
     }
 }
 
