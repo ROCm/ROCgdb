@@ -185,8 +185,24 @@ proc test_one_gpu { alloc_dev compute_loc variant } {
 	}
     }
 
-    if {[gdb_test -nopass "watch *buf" "Hardware watchpoint $::decimal: .*"]
-	|| ![continue_to_watchpoint_hit 7 17]} {
+    set kfd_xfail [expr {$variant eq "host"
+			 && [target_has_kfd_watchpoint_corruption]}]
+    set hit 0
+    if {![gdb_test -nopass "watch *buf" "Hardware watchpoint $::decimal: .*"]} {
+	# A watchpoint set before the dispatch can be lost on some targets.
+	if {$kfd_xfail} {
+	    setup_xfail "*-*-*" "watchpoint configuration corruption in kfd."
+	}
+	set hit [continue_to_watchpoint_hit 7 17]
+	if {$kfd_xfail} {
+	    # Don't let an unused xfail leak into a later result.
+	    clear_xfail "*-*-*"
+	}
+    }
+    if {!$hit} {
+	if {$kfd_xfail} {
+	    setup_xfail "*-*-*" "watchpoint configuration corruption in kfd."
+	}
 	gdb_test_no_output -nopass "set variable *hold = 0"
 	return store1
     }
@@ -256,8 +272,15 @@ proc test_gpus { variant ngpus alloc_devs locations ambiguous } {
 		}
 	    }
 
+	    # The whole "host" variant is expected to fail on targets where
+	    # KFD corrupts watchpoints set before the first dispatch.
+	    set kfd_xfail [expr {$variant eq "host" && $failed ne ""
+				 && [target_has_kfd_watchpoint_corruption]}]
+
 	    foreach {check name} $checks {
-		if {$check eq "agent" && $ambiguous && $failed eq ""} {
+		if {$kfd_xfail} {
+		    xfail $name
+		} elseif {$check eq "agent" && $ambiguous && $failed eq ""} {
 		    verbose -log "GPUs share PCI locations, can't identify\
 				  agents"
 		    unsupported $name
@@ -273,6 +296,8 @@ proc test_gpus { variant ngpus alloc_devs locations ambiguous } {
 	    if {$failed eq ""} {
 		delete_breakpoints
 		gdb_continue_to_end "" continue 1
+	    } elseif {$kfd_xfail} {
+		xfail "continue until exit"
 	    } else {
 		unresolved "continue until exit"
 	    }
