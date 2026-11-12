@@ -2735,9 +2735,9 @@ add_packet_config_cmd (const unsigned int which_packet, const char *name,
   packet_config *config = &remote_protocol_packets[which_packet];
 
   gdb::unique_xmalloc_ptr<char> set_doc
-    = xstrprintf ("Set use of remote protocol `%s' packet.", name);
+    = xstrprintf ("Set use of remote protocol \"%s\" packet.", name);
   gdb::unique_xmalloc_ptr<char> show_doc
-    = xstrprintf ("Show current use of remote protocol `%s' packet.", name);
+    = xstrprintf ("Show current use of remote protocol \"%s\" packet.", name);
   /* set/show TITLE-packet {auto,on,off} */
   gdb::unique_xmalloc_ptr<char> cmd_name = xstrprintf ("%s-packet", title);
   set_show_commands cmds
@@ -12539,7 +12539,7 @@ remote_target::rcmd (const char *command, struct ui_file *outbuf)
 
   if ((strlen (rs->buf.data ()) + strlen (command) * 2 + 8/*misc*/)
       > get_remote_packet_size ())
-    error (_("\"%ps\" command ``%s'' is too long."),
+    error (_("\"%ps\" command \"%s\" is too long."),
 	   styled_string (command_style.style (), "monitor"),
 	   command);
 
@@ -16700,8 +16700,8 @@ Send an arbitrary packet to a remote target.\n\
    maintenance packet TEXT\n\
 If GDB is talking to an inferior via the GDB serial protocol, then\n\
 this command sends the string TEXT to the inferior, and displays the\n\
-response packet.  GDB supplies the initial `$' character, and the\n\
-terminating `#' character and checksum."),
+response packet.  GDB supplies the initial \"$\" character, and the\n\
+terminating \"#\" character and checksum."),
 	   &maintenancelist);
 
   set_show_commands remotebreak_cmds
@@ -17088,8 +17088,8 @@ Show the maximum size of the address (in bits) in a memory packet."), NULL,
      documentation).  */
   add_setshow_auto_boolean_cmd ("Z-packet", class_obscure,
 				&remote_Z_packet_detect, _("\
-Set use of remote protocol `Z' packets."), _("\
-Show use of remote protocol `Z' packets."), _("\
+Set use of remote protocol \"Z\" packets."), _("\
+Show use of remote protocol \"Z\" packets."), _("\
 When set, GDB will attempt to use the remote breakpoint and watchpoint\n\
 packets."),
 				set_remote_protocol_Z_packet_cmd,

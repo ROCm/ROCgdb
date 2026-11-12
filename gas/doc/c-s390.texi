@@ -246,9 +246,10 @@ of Operation.
 Instruction operands can be grouped into three classes, operands located
 in registers, immediate operands, and operands in storage.
 
-A register operand can be located in general, floating-point, access,
-or control register. The register is identified by a four-bit field.
-The field containing the register operand is called the R field.
+Register operands can be located in a general, floating-point, vector,
+access, or control register.  The register is identified by a four-bit
+R field and, in case of vector registers, an additional bit in the four-bit
+RXB field.
 
 Immediate operands are contained within the instruction and can have
 8, 16 or 32 bits. The field containing the immediate operand is called
@@ -259,12 +260,12 @@ A storage operand consists of an address and a length. The address of a
 storage operands can be specified in any of these ways:
 
 @itemize
-@item The content of a single general R
+@item The content of a single general register R
 @item The sum of the content of a general register called the base
 register B plus the content of a displacement field D
 @item The sum of the contents of two general registers called the
 index register X and the base register B plus the content of a
-displacement field
+displacement field D
 @item The sum of the current instruction address and a 32-bit signed
 immediate field multiplied by two.
 @end itemize
@@ -273,9 +274,9 @@ The length of a storage operand can be:
 
 @itemize
 @item Implied by the instruction
-@item Specified by a bitmask
+@item Specified by a four-bit mask M
 @item Specified by a four-bit or eight-bit length field L
-@item Specified by the content of a general register
+@item Specified by the content of a general register R
 @end itemize
 
 The notation for storage operand addresses formed from multiple fields is
@@ -288,7 +289,7 @@ register Bn called the base register and the displacement field Dn.
 @item Dn(Xn,Bn)
 the address for operand number n is formed from the content of general
 register Xn called the index register, general register Bn called the
-base register and the displacement field Dn.
+base register, and the displacement field Dn.
 @item Dn(Ln,Bn)
 the address for operand number n is formed from the content of general
 register Bn called the base register and the displacement field Dn.
@@ -326,18 +327,110 @@ The following table lists the abbreviations used in the table of
 instruction formats:
 
 @display
-@multitable {OpCode / OpCd} {Displacement lower 12 bits for operand x.}
-@item OpCode / OpCd @tab Part of the op code.
+@multitable {OpCode / OpCd} {Signed PC-relative immediate for operand x.}
+@headitem Abbreviation @tab Description
+@item OpCode / OpCd @tab Part of the operation code.
 @item Bx @tab Base register number for operand x.
 @item Dx @tab Displacement for operand x.
 @item DLx @tab Displacement lower 12 bits for operand x.
-@item DHx @tab Displacement higher 8-bits for operand x.
+@item DHx @tab Displacement higher 8 bits for operand x.
+@item Mx @tab Mask for operand x.
+@item Lx @tab Length for operand x.
 @item Rx @tab Register number for operand x.
 @item Xx @tab Index register number for operand x.
-@item Ix @tab Signed immediate for operand x.
-@item Ux @tab Unsigned immediate for operand x.
+@item Vx @tab Vector register number for operand x.
+@item VXx @tab Vector index register number for operand x.
+@item Ix @tab Immediate for operand x in range min. signed to max. unsigned.
+@item RIx @tab Signed PC-relative immediate for operand x.
 @end multitable
 @end display
+
+In general, the operand order for an @code{.insn} directive can be derived
+from the field indices of the respective instruction format as listed in
+the @emph{ESA/390} and @emph{z/Architecture Principles of Operation} manuals,
+chapter @emph{Program Execution}, section @emph{Instruction Formats}. The
+operands need to be specified in ascending order of their field indices.
+Exceptions, where the operand order differs from the index order, are listed
+below.
+
+Register (Rx) operands may be a general register (GR), floating-point
+register (FPR), access register (AR), or control register (CR) number
+(0-15) or register name (@code{%r0}-@code{%r15}, @code{%f0}-@code{%f15},
+@code{%a0}-@code{%a15}, @code{%c0}-@code{%c15}).
+
+Vector register (Vx) operands may be a vector register (VR) number
+(0-31) or register name (@code{%v0}-@code{%v31}).
+
+Immediate (Ix) and mask (Mx) operands may be signed or unsigned. That
+is their value must be in range @code{SIGNED_MIN} to @code{UNSIGNED_MAX}
+inclusive for their respective bit field width. This enables coding
+these operand values naturally, depending on whether individual
+instructions define their operand values as signed or unsigned.
+
+Relative immediate (RIx) operands are treated as signed.
+
+Composite operands are grouped by field index and need to be coded in
+their natural form: Dx(Bx), Dx(Xx,Bx), Dx(Lx,Bx), Dx(VXx,Bx). They are
+treated as one operand and can be recognized by their shared index
+(e.g. fields B4 and D4 indicate a composite operand @code{D4(B4)}).
+
+For example, for instruction format RIS:
+
+@example
++---------+----+----+----+--------------+---------+---------+
+| OpCode  | R1 | M3 | B4 |      D4      |    I2   | OpCode  |
++---------+----+----+----+--------------+---------+---------+
+0         8    12   16   20             32        40       47
+@end example
+
+@noindent
+the operands and operand order can be deduced from the instruction
+field indices as follows:
+
+@enumerate
+@item R1: register operand; GR, FPR, AR, or CR register number or name
+@item I2: immediate operand; 8-bit signed or unsigned
+@item M3: mask operand; 4-bit signed or unsigned
+@item D4(B4): composite operand (displacement and base register)
+@end enumerate
+
+An instruction using the RIS format therefore needs to be coded
+as follows:
+
+@example
+.insn <format-name>,<insn-template>,R1,I2,M3,D4(B4)
+@end example
+
+Specifically, the RIS format @emph{Compare Immediate and Branch} (@code{cib})
+instruction with operation code @code{0xecfe} would need to be coded
+as follows:
+
+@example
+.insn ris,0xec00000000fe,R1,I2,M3,D4(B4)
+@end example
+
+The following instruction formats use an operand order that differs from
+the field index order:
+
+@itemize @bullet
+@item RIE (@code{rie}; not RIE-a/b/c/d/e/f/g): @code{R1,R3,RI2}
+@item RRF-a/b/c/d/e (@code{rrf_a/b/c/d/e}):
+The operand order of instruction formats RRF-a/b/c/d/e is documented in
+a @emph{Programming Note} of the Principles of Operation manual:
+  @itemize @minus
+  @item RRF-a (@code{rrf_a}): @code{R1,R2[,R3[,M4]]}
+  @item RRF-b (@code{rrf_b}): @code{R1,R3,R2[,M4]}
+  @item RRF-c (@code{rrf_c}): @code{R1,R2[,M3]}
+  @item RRF-d (@code{rrf_d}): @code{R1,R2,M4}
+  @item RRF-e (@code{rrf_e}): @code{R1,M3,R2[,M4]}
+  @end itemize
+@item RS (@code{rs}; not RS-a/b): @code{R1,R3,D2(B2)}
+@item RSE (@code{rse}): @code{R1,R3,D2(B2)}
+@item RSI (@code{rsi}): @code{R1,R3,RI2}
+@item RSY (@code{rsy}; not RSY-a/b): @code{R1,R3,D2(B2)}
+@item RXF (@code{rxf}): @code{R1,R3,D2(X2,B2)}
+@item VRS (@code{vrs}; not VRS-a/b/c/d): @code{R1,V3,D2(B2),M4}
+@end itemize
 
 An instruction is two, four, or six bytes in length and must be aligned
 on a 2 byte boundary. The first two bits of the instruction specify the
@@ -348,254 +441,313 @@ The following table lists the s390 instruction formats that are available
 with the @samp{.insn} pseudo directive:
 
 @table @code
-@item E format
+@ignore
+@item <fmt> format: <insn> <op1>,<op2>,<op3>,<op4>,<op5>
 @verbatim
-+-------------+
-|    OpCode   |
-+-------------+
-0            15
++----+----+----+----+
+| N1 | N2 | N3 | N4 |
++----+----+----+----+
+0    4    8    12  15
+
++----+----+----+----+----+----+----+----+
+| N1 | N2 | N3 | N4 | N5 | N6 | N7 | N8 |
++----+----+----+----+----+----+----+----+
+0    4    8    12   16   20   24   28  31
+
++----+----+----+----+----+----+----+----+----+----+----+----+
+| N1 | N2 | N3 | N4 | N5 | N6 | N7 | N8 | N9 | NA | NB | NC |
++----+----+----+----+----+----+----+----+----+----+----+----+
+0    4    8    12   16   20   24   28   32   36   40   44  47
+@end verbatim
+@end ignore
+
+@item E format: <insn>
+@verbatim
++-------------------+
+|      OpCode       |
++-------------------+
+0                  15
+@end verbatim
+
+@item I format: <insn> I1
+@verbatim
++---------+---------+
+| OpCode  |    I1   |
++---------+---------+
+0         8        15
+@end verbatim
+
+@item IE format: <insn> I1,I2
+@verbatim
++-------------------+---------+----+----+
+|      OpCode       |/////////| I1 | I2 |
++-------------------+---------+----+----+
+0                   16        24   28  31
+@end verbatim
+
+@item MII format: <insn> M1,RI2,RI3
+@verbatim
++---------+----+--------------+-----------------------------+
+| OpCode  | M1 |      RI2     |             RI3             |
++---------+----+--------------+-----------------------------+
+0         8    12             24                           47
 @end verbatim
 
 @item RI format: <insn> R1,I2
 @verbatim
-+--------+----+----+------------------+
-| OpCode | R1 |OpCd|        I2        |
-+--------+----+----+------------------+
-0        8    12   16                31
++---------+----+----+-------------------+
+| OpCode  | R1 |OpCd|         I2        |
++---------+----+----+-------------------+
+0         8    12   16                 31
 @end verbatim
 
-@item RIE format: <insn> R1,R3,I2
+@item RIE format: <insn> R1,R3,RI2
 @verbatim
-+--------+----+----+------------------+--------+--------+
-| OpCode | R1 | R3 |        I2        |////////| OpCode |
-+--------+----+----+------------------+--------+--------+
-0        8    12   16                 32       40      47
++---------+----+----+-------------------+---------+---------+
+| OpCode  | R1 | R3 |        RI2        |/////////| OpCode  |
++---------+----+----+-------------------+---------+---------+
+0         8    12   16                  32        40       47
 @end verbatim
 
-@item RIL format: <insn> R1,I2
+@item RIL format: <insn> R1,RI2
 @verbatim
-+--------+----+----+------------------------------------+
-| OpCode | R1 |OpCd|                  I2                |
-+--------+----+----+------------------------------------+
-0        8    12   16                                  47
++---------+----+----+---------------------------------------+
+| OpCode  | R1 |OpCd|                  RI2                  |
++---------+----+----+---------------------------------------+
+0         8    12   16                                     47
 @end verbatim
 
-@item RILU format: <insn> R1,U2
+@item RILU format: <insn> R1,I2
 @verbatim
-+--------+----+----+------------------------------------+
-| OpCode | R1 |OpCd|                  U2                |
-+--------+----+----+------------------------------------+
-0        8    12   16                                  47
++---------+----+----+---------------------------------------+
+| OpCode  | R1 |OpCd|                   I2                  |
++---------+----+----+---------------------------------------+
+0         8    12   16                                     47
 @end verbatim
 
 @item RIS format: <insn> R1,I2,M3,D4(B4)
 @verbatim
-+--------+----+----+----+-------------+--------+--------+
-| OpCode | R1 | M3 | B4 |     D4      |   I2   | Opcode |
-+--------+----+----+----+-------------+--------+--------+
-0        8    12   16   20            32       36      47
++---------+----+----+----+--------------+---------+---------+
+| OpCode  | R1 | M3 | B4 |      D4      |    I2   | OpCode  |
++---------+----+----+----+--------------+---------+---------+
+0         8    12   16   20             32        40       47
 @end verbatim
 
-@item RR format: <insn> R1,R2
+@item RR format: <insn> R1[,R2]
 @verbatim
-+--------+----+----+
-| OpCode | R1 | R2 |
-+--------+----+----+
-0        8    12  15
++---------+----+----+
+| OpCode  | R1 | R2 |
++---------+----+----+
+0         8    12  15
 @end verbatim
 
-@item RRE format: <insn> R1,R2
+@item RRD format: <insn> R1,R2,R3
 @verbatim
-+------------------+--------+----+----+
-|      OpCode      |////////| R1 | R2 |
-+------------------+--------+----+----+
-0                  16       24   28  31
++-------------------+----+----+----+----+
+|      OpCode       | R1 |////| R3 | R2 |
++-------------------+----+----+----+----+
+0                   16   20   24   28  31
+@end verbatim
+
+@item RRE format: <insn> [R1[,R2]]
+@verbatim
++-------------------+---------+----+----+
+|      OpCode       |/////////| R1 | R2 |
++-------------------+---------+----+----+
+0                   16        24   28  31
 @end verbatim
 
 @item RRF format: <insn> R1,R2,R3,M4
 @verbatim
-+------------------+----+----+----+----+
-|      OpCode      | R3 | M4 | R1 | R2 |
-+------------------+----+----+----+----+
-0                  16   20   24   28  31
++-------------------+----+----+----+----+
+|      OpCode       | R3 | M4 | R1 | R2 |
++-------------------+----+----+----+----+
+0                   16   20   24   28  31
 @end verbatim
 
 @item RRS format: <insn> R1,R2,M3,D4(B4)
 @verbatim
-+--------+----+----+----+-------------+----+----+--------+
-| OpCode | R1 | R3 | B4 |     D4      | M3 |////| OpCode |
-+--------+----+----+----+-------------+----+----+--------+
-0        8    12   16   20            32   36   40      47
++---------+----+----+----+--------------+----+----+---------+
+| OpCode  | R1 | R3 | B4 |      D4      | M3 |////| OpCode  |
++---------+----+----+----+--------------+----+----+---------+
+0         8    12   16   20             32   36   40       47
 @end verbatim
 
 @item RS format: <insn> R1,R3,D2(B2)
 @verbatim
-+--------+----+----+----+-------------+
-| OpCode | R1 | R3 | B2 |     D2      |
-+--------+----+----+----+-------------+
-0        8    12   16   20           31
++---------+----+----+----+--------------+
+| OpCode  | R1 | R3 | B2 |      D2      |
++---------+----+----+----+--------------+
+0         8    12   16   20            31
 @end verbatim
 
 @item RSE format: <insn> R1,R3,D2(B2)
 @verbatim
-+--------+----+----+----+-------------+--------+--------+
-| OpCode | R1 | R3 | B2 |     D2      |////////| OpCode |
-+--------+----+----+----+-------------+--------+--------+
-0        8    12   16   20            32       40      47
++---------+----+----+----+--------------+---------+---------+
+| OpCode  | R1 | R3 | B2 |      D2      |/////////| OpCode  |
++---------+----+----+----+--------------+---------+---------+
+0         8    12   16   20             32        40       47
 @end verbatim
 
-@item RSI format: <insn> R1,R3,I2
+@item RSI format: <insn> R1,R3,RI2
 @verbatim
-+--------+----+----+------------------------------------+
-| OpCode | R1 | R3 |                  I2                |
-+--------+----+----+------------------------------------+
-0        8    12   16                                  47
++---------+----+----+-------------------+
+| OpCode  | R1 | R3 |        RI2        |
++---------+----+----+-------------------+
+0         8    12   16                 31
 @end verbatim
 
 @item RSY format: <insn> R1,R3,D2(B2)
 @verbatim
-+--------+----+----+----+-------------+--------+--------+
-| OpCode | R1 | R3 | B2 |    DL2      |  DH2   | OpCode |
-+--------+----+----+----+-------------+--------+--------+
-0        8    12   16   20            32       40      47
++---------+----+----+----+--------------+---------+---------+
+| OpCode  | R1 | R3 | B2 |     DL2      |   DH2   | OpCode  |
++---------+----+----+----+--------------+---------+---------+
+0         8    12   16   20             32        40       47
 @end verbatim
 
 @item RX format: <insn> R1,D2(X2,B2)
 @verbatim
-+--------+----+----+----+-------------+
-| OpCode | R1 | X2 | B2 |     D2      |
-+--------+----+----+----+-------------+
-0        8    12   16   20           31
++---------+----+----+----+--------------+
+| OpCode  | R1 | X2 | B2 |      D2      |
++---------+----+----+----+--------------+
+0         8    12   16   20            31
 @end verbatim
 
-@item RXE format: <insn> R1,D2(X2,B2)
+@item RXE format: <insn> R1,D2(X2,B2)[,M3]
 @verbatim
-+--------+----+----+----+-------------+--------+--------+
-| OpCode | R1 | X2 | B2 |     D2      |////////| OpCode |
-+--------+----+----+----+-------------+--------+--------+
-0        8    12   16   20            32       40      47
++---------+----+----+----+--------------+----+----+---------+
+| OpCode  | R1 | X2 | B2 |      D2      | M3 |////| OpCode  |
++---------+----+----+----+--------------+----+----+---------+
+0         8    12   16   20             32        40       47
 @end verbatim
 
 @item RXF format: <insn> R1,R3,D2(X2,B2)
 @verbatim
-+--------+----+----+----+-------------+----+---+--------+
-| OpCode | R3 | X2 | B2 |     D2      | R1 |///| OpCode |
-+--------+----+----+----+-------------+----+---+--------+
-0        8    12   16   20            32   36  40      47
++---------+----+----+----+--------------+----+----+---------+
+| OpCode  | R3 | X2 | B2 |      D2      | R1 |////| OpCode  |
++---------+----+----+----+--------------+----+----+---------+
+0         8    12   16   20             32   36   40       47
 @end verbatim
 
 @item RXY format: <insn> R1,D2(X2,B2)
 @verbatim
-+--------+----+----+----+-------------+--------+--------+
-| OpCode | R1 | X2 | B2 |     DL2     |   DH2  | OpCode |
-+--------+----+----+----+-------------+--------+--------+
-0        8    12   16   20            32   36   40      47
++---------+----+----+----+--------------+---------+---------+
+| OpCode  | R1 | X2 | B2 |     DL2      |   DH2   | OpCode  |
++---------+----+----+----+--------------+---------+---------+
+0         8    12   16   20             32        40       47
 @end verbatim
 
-@item S format: <insn> D2(B2)
+@item S format: <insn> [D2(B2)]
 @verbatim
-+------------------+----+-------------+
-|      OpCode      | B2 |     D2      |
-+------------------+----+-------------+
-0                  16   20           31
++-------------------+----+--------------+
+|      OpCode       | B2 |      D2      |
++-------------------+----+--------------+
+0                   16   20            31
 @end verbatim
 
-@item SI format: <insn> D1(B1),I2
+@item SI format: <insn> D1(B1)[,I2]
 @verbatim
-+--------+---------+----+-------------+
-| OpCode |   I2    | B1 |     D1      |
-+--------+---------+----+-------------+
-0        8         16   20           31
++---------+---------+----+--------------+
+| OpCode  |   I2    | B1 |      D1      |
++---------+---------+----+--------------+
+0         8         16   20            31
 @end verbatim
 
-@item SIY format: <insn> D1(B1),U2
+@item SIY format: <insn> D1(B1)[,I2]
 @verbatim
-+--------+---------+----+-------------+--------+--------+
-| OpCode |   I2    | B1 |     DL1     |  DH1   | OpCode |
-+--------+---------+----+-------------+--------+--------+
-0        8         16   20            32   36   40      47
++---------+---------+----+--------------+---------+---------+
+| OpCode  |   I2    | B1 |     DL1      |   DH1   | OpCode  |
++---------+---------+----+--------------+---------+---------+
+0         8         16   20             32        40       47
 @end verbatim
 
 @item SIL format: <insn> D1(B1),I2
 @verbatim
-+------------------+----+-------------+-----------------+
-|      OpCode      | B1 |      D1     |       I2        |
-+------------------+----+-------------+-----------------+
-0                  16   20            32               47
++-------------------+----+--------------+-------------------+
+|      OpCode       | B1 |      D1      |         I2        |
++-------------------+----+--------------+-------------------+
+0                   16   20             32                 47
 @end verbatim
 
-@item SS format: <insn> D1(R1,B1),D2(B3),R3
+@item SMI format: <insn> M1,RI2,D3(B3)
 @verbatim
-+--------+----+----+----+-------------+----+------------+
-| OpCode | R1 | R3 | B1 |     D1      | B2 |     D2     |
-+--------+----+----+----+-------------+----+------------+
-0        8    12   16   20            32   36          47
++---------+----+----+----+--------------+-------------------+
+| OpCode  | M1 |////| B3 |      D3      |        RI2        |
++---------+----+----+----+--------------+-------------------+
+0         8    12   16   20             32                 47
+@end verbatim
+
+@item SS format: <insn> D1(R1,B1),D2(B2),R3
+@verbatim
++---------+----+----+----+--------------+----+--------------+
+| OpCode  | R1 | R3 | B1 |      D1      | B2 |      D2      |
++---------+----+----+----+--------------+----+--------------+
+0         8    12   16   20             32   36            47
 @end verbatim
 
 @item SSE format: <insn> D1(B1),D2(B2)
 @verbatim
-+------------------+----+-------------+----+------------+
-|      OpCode      | B1 |     D1      | B2 |     D2     |
-+------------------+----+-------------+----+------------+
-0        8    12   16   20            32   36           47
++-------------------+----+--------------+----+--------------+
+|      OpCode       | B1 |      D1      | B2 |      D2      |
++-------------------+----+--------------+----+--------------+
+0                   16   20             32   36            47
 @end verbatim
 
 @item SSF format: <insn> D1(B1),D2(B2),R3
 @verbatim
-+--------+----+----+----+-------------+----+------------+
-| OpCode | R3 |OpCd| B1 |     D1      | B2 |     D2     |
-+--------+----+----+----+-------------+----+------------+
-0        8    12   16   20            32   36           47
++---------+----+----+----+--------------+----+--------------+
+| OpCode  | R3 |OpCd| B1 |      D1      | B2 |      D2      |
++---------+----+----+----+--------------+----+--------------+
+0         8    12   16   20             32   36            47
 @end verbatim
 
-@item VRV format: <insn> V1,D2(V2,B2),M3
+@item VRV format: <insn> V1,D2(V2,B2)[,M3]
 @verbatim
-+--------+----+----+----+-------------+----+------------+
-| OpCode | V1 | V2 | B2 |     D2      | M3 |   Opcode   |
-+--------+----+----+----+-------------+----+------------+
-0        8    12   16   20            32   36           47
++---------+----+----+----+--------------+----+--------------+
+| OpCode  | V1 | V2 | B2 |      D2      | M3 |    OpCode    |
++---------+----+----+----+--------------+----+--------------+
+0         8    12   16   20             32   36            47
 @end verbatim
 
 @item VRI format: <insn> V1,V2,I3,M4,M5
 @verbatim
-+--------+----+----+-------------+----+----+------------+
-| OpCode | V1 | V2 |     I3      | M5 | M4 |   Opcode   |
-+--------+----+----+-------------+----+----+------------+
-0        8    12   16            28   32   36           47
++---------+----+----+--------------+----+----+--------------+
+| OpCode  | V1 | V2 |      I3      | M5 | M4 |    OpCode    |
++---------+----+----+--------------+----+----+--------------+
+0         8    12   16             28   32   36            47
 @end verbatim
 
-@item VRX format: <insn> V1,D2(R2,B2),M3
+@item VRX format: <insn> V1,D2(R2,B2)[,M3]
 @verbatim
-+--------+----+----+----+-------------+----+------------+
-| OpCode | V1 | R2 | B2 |     D2      | M3 |   Opcode   |
-+--------+----+----+----+-------------+----+------------+
-0        8    12   16   20            32   36           47
++---------+----+----+----+--------------+----+--------------+
+| OpCode  | V1 | R2 | B2 |      D2      | M3 |    OpCode    |
++---------+----+----+----+--------------+----+--------------+
+0         8    12   16   20             32   36            47
 @end verbatim
 
 @item VRS format: <insn> R1,V3,D2(B2),M4
 @verbatim
-+--------+----+----+----+-------------+----+------------+
-| OpCode | R1 | V3 | B2 |     D2      | M4 |   Opcode   |
-+--------+----+----+----+-------------+----+------------+
-0        8    12   16   20            32   36           47
++---------+----+----+----+--------------+----+--------------+
+| OpCode  | R1 | V3 | B2 |      D2      | M4 |    OpCode    |
++---------+----+----+----+--------------+----+--------------+
+0         8    12   16   20             32   36            47
 @end verbatim
 
 @item VRR format: <insn> V1,V2,V3,M4,M5,M6
 @verbatim
-+--------+----+----+----+---+----+----+----+------------+
-| OpCode | V1 | V2 | V3 |///| M6 | M5 | M4 |   Opcode   |
-+--------+----+----+----+---+----+----+----+------------+
-0        8    12   16       24   28   32   36           47
++---------+----+----+----+----+----+----+----+--------------+
+| OpCode  | V1 | V2 | V3 |////| M6 | M5 | M4 |    OpCode    |
++---------+----+----+----+----+----+----+----+--------------+
+0         8    12   16   20   24   28   32   36            47
 @end verbatim
 
 @item VSI format: <insn> V1,D2(B2),I3
 @verbatim
-+--------+---------+----+-------------+----+------------+
-| OpCode |   I3    | B2 |     D2      | V1 |   Opcode   |
-+--------+---------+----+-------------+----+------------+
-0        8         16   20            32   36           47
++---------+---------+----+--------------+----+--------------+
+| OpCode  |    I3   | B2 |      D2      | V1 |    OpCode    |
++---------+---------+----+--------------+----+--------------+
+0         8         16   20             32   36            47
 @end verbatim
-
 @end table
 
 For the complete list of all instruction format variants see the

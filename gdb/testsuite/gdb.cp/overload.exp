@@ -370,7 +370,7 @@ gdb_test "print intToChar(1)" "${::valnum_re} = 297"
 
 # Test expression evaluation with overloaded methods
 gdb_test "print foo::overload1arg" \
-    "non-unique member `overload1arg' requires type instantiation"
+    "non-unique member \"overload1arg\" requires type instantiation"
 
 gdb_test "print foo::overload1arg(char***)" \
     "no member function matches that type instantiation"

@@ -150,8 +150,6 @@ enum
 #define CONSERVATIVE_19BIT	(0x40000 - 0x1000)
 #define CONSERVATIVE_20BIT	(0x80000 - 0x1000)
 
-/* Size of small data/bss sections, used to calculate SDA_BASE.  */
-static long got_size = 0;
 static int is_SDA_BASE_set = 0;
 
 /* Convert ELF-VER in eflags to string for debugging purpose.  */
@@ -4531,19 +4529,13 @@ nds32_elf_late_size_sections (struct bfd_link_info *info)
       if ((s->flags & SEC_LINKER_CREATED) == 0)
 	continue;
 
-      if (s == htab->root.splt)
+      if (s == htab->root.splt
+	  || s == elf_hash_table (info)->sgot
+	  || s == elf_hash_table (info)->sgotplt)
 	{
 	  /* Strip this section if we don't need it; see the
 	     comment below.  */
 	  ;
-	}
-      else if (s == elf_hash_table (info)->sgot)
-	{
-	  got_size += s->size;
-	}
-      else if (s == elf_hash_table (info)->sgotplt)
-	{
-	  got_size += s->size;
 	}
       else if (startswith (bfd_section_name (s), ".rela"))
 	{

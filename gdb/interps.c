@@ -196,7 +196,7 @@ set_top_level_interpreter (const char *name, bool for_new_ui)
   struct interp *interp = interp_lookup (current_ui, name);
 
   if (interp == NULL)
-    error (_("Interpreter `%s' unrecognized"), name);
+    error (_("Interpreter \"%s\" unrecognized"), name);
   if (for_new_ui && !interp->supports_new_ui ())
     error (_("interpreter '%s' cannot be used with a new UI"), name);
 

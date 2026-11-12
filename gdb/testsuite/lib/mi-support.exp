@@ -286,7 +286,7 @@ proc default_mi_gdb_start { { flags {} } } {
 	    unset gdb_spawn_id
 	    return -1
 	}
-	-re ".*Interpreter `mi' unrecognized." {
+	-re {.*Interpreter "mi" unrecognized} {
 	    untested "skip mi tests (not compiled with mi support)."
 	    remote_close host
 	    unset gdb_spawn_id

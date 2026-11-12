@@ -1434,6 +1434,68 @@ optimize:
 	{nf}	\op	$-1, (%rax), %r9
 	.endr
 
+	{nf}	xor	$0xff, %bl
+	{nf}	xor	$-1, %bl, %dl
+	{nf}	xor	$-1, %dl, %dl
+	{nf}	xor	$0xffff, %dx
+	{nf}	xor	$-1, %dx, %ax
+	{nf}	xor	$-1, %ax, %ax
+	{nf}	xor	$0xffffffff, %ecx
+	{nf}	xor	$-1, %ecx, %edx
+	{nf}	xor	$-1, %edx, %edx
+	{nf}	xor	$-1, %r9
+	{nf}	xor	$-1, %r9, %r31
+	{nf}	xor	$-1, %r31, %r31
+	{nf}	xorb	$0xff, (%rax)
+	{nf}	xor	$-1, (%rax), %bl
+	{nf}	xorw	$0xffff, (%rax)
+	{nf}	xor	$-1, (%rax), %dx
+	{nf}	xorl	$0xffffffff, (%rax)
+	{nf}	xor	$-1, (%rax), %ecx
+	{nf}	xorq	$-1, (%rax)
+	{nf}	xor	$-1, (%rax), %r9
+
+	{nf}	imul	$-1, %dx
+	{nf}	imul	$-1, %dx, %bx
+	{nf}	imul	$-1, %bx, %bx
+	{nf}	imulzu	$-1, %dx
+	{nf}	imulzu	$-1, %dx, %bx
+	{nf}	imulzu	$-1, %bx, %bx
+	{nf}	imul	$-1, %ecx
+	{nf}	imul	$-1, %ecx, %edx
+	{nf}	imul	$-1, %edx, %edx
+	{nf}	imul	$-1, %r9
+	{nf}	imul	$-1, %r9, %r31
+	{nf}	imul	$-1, %r31, %r31
+	{nf}	imul	$-1, (%rax), %dx
+	{nf}	imulzu	$-1, (%rax), %bx
+	{nf}	imul	$-1, (%rax), %ecx
+	{nf}	imul	$-1, (%rax), %r9
+
+	{nf}	and	$0xaa, %rcx, %rdx
+	{nf}	and	$0xaa, %ecx, %edx
+	{nf}	and	$0xaa, %cx, %dx
+	{nf}	and	$0xaa, %rcx
+	{nf}	and	$0xaa, %ecx
+	{nf}	and	$0xaa55, %rcx, %rdx
+	{nf}	and	$0xaa55, %ecx, %edx
+	{nf}	and	$0xaa55, %rcx
+	{nf}	and	$0xaa55, %ecx
+
+	{nf}	and	$~0xaa, %rcx, %rcx
+	{nf}	and	$~0xaa, %rcx
+	{nf}	and	$~0xaa, %cx
+	{nf}	and	$~0xaa55, %rcx, %rcx
+	{nf}	and	$~0xaa55, %rcx
+
+	.irp op, or, xor
+	{nf}	\op	$0xaa, %rcx, %rcx
+	{nf}	\op	$0xaa, %rcx
+	{nf}	\op	$0xaa, %cx
+	{nf}	\op	$0xaa55, %rcx, %rcx
+	{nf}	\op	$0xaa55, %rcx
+	.endr
+
 	.irp dir, l, r
 	{nf}	ro\dir	$7, %dl
 	{nf}	ro\dir	$7, %dl, %al

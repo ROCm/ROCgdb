@@ -2,8 +2,12 @@
 _start:
 	vldmxcsr (%ebp)
 	lgdt (%ebp)
+	lidt (%ebp)
 	vmptrld (%ebp)
+	vmptrst (%ebp)
 	vmclear (%ebp)
+	vmxon (%ebx)
+	vmread %ecx, (%ebx)
 	invpcid (%ebp), %edx
 	invlpg (%ebp)
 	clflush (%ebp)
@@ -25,6 +29,8 @@ _start:
 	popf
 	popa
 	xlatb (%ebx)
+	lldt (%edx)
+	verr (%edx)
 	fsts (%ebp)
 	flds (%ebp)
 	fistl (%ebp)
@@ -52,6 +58,7 @@ _start:
 	popl (%eax)
 	popl %eax
 	rclw	(%ecx)
+	rcrb	$0,(%ecx)
 	testl	$1,(%ecx)
 	incl	(%ecx)
 	notl	(%ecx)
@@ -69,6 +76,11 @@ _start:
 	rep lodsl
 	addl $1, (%eax)
 	btl $1, (%eax)
+	bt %eax, (%ecx)
+	shld $0, %eax, (%ecx)
+	shld $1, %eax, (%ecx)
+	shrd %cl, %eax, (%ecx)
+	cmpxchg %eax, (%ebx)
 	xadd %eax,(%ebx)
 	xadd %eax,%ebx
 	xchg %eax,(%ebx)
@@ -79,3 +91,4 @@ _start:
 	add (%eax),%eax
 	test %eax,0x40(%ebp)
 	test 0x40(%ebp),%eax
+	arpl	%eax, (%ecx)

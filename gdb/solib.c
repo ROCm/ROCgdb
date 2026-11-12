@@ -389,7 +389,7 @@ solib_bfd_fopen (const char *pathname, int fd)
   gdb_bfd_ref_ptr abfd (gdb_bfd_open (pathname, gnutarget, fd));
 
   if (abfd == NULL)
-    error (_("Could not open `%ps' as an executable file: %s"),
+    error (_("Could not open \"%ps\" as an executable file: %s"),
 	   styled_string (file_name_style.style (), pathname),
 	   bfd_errmsg (bfd_get_error ()));
 
@@ -422,7 +422,7 @@ solib_bfd_open (const char *pathname)
 
   /* Check bfd format.  */
   if (!gdb_bfd_check_format (abfd.get (), bfd_object))
-    error (_("`%ps': not in executable format: %s"),
+    error (_("\"%ps\": not in executable format: %s"),
 	   styled_string (file_name_style.style (),
 			  bfd_get_filename (abfd.get ())),
 	   bfd_errmsg (bfd_get_error ()));
@@ -430,7 +430,7 @@ solib_bfd_open (const char *pathname)
   /* Check bfd arch.  */
   b = gdbarch_bfd_arch_info (current_inferior ()->arch ());
   if (!b->compatible (b, bfd_get_arch_info (abfd.get ())))
-    error (_("`%ps': Shared library architecture %s is not compatible "
+    error (_("\"%ps\": Shared library architecture %s is not compatible "
 	     "with target architecture %s."),
 	   styled_string (file_name_style.style (),
 			  bfd_get_filename (abfd.get ())),
@@ -1024,7 +1024,7 @@ solib_add (const char *pattern, int from_tty, int readsyms)
       breakpoint_re_set ();
 
     if (from_tty && pattern && !any_matches)
-      gdb_printf ("No loaded shared libraries match the pattern `%s'.\n",
+      gdb_printf ("No loaded shared libraries match the pattern \"%s\".\n",
 		  pattern);
 
     if (loaded_any_symbols)
@@ -1960,7 +1960,7 @@ If \"on\", symbols from all shared object libraries will be loaded\n\
 automatically when the inferior begins execution, when the dynamic linker\n\
 informs gdb that a new library has been loaded, or when attaching to the\n\
 inferior.  Otherwise, symbols must be loaded manually, using \
-`sharedlibrary'."),
+\"sharedlibrary\"."),
 			   NULL, show_auto_solib_add, &setlist, &showlist);
 
   set_show_commands sysroot_cmds
@@ -1972,7 +1972,7 @@ Show the current system root."),
 					 _("\
 The system root is used to load absolute shared library symbol files.\n\
 For other (relative) files, you can add directories using\n\
-`set solib-search-path'."),
+\"set solib-search-path\"."),
 					 gdb_sysroot_changed, NULL, &setlist,
 					 &showlist);
 

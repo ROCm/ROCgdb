@@ -630,7 +630,7 @@ tfile_target::close ()
 void
 tfile_target::files_info ()
 {
-  gdb_printf ("\t`%s'\n", trace_filename.get ());
+  gdb_printf ("\t\"%s\"\n", trace_filename.get ());
 }
 
 void

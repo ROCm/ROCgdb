@@ -99,10 +99,10 @@ foreach prelink_lib1 {0x40000000 0x50000000} { with_test_prefix "$prelink_lib1" 
 
     set test attach
     gdb_test_multiple "attach $testpid" $test {
-	-re "Attaching to program.*`?$escapedbinfile'?, process $testpid.*$gdb_prompt $" {
+	-re -wrap "Attaching to program: $escapedbinfile, process $testpid.*" {
 	    pass $test
 	}
-	-re "Attaching to program.*`?$escapedbinfile\.exe'?, process $testpid.*\[Switching to thread $testpid\..*\].*$gdb_prompt $" {
+	-re -wrap "[subst_vars {Attaching to program: $escapedbinfile\.exe, process $testpid.*\[Switching to thread $testpid\..*\].*}]" {
 	    # Response expected on Cygwin
 	    pass $test
 	}

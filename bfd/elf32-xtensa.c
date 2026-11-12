@@ -2050,10 +2050,9 @@ elf_xtensa_do_reloc (reloc_howto_type *howto,
   if (input_size <= address)
     return bfd_reloc_outofrange;
   /* Read the instruction into a buffer and decode the opcode.  */
-  xtensa_insnbuf_from_chars (isa, ibuff, contents + address,
-			     input_size - address);
-  fmt = xtensa_format_decode (isa, ibuff);
-  if (fmt == XTENSA_UNDEFINED)
+  if (xtensa_insnbuf_from_chars (isa, ibuff, contents + address,
+				 input_size - address) < 0
+      || (fmt = xtensa_format_decode (isa, ibuff)) == XTENSA_UNDEFINED)
     {
       *error_message = "cannot decode instruction format";
       return bfd_reloc_dangerous;
@@ -2417,10 +2416,9 @@ replace_tls_insn (Elf_Internal_Rela *rel,
   input_size = bfd_get_section_limit (abfd, input_section);
 
   /* Read the instruction into a buffer and decode the opcode.  */
-  xtensa_insnbuf_from_chars (isa, ibuff, contents + rel->r_offset,
-			     input_size - rel->r_offset);
-  fmt = xtensa_format_decode (isa, ibuff);
-  if (fmt == XTENSA_UNDEFINED)
+  if (xtensa_insnbuf_from_chars (isa, ibuff, contents + rel->r_offset,
+				 input_size - rel->r_offset) < 0
+      || (fmt = xtensa_format_decode (isa, ibuff)) == XTENSA_UNDEFINED)
     {
       *error_message = "cannot decode instruction format";
       return false;
@@ -4123,8 +4121,9 @@ get_relocation_opcode (bfd *abfd,
     }
 
   /* Decode the instruction.  */
-  xtensa_insnbuf_from_chars (isa, ibuff, &contents[irel->r_offset],
-			     sec->size - irel->r_offset);
+  if (xtensa_insnbuf_from_chars (isa, ibuff, &contents[irel->r_offset],
+				 sec->size - irel->r_offset) < 0)
+    return XTENSA_UNDEFINED;
   fmt = xtensa_format_decode (isa, ibuff);
   slot = get_relocation_slot (ELF32_R_TYPE (irel->r_info));
   if (slot == XTENSA_UNDEFINED)
@@ -4220,8 +4219,9 @@ insn_decode_len (bfd_byte *contents,
 
   if (ibuff == NULL)
     ibuff = xtensa_insnbuf_alloc (isa);
-  xtensa_insnbuf_from_chars (isa, ibuff, &contents[offset],
-			     content_len - offset);
+  if (xtensa_insnbuf_from_chars (isa, ibuff, &contents[offset],
+				 content_len - offset) < 0)
+    return 0;
   fmt = xtensa_format_decode (isa, ibuff);
   if (fmt == XTENSA_UNDEFINED)
     return 0;
@@ -4245,8 +4245,9 @@ insn_num_slots (bfd_byte *contents,
 
   if (ibuff == NULL)
     ibuff = xtensa_insnbuf_alloc (isa);
-  xtensa_insnbuf_from_chars (isa, ibuff, &contents[offset],
-			     content_len - offset);
+  if (xtensa_insnbuf_from_chars (isa, ibuff, &contents[offset],
+				 content_len - offset) < 0)
+    return XTENSA_UNDEFINED;
   fmt = xtensa_format_decode (isa, ibuff);
   if (fmt == XTENSA_UNDEFINED)
     return XTENSA_UNDEFINED;
@@ -4277,8 +4278,9 @@ insn_decode_opcode (bfd_byte *contents,
       slotbuf = xtensa_insnbuf_alloc (isa);
     }
 
-  xtensa_insnbuf_from_chars (isa, insnbuf, &contents[offset],
-			     content_len - offset);
+  if (xtensa_insnbuf_from_chars (isa, insnbuf, &contents[offset],
+				 content_len - offset) < 0)
+    return XTENSA_UNDEFINED;
   fmt = xtensa_format_decode (isa, insnbuf);
   if (fmt == XTENSA_UNDEFINED)
     return XTENSA_UNDEFINED;
@@ -4592,8 +4594,9 @@ narrow_instruction (bfd_byte *contents,
 
   /* We will hand-code a few of these for a little while.
      These have all been specified in the assembler aleady.  */
-  xtensa_insnbuf_from_chars (isa, insnbuf, &contents[offset],
-			     content_length - offset);
+  if (xtensa_insnbuf_from_chars (isa, insnbuf, &contents[offset],
+				 content_length - offset) < 0)
+    return false;
   fmt = xtensa_format_decode (isa, insnbuf);
   if (xtensa_format_num_slots (isa, fmt) != 1)
     return false;
@@ -4761,8 +4764,9 @@ widen_instruction (bfd_byte *contents,
 
   /* We will hand-code a few of these for a little while.
      These have all been specified in the assembler aleady.  */
-  xtensa_insnbuf_from_chars (isa, insnbuf, &contents[offset],
-			     content_length - offset);
+  if (xtensa_insnbuf_from_chars (isa, insnbuf, &contents[offset],
+				 content_length - offset) < 0)
+    return false;
   fmt = xtensa_format_decode (isa, insnbuf);
   if (xtensa_format_num_slots (isa, fmt) != 1)
     return false;
@@ -4914,7 +4918,8 @@ get_expanded_call_opcode (bfd_byte *buf, int bufsize, bool *p_uses_l32r)
       slotbuf = xtensa_insnbuf_alloc (isa);
     }
 
-  xtensa_insnbuf_from_chars (isa, insnbuf, buf, bufsize);
+  if (xtensa_insnbuf_from_chars (isa, insnbuf, buf, bufsize) < 0)
+    return XTENSA_UNDEFINED;
   fmt = xtensa_format_decode (isa, insnbuf);
   if (fmt == XTENSA_UNDEFINED
       || xtensa_format_get_slot (isa, fmt, 0, insnbuf, slotbuf))
@@ -4946,7 +4951,9 @@ get_expanded_call_opcode (bfd_byte *buf, int bufsize, bool *p_uses_l32r)
 
       /* Check that the next instruction is also CONST16.  */
       offset += xtensa_format_length (isa, fmt);
-      xtensa_insnbuf_from_chars (isa, insnbuf, buf + offset, bufsize - offset);
+      if (xtensa_insnbuf_from_chars (isa, insnbuf, buf + offset,
+				     bufsize - offset) < 0)
+	return XTENSA_UNDEFINED;
       fmt = xtensa_format_decode (isa, insnbuf);
       if (fmt == XTENSA_UNDEFINED
 	  || xtensa_format_get_slot (isa, fmt, 0, insnbuf, slotbuf))
@@ -4967,7 +4974,9 @@ get_expanded_call_opcode (bfd_byte *buf, int bufsize, bool *p_uses_l32r)
 
   /* Next instruction should be an CALLXn with operand 0 == regno.  */
   offset += xtensa_format_length (isa, fmt);
-  xtensa_insnbuf_from_chars (isa, insnbuf, buf + offset, bufsize - offset);
+  if (xtensa_insnbuf_from_chars (isa, insnbuf, buf + offset,
+				 bufsize - offset) < 0)
+    return XTENSA_UNDEFINED;
   fmt = xtensa_format_decode (isa, insnbuf);
   if (fmt == XTENSA_UNDEFINED
       || xtensa_format_get_slot (isa, fmt, 0, insnbuf, slotbuf))
@@ -8164,8 +8173,9 @@ compute_ebb_proposed_actions (ebb_constraint *ebb_table)
 
 	  if (offset + MIN_INSN_LENGTH > ebb->content_length)
 	    goto decode_error;
-	  xtensa_insnbuf_from_chars (isa, insnbuf, &ebb->contents[offset],
-				     ebb->content_length - offset);
+	  if (xtensa_insnbuf_from_chars (isa, insnbuf, &ebb->contents[offset],
+					 ebb->content_length - offset) < 0)
+	    goto decode_error;
 	  fmt = xtensa_format_decode (isa, insnbuf);
 	  if (fmt == XTENSA_UNDEFINED)
 	    goto decode_error;

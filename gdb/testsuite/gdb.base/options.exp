@@ -856,9 +856,9 @@ proc_with_prefix test-boolean {variant} {
     gdb_test "$cmd -bool -1 999 --" \
 	"Unrecognized option at: -1 999 --"
     gdb_test "$cmd -bool xxx 999 --" \
-	"Value given for `-bool' is not a boolean: xxx"
+	"Value given for \"-bool\" is not a boolean: xxx"
     gdb_test "$cmd -bool o 999 --" \
-	"Value given for `-bool' is not a boolean: o"
+	"Value given for \"-bool\" is not a boolean: o"
 
     # Completing after a boolean option + "o" does list "on/off",
     # though.

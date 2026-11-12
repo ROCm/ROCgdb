@@ -1440,7 +1440,7 @@ do_define_command (const char *comname, int from_tty,
 				/* ignore_help_classes = */ false);
       if (!hookc && commands == nullptr)
 	{
-	  warning (_("Your new `%s' command does not "
+	  warning (_("Your new \"%s\" command does not "
 		     "hook any existing command."),
 		   comfull);
 	  if (!query (_("Proceed? ")))
@@ -1757,14 +1757,14 @@ If the command already exists, it is changed to a prefix command."));
 
   while_cmd_element = add_com ("while", class_support, while_command, _("\
 Execute nested commands WHILE the conditional expression is non zero.\n\
-The conditional expression must follow the word `while' and must in turn be\n\
+The conditional expression must follow the word \"while\" and must in turn be\n\
 followed by a new line.  The nested commands must be entered one per line,\n\
-and should be terminated by the word `end'."));
+and should be terminated by the word \"end\"."));
 
   if_cmd_element = add_com ("if", class_support, if_command, _("\
 Execute nested commands once IF the conditional expression is non zero.\n\
-The conditional expression must follow the word `if' and must in turn be\n\
+The conditional expression must follow the word \"if\" and must in turn be\n\
 followed by a new line.  The nested commands must be entered one per line,\n\
-and should be terminated by the word 'else' or `end'.  If an else clause\n\
+and should be terminated by the word \"else\" or \"end\".  If an else clause\n\
 is used, the same rules apply to its nested commands as to the first ones."));
 }

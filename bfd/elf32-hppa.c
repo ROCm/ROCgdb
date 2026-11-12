@@ -3225,17 +3225,19 @@ final_link_relocate (asection *input_section,
 		insn = ADDIL_DP;
 	      else
 		{
-		  /* We must have a ldil instruction.  In general, it's
-		     hard to find and convert the associated add instruction.
+		  /* We must have a ldil instruction.  In general, it's hard
+		     to find and convert the associated add instruction.
 		     However, gcc emits the addl immediately after the ldil.
-		     So if the next instruction is an r19 addl, convert it
+		     As with addil, gcc sometimes changes the base in the
+		     addl.  So if the next instruction is an addl with r1
+		     matching the target register of the ldil, convert it
 		     to use dp.  Otherwise, issue an error.  */
 		  unsigned int next = bfd_get_32 (input_bfd, hit_data + 4);
 
-		  /* Check for "addl %r0,%r19,%r0" and ldil/addl
+		  /* Check for "addl %r0,%r0,%r0" and ldil/addl
 		     target/input register match.  */
-		  if ((next & 0xffe0ffe0) == 0x0a600a00
-		      && ((next >> 16) & 0x1f) == (insn & 0x1f))
+		  if ((next & 0xfc00ffe0) == 0x08000a00
+		      && ((next >> 16) & 0x1f) == ((insn >> 21) & 0x1f))
 		    {
 		      /* Change register to dp.  */
 		      next = (next & 0xfc1fffff) | (27 << 21);
@@ -3285,7 +3287,7 @@ final_link_relocate (asection *input_section,
 	      /* Check for "addl %r0,%dp,%r0" and ldil/addl
 		 target/input register match.  */
 	      if ((next & 0xffe0ffe0) == 0x0b600a00
-		  && ((next >> 16) & 0x1f) == (insn & 0x1f))
+		  && ((next >> 16) & 0x1f) == ((insn >> 21) & 0x1f))
 		{
 		  /* Change dp register in addl to r0.  */
 		  next &= ~ (0x1f << 21);

@@ -87,11 +87,11 @@ gdb_test "continue" \
 # Try printing again using the "<...>" notation.  This shouldn't work
 # now, since the current frame is a C function.
 gdb_test "p <MixedCaseFunc>" \
-    "A syntax error in expression, near `<MixedCaseFunc>'\\." \
+    "A syntax error in expression, near \"<MixedCaseFunc>\"\\." \
     "p <MixedCaseFunc>, in C"
 
 gdb_test "p <NoDebugMixedCaseFunc>" \
-    "A syntax error in expression, near `<NoDebugMixedCaseFunc>'\\." \
+    "A syntax error in expression, near \"<NoDebugMixedCaseFunc>\"\\." \
     "p <NoDebugMixedCaseFunc>, in C"
 
 set test "break <MixedCaseFunc>, in C"

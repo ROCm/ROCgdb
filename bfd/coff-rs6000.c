@@ -2052,11 +2052,11 @@ xcoff_write_armap_big (bfd *abfd, unsigned int elength ATTRIBUTE_UNUSED,
 
   i = 0;
   for (current_bfd = abfd->archive_head;
-       current_bfd != NULL && i < orl_count;
+       current_bfd != NULL;
        current_bfd = current_bfd->archive_next)
     {
       arch_info = bfd_get_arch_info (current_bfd);
-      while (map[i].abfd == current_bfd)
+      while (i < orl_count && map[i].abfd == current_bfd)
 	{
 	  string_length = strlen (map[i].name) + 1;
 	  if (arch_info->bits_per_address == 64)
@@ -2150,10 +2150,10 @@ xcoff_write_armap_big (bfd *abfd, unsigned int elength ATTRIBUTE_UNUSED,
       /* loop over the 32 bit offsets */
       i = 0;
       archive_iterator_begin (&iterator, abfd);
-      while (i < orl_count && archive_iterator_next (&iterator))
+      while (archive_iterator_next (&iterator))
 	{
 	  arch_info = bfd_get_arch_info (iterator.current.member);
-	  while (map[i].abfd == iterator.current.member)
+	  while (i < orl_count && map[i].abfd == iterator.current.member)
 	    {
 	      if (arch_info->bits_per_address == 32)
 		{
@@ -2167,11 +2167,11 @@ xcoff_write_armap_big (bfd *abfd, unsigned int elength ATTRIBUTE_UNUSED,
       /* loop over the 32 bit symbol names */
       i = 0;
       for (current_bfd = abfd->archive_head;
-	   current_bfd != NULL && i < orl_count;
+	   current_bfd != NULL;
 	   current_bfd = current_bfd->archive_next)
 	{
 	  arch_info = bfd_get_arch_info (current_bfd);
-	  while (map[i].abfd == current_bfd)
+	  while (i < orl_count && map[i].abfd == current_bfd)
 	    {
 	      if (arch_info->bits_per_address == 32)
 		{
@@ -2234,10 +2234,10 @@ xcoff_write_armap_big (bfd *abfd, unsigned int elength ATTRIBUTE_UNUSED,
       /* loop over the 64 bit offsets */
       i = 0;
       archive_iterator_begin (&iterator, abfd);
-      while (i < orl_count && archive_iterator_next (&iterator))
+      while (archive_iterator_next (&iterator))
 	{
 	  arch_info = bfd_get_arch_info (iterator.current.member);
-	  while (map[i].abfd == iterator.current.member)
+	  while (i < orl_count && map[i].abfd == iterator.current.member)
 	    {
 	      if (arch_info->bits_per_address == 64)
 		{
@@ -2251,11 +2251,11 @@ xcoff_write_armap_big (bfd *abfd, unsigned int elength ATTRIBUTE_UNUSED,
       /* loop over the 64 bit symbol names */
       i = 0;
       for (current_bfd = abfd->archive_head;
-	   current_bfd != NULL && i < orl_count;
+	   current_bfd != NULL;
 	   current_bfd = current_bfd->archive_next)
 	{
 	  arch_info = bfd_get_arch_info (current_bfd);
-	  while (map[i].abfd == current_bfd)
+	  while (i < orl_count && map[i].abfd == current_bfd)
 	    {
 	      if (arch_info->bits_per_address == 64)
 		{

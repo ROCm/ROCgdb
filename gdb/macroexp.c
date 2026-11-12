@@ -795,7 +795,7 @@ gather_arguments (const char *name, shared_macro_buffer *src, int nargs,
       for (;;)
 	{
 	  if (! get_token (&tok, src))
-	    error (_("Malformed argument list for macro `%s'."), name);
+	    error (_("Malformed argument list for macro \"%s\"."), name);
 
 	  /* Is tok an opening paren?  */
 	  if (tok.len == 1 && tok.text[0] == '(')
@@ -1270,7 +1270,7 @@ expand (const char *id,
 	  else if (! (argv.size () == 1
 		      && argv[0].len == 0
 		      && def->argc == 0))
-	    error (_("Wrong number of arguments to macro `%s' "
+	    error (_("Wrong number of arguments to macro \"%s\" "
 		   "(expected %d, got %d)."),
 		   id, def->argc, int (argv.size ()));
 	}

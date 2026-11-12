@@ -525,7 +525,7 @@ print_throw_error (SCM key, SCM args)
   else
     {
       scm_simple_format (scm_current_error_port (),
-			 scm_from_latin1_string (_("Throw to key `~a' with args `~s'.~%")),
+			 scm_from_latin1_string (_("Throw to key \"~a\" with args \"~s\".~%")),
 			 scm_list_2 (key, args));
     }
 }

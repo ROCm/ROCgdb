@@ -1939,7 +1939,7 @@ The error was: %s"),
       catch (const gdb_exception_error &ex)
 	{
 	  warning (_("This version of macOS has System Integrity Protection.\n\
-Because `startup-with-shell' is enabled, gdb tried to work around SIP by\n\
+Because \"startup-with-shell\" is enabled, gdb tried to work around SIP by\n\
 caching a copy of your shell.  However, this failed:\n\
 %s\n\
 If you correct the problem, gdb will automatically try again the next time\n\
@@ -1953,7 +1953,7 @@ you \"%ps\".  To prevent these attempts, you can use:\n\
 	}
 
       gdb_printf (_("Note: this version of macOS has System Integrity Protection.\n\
-Because `startup-with-shell' is enabled, gdb has worked around this by\n\
+Because \"startup-with-shell\" is enabled, gdb has worked around this by\n\
 caching a copy of your shell.  The shell used by \"%ps\" is now:\n\
     %s\n"),
 		  styled_string (command_style.style (), "run"),

@@ -131,7 +131,7 @@ parse_probes (const location_spec *locspec,
   arg = (char *) cs;
   arg = skip_spaces (arg);
   if (!*arg)
-    error (_("argument to `%s' missing"), arg_start);
+    error (_("argument to \"%s\" missing"), arg_start);
 
   arg_end = skip_to_space (arg);
 
@@ -191,7 +191,7 @@ parse_probes (const location_spec *locspec,
   if (result.empty ())
     {
       throw_error (NOT_FOUND_ERROR,
-		   _("No probe matching objfile=`%s', provider=`%s', name=`%s'"),
+		   _("No probe matching objfile=\"%s\", provider=\"%s\", name=\"%s\""),
 		   objfile_namestr ? objfile_namestr : _("<any>"),
 		   provider ? provider : _("<any>"),
 		   name);
@@ -885,7 +885,7 @@ TYPE specifies the type of the probe, and can be one of the following:\n\
   - stap\n\
 If you specify TYPE, there may be additional arguments needed by the\n\
 subcommand.\n\
-If you do not specify any argument, or specify `all', then the command\n\
+If you do not specify any argument, or specify \"all\", then the command\n\
 will show information about all types of probes."),
 		    &info_probes_cmdlist, 0/*allow-unknown*/, &infolist);
 

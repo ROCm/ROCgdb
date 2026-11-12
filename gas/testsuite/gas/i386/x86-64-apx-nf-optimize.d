@@ -1480,6 +1480,66 @@ Disassembly of section \.text:
 [ 	]*[a-f0-9]+:[ 	]*62 f4 74 1c ff 00[ 	]+\{nf\} inc \(%rax\),%ecx
 [ 	]*[a-f0-9]+:[ 	]*62 f4 fc 0c ff 00[ 	]+\{nf\} incq \(%rax\)
 [ 	]*[a-f0-9]+:[ 	]*62 f4 b4 1c ff 00[ 	]+\{nf\} inc \(%rax\),%r9
+[ 	]*[a-f0-9]+:[ 	]*f6 d3[ 	]+not    %bl
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6c 18 f6 d3[ 	]+not    %bl,%dl
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6c 18 f6 d2[ 	]+not    %dl,%dl
+[ 	]*[a-f0-9]+:[ 	]*66 f7 d2[ 	]+not    %dx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7d 18 f7 d2[ 	]+not    %dx,%ax
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7d 18 f7 d0[ 	]+not    %ax,%ax
+[ 	]*[a-f0-9]+:[ 	]*f7 d1[ 	]+not    %ecx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6c 18 f7 d1[ 	]+not    %ecx,%edx
+[ 	]*[a-f0-9]+:[ 	]*f7 d2[ 	]+not    %edx
+[ 	]*[a-f0-9]+:[ 	]*49 f7 d1[ 	]+not    %r9
+[ 	]*[a-f0-9]+:[ 	]*62 d4 84 10 f7 d1[ 	]+not    %r9,%r31
+[ 	]*[a-f0-9]+:[ 	]*d5 19 f7 d7[ 	]+not    %r31
+[ 	]*[a-f0-9]+:[ 	]*f6 10[ 	]+notb   \(%rax\)
+[ 	]*[a-f0-9]+:[ 	]*62 f4 64 18 f6 10[ 	]+not    \(%rax\),%bl
+[ 	]*[a-f0-9]+:[ 	]*66 f7 10[ 	]+notw   \(%rax\)
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6d 18 f7 10[ 	]+not    \(%rax\),%dx
+[ 	]*[a-f0-9]+:[ 	]*f7 10[ 	]+notl   \(%rax\)
+[ 	]*[a-f0-9]+:[ 	]*62 f4 74 18 f7 10[ 	]+not    \(%rax\),%ecx
+[ 	]*[a-f0-9]+:[ 	]*48 f7 10[ 	]+notq   \(%rax\)
+[ 	]*[a-f0-9]+:[ 	]*62 f4 b4 18 f7 10[ 	]+not    \(%rax\),%r9
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c f7 da[ 	]+\{nf\} neg %dx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c 6b da ff[ 	]+\{nf\} imul \$0xffff,%dx,%bx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c f7 db[ 	]+\{nf\} neg %bx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6d 1c f7 da[ 	]+\{nf\} neg %dx,%dx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 65 1c f7 da[ 	]+\{nf\} neg %dx,%bx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 65 1c f7 db[ 	]+\{nf\} neg %bx,%bx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7c 0c f7 d9[ 	]+\{nf\} neg %ecx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6c 1c f7 d9[ 	]+\{nf\} neg %ecx,%edx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6c 1c f7 da[ 	]+\{nf\} neg %edx,%edx
+[ 	]*[a-f0-9]+:[ 	]*62 d4 fc 0c f7 d9[ 	]+\{nf\} neg %r9
+[ 	]*[a-f0-9]+:[ 	]*62 d4 84 14 f7 d9[ 	]+\{nf\} neg %r9,%r31
+[ 	]*[a-f0-9]+:[ 	]*62 dc 84 14 f7 df[ 	]+\{nf\} neg %r31,%r31
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c 6b 10 ff[ 	]+\{nf\} imul \$0xffff,\(%rax\),%dx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 65 1c f7 18[ 	]+\{nf\} neg \(%rax\),%bx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 74 1c f7 18[ 	]+\{nf\} neg \(%rax\),%ecx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 b4 1c f7 18[ 	]+\{nf\} neg \(%rax\),%r9
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6c 1c 80 e1 aa[ 	]+\{nf\} and \$0xaa,%cl,%dl
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6c 1c 80 e1 aa[ 	]+\{nf\} and \$0xaa,%cl,%dl
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6c 1c 80 e1 aa[ 	]+\{nf\} and \$0xaa,%cl,%dl
+[ 	]*[a-f0-9]+:[ 	]*62 f4 74 1c 80 e1 aa[ 	]+\{nf\} and \$0xaa,%cl,%cl
+[ 	]*[a-f0-9]+:[ 	]*62 f4 74 1c 80 e1 aa[ 	]+\{nf\} and \$0xaa,%cl,%cl
+[ 	]*[a-f0-9]+:[ 	]*62 f4 ec 1c 81 e1 55 aa 00 00[ 	]+\{nf\} and \$0xaa55,%rcx,%rdx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6c 1c 81 e1 55 aa 00 00[ 	]+\{nf\} and \$0xaa55,%ecx,%edx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 fc 0c 81 e1 55 aa 00 00[ 	]+\{nf\} and \$0xaa55,%rcx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7c 0c 81 e1 55 aa 00 00[ 	]+\{nf\} and \$0xaa55,%ecx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 f4 1c 81 e1 55 ff ff ff[ 	]+\{nf\} and \$0xf+55,%rcx,%rcx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 fc 0c 81 e1 55 ff ff ff[ 	]+\{nf\} and \$0xf+55,%rcx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c 81 e1 55 ff[ 	]+\{nf\} and \$0xff55,%cx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 f4 1c 81 e1 aa 55 ff ff[ 	]+\{nf\} and \$0xf+55aa,%rcx,%rcx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 fc 0c 81 e1 aa 55 ff ff[ 	]+\{nf\} and \$0xf+55aa,%rcx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 f4 1c 81 c9 aa 00 00 00[ 	]+\{nf\} or \$0xaa,%rcx,%rcx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 fc 0c 81 c9 aa 00 00 00[ 	]+\{nf\} or \$0xaa,%rcx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c 81 c9 aa 00[ 	]+\{nf\} or \$0xaa,%cx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 f4 1c 81 c9 55 aa 00 00[ 	]+\{nf\} or \$0xaa55,%rcx,%rcx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 fc 0c 81 c9 55 aa 00 00[ 	]+\{nf\} or \$0xaa55,%rcx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 f4 1c 81 f1 aa 00 00 00[ 	]+\{nf\} xor \$0xaa,%rcx,%rcx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 fc 0c 81 f1 aa 00 00 00[ 	]+\{nf\} xor \$0xaa,%rcx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c 81 f1 aa 00[ 	]+\{nf\} xor \$0xaa,%cx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 f4 1c 81 f1 55 aa 00 00[ 	]+\{nf\} xor \$0xaa55,%rcx,%rcx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 fc 0c 81 f1 55 aa 00 00[ 	]+\{nf\} xor \$0xaa55,%rcx
 [ 	]*[a-f0-9]+:[ 	]*62 f4 7c 0c d0 ca[ 	]+\{nf\} ror \$1,%dl
 [ 	]*[a-f0-9]+:[ 	]*62 f4 7c 1c d0 ca[ 	]+\{nf\} ror \$1,%dl,%al
 [ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c d1 ca[ 	]+\{nf\} ror \$1,%dx

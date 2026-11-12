@@ -49,7 +49,7 @@ proc corefunc { threadtype } {
 
     set test "$threadtype: attach2 to stopped, after setting file"
     gdb_test_multiple "attach $testpid" "$test" {
-	-re "Attaching to program.*`?$escapedbinfile'?, process $testpid.*$gdb_prompt $" {
+	-re -wrap "Attaching to program: $escapedbinfile, process $testpid.*" {
 	    pass "$test"
 	}
     }

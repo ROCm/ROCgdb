@@ -110,7 +110,7 @@ proc test_d_expressions {} {
     # Test expression behavior specific to D.
 
     # Comparison and order expressions have same precedence.
-    gdb_test "print 1 == 2 > 0" "A syntax error in expression, near `> 0'\."
+    gdb_test "print 1 == 2 > 0" "A syntax error in expression, near \"> 0\"\."
     gdb_test "print (1 == 2) > 0" " = false"
 
     # Exponent expressions

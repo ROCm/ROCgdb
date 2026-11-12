@@ -338,7 +338,7 @@ dwarf_decode_line_header (section_and_offset sect_and_offset,
     {
       lh->maximum_ops_per_instruction = 1;
       complaint (_("invalid maximum_ops_per_instruction "
-		   "in `.debug_line' section"));
+		   "in \".debug_line\" section"));
     }
 
   lh->default_is_stmt = read_1_byte (abfd, line_ptr);
@@ -418,7 +418,7 @@ dwarf_decode_line_header (section_and_offset sect_and_offset,
 
   if (line_ptr > (section->buffer + section->size))
     complaint (_("line number info header doesn't "
-		 "fit in `.debug_line' section"));
+		 "fit in \".debug_line\" section"));
 
   if (line_ptr != lh->statement_program_start)
     error (_("malformed line number program header, advertised length does"

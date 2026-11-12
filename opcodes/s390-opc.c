@@ -306,12 +306,15 @@ unused_s390_operands_static_asserts (void)
       The instruction format is: INSTR_SS_LLRDRD / MASK_SS_LLRDRD.  */
 
 #define INSTR_E            2, { 0,0,0,0,0,0 }                    /* e.g. pr    */
+#define INSTR_I_U          2, { U8_8,0,0,0,0,0 }                 /* e.g. svc   */
 #define INSTR_IE_UU        4, { U4_24,U4_28,0,0,0,0 }            /* e.g. niai  */
 #define INSTR_MII_UPP      6, { U4_8,J12_12,J24_24 }             /* e.g. bprp  */
 #define INSTR_RIE_RRP      6, { R_8,R_12,J16_16,0,0,0 }          /* e.g. brxhg */
 #define INSTR_RIE_RRPU     6, { R_8,R_12,U4_32,J16_16,0,0 }      /* e.g. crj   */
 #define INSTR_RIE_RRP0     6, { R_8,R_12,J16_16,0,0,0 }          /* e.g. cgrjne */
+#define INSTR_RIE_RRP02    6, { R_8,J16_16,R_12,0,0,0 }          /* e.g. .insn rie_e */
 #define INSTR_RIE_RRI0     6, { R_8,R_12,I16_16,0,0,0 }          /* e.g. ahik  */
+#define INSTR_RIE_RRU0     6, { R_8,U16_16,R_12,0,0,0 }          /* e.g. .insn rie_d */
 #define INSTR_RIE_RUPI     6, { R_8,I8_32,U4_12,J16_16,0,0 }     /* e.g. cij   */
 #define INSTR_RIE_R0PI     6, { R_8,I8_32,J16_16,0,0,0 }         /* e.g. cijne */
 #define INSTR_RIE_RUPU     6, { R_8,U8_32,U4_12,J16_16,0,0 }     /* e.g. clij  */
@@ -321,6 +324,7 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_RIE_R0UU     6, { R_8,U16_16,U4_32,0,0,0 }         /* e.g. clfit */
 #define INSTR_RIE_R0U0     6, { R_8,U16_16,0,0,0,0 }             /* e.g. clfitne */
 #define INSTR_RIE_RUI0     6, { R_8,I16_16,U4_12,0,0,0 }         /* e.g. lochi */
+#define INSTR_RIE_RUU0     6, { R_8,U16_16,U4_12,0,0,0 }         /* e.g. .insn rie_g */
 #define INSTR_RIE_RRUUU    6, { R_8,R_12,U8_16,U8_24,U8_32,0 }   /* e.g. rnsbg */
 #define INSTR_RIE_RRUUU2   INSTR_RIE_RRUUU                       /* e.g. risbgz */
 #define INSTR_RIE_RRUUU3   INSTR_RIE_RRUUU                       /* e.g. risbhg */
@@ -339,6 +343,7 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_RIS_R0RDI    6, { R_8,I8_32,D_20,B_16,0,0 }        /* e.g. cibne */
 #define INSTR_RIS_RURDU    6, { R_8,U8_32,U4_12,D_20,B_16,0 }    /* e.g. clib  */
 #define INSTR_RIS_R0RDU    6, { R_8,U8_32,D_20,B_16,0,0 }        /* e.g. clibne*/
+#define INSTR_RRD_R0RR     4, { R_16,R_28,R_24,0,0,0 }           /* e.g. .insn rrd */
 #define INSTR_RRD_F0FF     4, { F_16,F_24,F_28,0,0,0 }           /* e.g. madbr */
 #define INSTR_RRD_FE0FF    4, { FE_16,F_24,F_28,0,0,0 }          /* e.g. myr   */
 #define INSTR_RRE_00       4, { 0,0,0,0,0,0 }                    /* e.g. palb  */
@@ -394,11 +399,13 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_RRF_U0RERE   4, { RE_24,RE_28,U4_16,0,0,0 }        /* e.g. cu24  */
 #define INSTR_RRF_00RR     4, { R_24,R_28,0,0,0,0 }              /* e.g. clrtne */
 #define INSTR_RRF_0URF     4, { R_24,F_28,U4_20,0,0,0 }          /* e.g. csdtr  */
+#define INSTR_RRF_0URR     4, { R_24,R_28,U4_20,0,0,0 }          /* e.g. .insn rrf_d */
 #define INSTR_RRF_0UREFE   4, { RE_24,FE_28,U4_20,0,0,0 }        /* e.g. csxtr  */
 #define INSTR_RRF_UUFR     4, { F_24,U4_16,R_28,U4_20,0,0 }      /* e.g. cdgtra */
 #define INSTR_RRF_UUFER    4, { FE_24,U4_16,R_28,U4_20,0,0 }     /* e.g. cxfbra */
 #define INSTR_RRF_UURF     4, { R_24,U4_16,F_28,U4_20,0,0 }      /* e.g. cgdtra */
 #define INSTR_RRF_UURFE    4, { R_24,U4_16,FE_28,U4_20,0,0 }     /* e.g. cfxbra */
+#define INSTR_RRF_UURR     4, { R_24,U4_16,R_28,U4_20,0,0 }      /* e.g. .insn rrf_e */
 #define INSTR_RR_0R        2, { R_12, 0,0,0,0,0 }                /* e.g. br    */
 #define INSTR_RR_FF        2, { F_8,F_12,0,0,0,0 }               /* e.g. adr   */
 #define INSTR_RR_FEF       2, { FE_8,F_12,0,0,0,0 }              /* e.g. mxdr  */
@@ -408,7 +415,6 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_RR_RR        2, { R_8,R_12,0,0,0,0 }               /* e.g. lr    */
 #define INSTR_RR_RER       2, { RE_8,R_12,0,0,0,0 }              /* e.g. dr    */
 #define INSTR_RR_RERE      2, { RE_8,RE_12,0,0,0,0 }             /* e.g. clcl  */
-#define INSTR_RR_U0        2, { U8_8, 0,0,0,0,0 }                /* e.g. svc   */
 #define INSTR_RR_UR        2, { U4_8,R_12,0,0,0,0 }              /* e.g. bcr   */
 #define INSTR_RRS_RRRDU    6, { R_8,R_12,U4_32,D_20,B_16 }       /* e.g. crb   */
 #define INSTR_RRS_RRRD0    6, { R_8,R_12,D_20,B_16,0 }           /* e.g. crbne */
@@ -419,8 +425,10 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_RSL_R0RD     6, { D_20,L4_8,B_16,0,0,0 }           /* e.g. tp    */
 #define INSTR_RSL_LRDFU    6, { F_32,D_20,L8_8,B_16,U4_36,0 }    /* e.g. cdzt  */
 #define INSTR_RSL_LRDFEU   6, { FE_32,D_20,L8_8,B_16,U4_36,0 }   /* e.g. cxzt  */
+#define INSTR_RSL_LRDRU    6, { R_32,D_20,L8_8,B_16,U4_36,0 }    /* e.g. .insn rsl_b */
 #define INSTR_RSI_RRP      4, { R_8,R_12,J16_16,0,0,0 }          /* e.g. brxh  */
 #define INSTR_RSY_RRRD     6, { R_8,R_12,D20_20,B_16,0,0 }       /* e.g. stmy  */
+#define INSTR_RSY_RRRD2    6, { R_8,D20_20,B_16,R_12,0,0 }       /* e.g. .insn rsy_a */
 #define INSTR_RSY_RERERD   6, { RE_8,RE_12,D20_20,B_16,0,0 }     /* e.g. cdsy  */
 #define INSTR_RSY_RURD     6, { R_8,U4_12,D20_20,B_16,0,0 }      /* e.g. icmh  */
 #define INSTR_RSY_RURD2    6, { R_8,D20_20,B_16,U4_12,0,0 }      /* e.g. loc   */
@@ -432,8 +440,10 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_RS_R0RD      4, { R_8,D_20,B_16,0,0,0 }            /* e.g. sll   */
 #define INSTR_RS_RE0RD     4, { RE_8,D_20,B_16,0,0,0 }           /* e.g. slda  */
 #define INSTR_RS_RRRD      4, { R_8,R_12,D_20,B_16,0,0 }         /* e.g. cs    */
+#define INSTR_RS_RRRD2     4, { R_8,D_20,B_16,R_12,0,0 }         /* e.g. .insn rs_a */
 #define INSTR_RS_RERERD    4, { RE_8,RE_12,D_20,B_16,0,0 }       /* e.g. cds   */
 #define INSTR_RS_RURD      4, { R_8,U4_12,D_20,B_16,0,0 }        /* e.g. icm   */
+#define INSTR_RS_RURD2     4, { R_8,D_20,B_16,U4_12,0,0 }        /* e.g. .insn rs_b */
 #define INSTR_RXE_FRRD     6, { F_8,D_20,X_12,B_16,0,0 }         /* e.g. adb   */
 #define INSTR_RXE_FERRD    6, { FE_8,D_20,X_12,B_16,0,0 }        /* e.g. lxdb  */
 #define INSTR_RXE_RRRD     6, { R_8,D_20,X_12,B_16,0,0 }         /* e.g. lg    */
@@ -483,6 +493,7 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_VRI_V0UU     6, { V_8,U8_16,U8_24,0,0,0 }          /* e.g. vgmb  */
 #define INSTR_VRI_V0UU2    6, { V_8,U16_16,U4_32,0,0,0 }         /* e.g. vlip  */
 #define INSTR_VRI_VVUU     6, { V_8,V_12,U16_16,U4_32,0,0 }      /* e.g. vrep  */
+#define INSTR_VRI_VVUU2    6, { V_8,U16_16,V_12,U4_32,0,0 }      /* e.g. .insn vri_c */
 #define INSTR_VRI_VVU      6, { V_8,V_12,U16_16,0,0,0 }          /* e.g. vrepb */
 #define INSTR_VRI_VVU2     6, { V_8,V_12,U12_16,0,0,0 }          /* e.g. vftcidb */
 #define INSTR_VRI_V0IU     6, { V_8,I16_16,U4_32,0,0,0 }         /* e.g. vrepi */
@@ -498,12 +509,16 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_VRX_VRRD     6, { V_8,D_20,X_12,B_16,0,0 }         /* e.g. vl    */
 #define INSTR_VRX_VRRDU    6, { V_8,D_20,X_12,B_16,U4_32,0 }     /* e.g. vlrep */
 #define INSTR_VRS_RVRDU    6, { R_8,V_12,D_20,B_16,U4_32,0 }     /* e.g. vlgv  */
+#define INSTR_VRS_RVRDU2   6, { R_8,D_20,B_16,V_12,U4_32,0 }     /* e.g. .insn vrs_c */
 #define INSTR_VRS_RVRD     6, { R_8,V_12,D_20,B_16,0,0 }         /* e.g. vlgvb */
 #define INSTR_VRS_VVRDU    6, { V_8,V_12,D_20,B_16,U4_32,0 }     /* e.g. verll */
+#define INSTR_VRS_VVRDU2   6, { V_8,D_20,B_16,V_12,U4_32,0 }     /* e.g. .insn vrs_a */
 #define INSTR_VRS_VVRD     6, { V_8,V_12,D_20,B_16,0,0 }         /* e.g. vlm   */
 #define INSTR_VRS_VRRDU    6, { V_8,R_12,D_20,B_16,U4_32,0 }     /* e.g. vlvg  */
+#define INSTR_VRS_VRRDU2   6, { V_8,D_20,B_16,R_12,U4_32,0 }     /* e.g. .insn vrs_b */
 #define INSTR_VRS_VRRD     6, { V_8,R_12,D_20,B_16,0,0 }         /* e.g. vlvgb */
 #define INSTR_VRS_RRDV     6, { V_32,R_12,D_20,B_16,0,0 }        /* e.g. vlrlr */
+#define INSTR_VRS_RRDV2    6, { V_32,D_20,B_16,R_12,0,0 }        /* e.g. .insn vrs_d */
 #define INSTR_VRR_VRR      6, { V_8,R_12,R_16,0,0,0 }            /* e.g. vlvgp */
 #define INSTR_VRR_VVV0U    6, { V_8,V_12,V_16,U4_32,0,0 }        /* e.g. vmrh  */
 #define INSTR_VRR_VVV0U0   6, { V_8,V_12,V_16,U4_24,0,0 }        /* e.g. vfaeb */
@@ -541,12 +556,15 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_VSI_URDV     6, { V_32,D_20,B_16,U8_8,0,0 }        /* e.g. vlrl  */
 
 #define MASK_E            { 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }
+#define MASK_I_U          { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_IE_UU        { 0xff, 0xff, 0xff, 0x00, 0x00, 0x00 }
 #define MASK_MII_UPP      { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RIE_RRP      { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RIE_RRPU     { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RIE_RRP0     { 0xff, 0x00, 0x00, 0x00, 0xf0, 0xff }
+#define MASK_RIE_RRP02    { 0xff, 0x00, 0x00, 0x00, 0xf0, 0xff }
 #define MASK_RIE_RRI0     { 0xff, 0x00, 0x00, 0x00, 0xf0, 0xff }
+#define MASK_RIE_RRU0     { 0xff, 0x00, 0x00, 0x00, 0xf0, 0xff }
 #define MASK_RIE_RUPI     { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RIE_R0PI     { 0xff, 0x0f, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RIE_RUPU     { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
@@ -556,6 +574,7 @@ unused_s390_operands_static_asserts (void)
 #define MASK_RIE_R0UU     { 0xff, 0x0f, 0x00, 0x00, 0x0f, 0xff }
 #define MASK_RIE_R0U0     { 0xff, 0x0f, 0x00, 0x00, 0xff, 0xff }
 #define MASK_RIE_RUI0     { 0xff, 0x00, 0x00, 0x00, 0xff, 0xff }
+#define MASK_RIE_RUU0     { 0xff, 0x00, 0x00, 0x00, 0xff, 0xff }
 #define MASK_RIE_RRUUU    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RIE_RRUUU2   { 0xff, 0x00, 0x00, 0x80, 0x00, 0xff }
 #define MASK_RIE_RRUUU3   { 0xff, 0x00, 0x00, 0x80, 0x00, 0xff }
@@ -574,6 +593,7 @@ unused_s390_operands_static_asserts (void)
 #define MASK_RIS_R0RDI    { 0xff, 0x0f, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RIS_RURDU    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RIS_R0RDU    { 0xff, 0x0f, 0x00, 0x00, 0x00, 0xff }
+#define MASK_RRD_R0RR     { 0xff, 0xff, 0x0f, 0x00, 0x00, 0x00 }
 #define MASK_RRD_F0FF     { 0xff, 0xff, 0x0f, 0x00, 0x00, 0x00 }
 #define MASK_RRD_FE0FF    { 0xff, 0xff, 0x0f, 0x00, 0x00, 0x00 }
 #define MASK_RRE_00       { 0xff, 0xff, 0xff, 0xff, 0x00, 0x00 }
@@ -629,11 +649,13 @@ unused_s390_operands_static_asserts (void)
 #define MASK_RRF_U0RERE   { 0xff, 0xff, 0x0f, 0x00, 0x00, 0x00 }
 #define MASK_RRF_00RR     { 0xff, 0xff, 0xff, 0x00, 0x00, 0x00 }
 #define MASK_RRF_0URF     { 0xff, 0xff, 0xf0, 0x00, 0x00, 0x00 }
+#define MASK_RRF_0URR     { 0xff, 0xff, 0xf0, 0x00, 0x00, 0x00 }
 #define MASK_RRF_0UREFE   { 0xff, 0xff, 0xf0, 0x00, 0x00, 0x00 }
 #define MASK_RRF_UUFR     { 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RRF_UUFER    { 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RRF_UURF     { 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RRF_UURFE    { 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }
+#define MASK_RRF_UURR     { 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RR_0R        { 0xff, 0xf0, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RR_FF        { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RR_FEF       { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
@@ -643,7 +665,6 @@ unused_s390_operands_static_asserts (void)
 #define MASK_RR_RR        { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RR_RER       { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RR_RERE      { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
-#define MASK_RR_U0        { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RR_UR        { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RRS_RRRDU    { 0xff, 0x00, 0x00, 0x00, 0x0f, 0xff }
 #define MASK_RRS_RRRD0    { 0xff, 0x00, 0x00, 0x00, 0xff, 0xff }
@@ -654,15 +675,19 @@ unused_s390_operands_static_asserts (void)
 #define MASK_RSL_R0RD     { 0xff, 0x0f, 0x00, 0x00, 0xff, 0xff }
 #define MASK_RSL_LRDFU    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RSL_LRDFEU   { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
+#define MASK_RSL_LRDRU    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RSI_RRP      { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RS_AARD      { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RS_CCRD      { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RS_R0RD      { 0xff, 0x0f, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RS_RE0RD     { 0xff, 0x0f, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RS_RRRD      { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
+#define MASK_RS_RRRD2     { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RS_RERERD    { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RS_RURD      { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
+#define MASK_RS_RURD2     { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RSY_RRRD     { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
+#define MASK_RSY_RRRD2    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RSY_RERERD   { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RSY_RURD     { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RSY_RURD2    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
@@ -718,6 +743,7 @@ unused_s390_operands_static_asserts (void)
 #define MASK_VRI_V0UU     { 0xff, 0x0f, 0x00, 0x00, 0xf0, 0xff }
 #define MASK_VRI_V0UU2    { 0xff, 0x0f, 0x00, 0x00, 0x00, 0xff }
 #define MASK_VRI_VVUU     { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
+#define MASK_VRI_VVUU2    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_VRI_VVU      { 0xff, 0x00, 0x00, 0x00, 0xf0, 0xff }
 #define MASK_VRI_VVU2     { 0xff, 0x00, 0x00, 0x0f, 0xf0, 0xff }
 #define MASK_VRI_V0IU     { 0xff, 0x0f, 0x00, 0x00, 0x00, 0xff }
@@ -733,12 +759,16 @@ unused_s390_operands_static_asserts (void)
 #define MASK_VRX_VRRD     { 0xff, 0x00, 0x00, 0x00, 0xf0, 0xff }
 #define MASK_VRX_VRRDU    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_VRS_RVRDU    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
+#define MASK_VRS_RVRDU2   { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_VRS_RVRD     { 0xff, 0x00, 0x00, 0x00, 0xf0, 0xff }
 #define MASK_VRS_VVRDU    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
+#define MASK_VRS_VVRDU2   { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_VRS_VVRD     { 0xff, 0x00, 0x00, 0x00, 0xf0, 0xff }
 #define MASK_VRS_VRRDU    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
+#define MASK_VRS_VRRDU2   { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_VRS_VRRD     { 0xff, 0x00, 0x00, 0x00, 0xf0, 0xff }
 #define MASK_VRS_RRDV     { 0xff, 0xf0, 0x00, 0x00, 0x00, 0xff }
+#define MASK_VRS_RRDV2    { 0xff, 0xf0, 0x00, 0x00, 0x00, 0xff }
 #define MASK_VRR_VRR      { 0xff, 0x00, 0x0f, 0xff, 0xf0, 0xff }
 #define MASK_VRR_VVV0U    { 0xff, 0x00, 0x0f, 0xff, 0x00, 0xff }
 #define MASK_VRR_VVV0U0   { 0xff, 0x00, 0x0f, 0x0f, 0xf0, 0xff }
@@ -780,37 +810,105 @@ unused_s390_operands_static_asserts (void)
 
 const struct s390_opcode s390_opformats[] =
   {
+  /*NAME,   OPCODE,      MASK,             INSTR,          MODE,CPU,FLAG, DESCRIPTION*/
   { "e",    OP8(0x00LL), MASK_E,	   INSTR_E,	      3,  0, 256, NULL },
+  { "i",    OP8(0x00LL), MASK_I_U,	   INSTR_I_U,	      3,  0, 256, NULL },
+  { "ie",   OP8(0x00LL), MASK_IE_UU,	   INSTR_IE_UU,	      2,  8, 256, NULL },
+  { "mii",  OP8(0x00LL), MASK_MII_UPP,	   INSTR_MII_UPP,     2,  8, 256, NULL },
   { "ri",   OP8(0x00LL), MASK_RI_RI,	   INSTR_RI_RI,	      3,  0, 256, NULL },
-  { "rie",  OP8(0x00LL), MASK_RIE_RRP,	   INSTR_RIE_RRP,     3,  0, 256, NULL },
-  { "ril",  OP8(0x00LL), MASK_RIL_RP,	   INSTR_RIL_RP,      3,  0, 256, NULL },
-  { "rilu", OP8(0x00LL), MASK_RIL_RU,	   INSTR_RIL_RU,      3,  0, 256, NULL },
-  { "ris",  OP8(0x00LL), MASK_RIS_RURDI,   INSTR_RIS_RURDI,   3,  6, 256, NULL },
-  { "rr",   OP8(0x00LL), MASK_RR_RR,	   INSTR_RR_RR,       3,  0, 256, NULL },
-  { "rre",  OP8(0x00LL), MASK_RRE_RR,	   INSTR_RRE_RR,      3,  0, 256, NULL },
+  { "ri_a", OP8(0x00LL), MASK_RI_RU,	   INSTR_RI_RU,	      3,  0, 256, NULL },
+  { "ri_b", OP8(0x00LL), MASK_RI_RP,	   INSTR_RI_RP,	      3,  0, 256, NULL },
+  { "ri_c", OP8(0x00LL), MASK_RI_UP,	   INSTR_RI_UP,	      3,  0, 256, NULL },
+  { "rie",  OP8(0x00LL), MASK_RIE_RRP,	   INSTR_RIE_RRP,     2,  2, 256, NULL },
+  { "rie_a",OP8(0x00LL), MASK_RIE_R0UU,	   INSTR_RIE_R0UU,    2,  6, 256, NULL },
+  { "rie_b",OP8(0x00LL), MASK_RIE_RRPU,	   INSTR_RIE_RRPU,    2,  6, 256, NULL },
+  { "rie_c",OP8(0x00LL), MASK_RIE_RUPU,	   INSTR_RIE_RUPU,    2,  6, 256, NULL },
+  { "rie_d",OP8(0x00LL), MASK_RIE_RRU0,	   INSTR_RIE_RRU0,    2,  7, 256, NULL },
+  { "rie_e",OP8(0x00LL), MASK_RIE_RRP02,   INSTR_RIE_RRP02,   2,  2, 256, NULL },
+  { "rie_f",OP8(0x00LL), MASK_RIE_RRUUU,   INSTR_RIE_RRUUU,   2,  6, 256, NULL },
+  { "rie_g",OP8(0x00LL), MASK_RIE_RUU0,	   INSTR_RIE_RUU0,    2,  9, 256, NULL },
+  { "ril",  OP8(0x00LL), MASK_RIL_RP,	   INSTR_RIL_RP,      3,  2, 256, NULL },
+  { "rilu", OP8(0x00LL), MASK_RIL_RU,	   INSTR_RIL_RU,      2,  4, 256, NULL },
+  { "ril_a",OP8(0x00LL), MASK_RIL_RU,	   INSTR_RIL_RU,      2,  4, 256, NULL },
+  { "ril_b",OP8(0x00LL), MASK_RIL_RP,	   INSTR_RIL_RP,      3,  2, 256, NULL },
+  { "ril_c",OP8(0x00LL), MASK_RIL_UP,	   INSTR_RIL_UP,      3,  2, 256, NULL },
+  { "ris",  OP8(0x00LL), MASK_RIS_RURDI,   INSTR_RIS_RURDI,   2,  6, 256, NULL },
+  { "rr",   OP8(0x00LL), MASK_RR_RR,	   INSTR_RR_RR,       3,  0, 256|1, NULL },
+  { "rrd",  OP8(0x00LL), MASK_RRD_R0RR,	   INSTR_RRD_R0RR,    3,  0, 256, NULL },
+  { "rre",  OP8(0x00LL), MASK_RRE_RR,	   INSTR_RRE_RR,      3,  0, 256|2, NULL },
   { "rrf",  OP8(0x00LL), MASK_RRF_RURR,	   INSTR_RRF_RURR,    3,  0, 256, NULL },
-  { "rrs",  OP8(0x00LL), MASK_RRS_RRRDU,   INSTR_RRS_RRRDU,   3,  6, 256, NULL },
+  { "rrf_a",OP8(0x00LL), MASK_RRF_RURR,	   INSTR_RRF_RURR,    3,  0, 256|2, NULL },
+  { "rrf_b",OP8(0x00LL), MASK_RRF_RURR2,   INSTR_RRF_RURR2,   3,  0, 256|1, NULL },
+  { "rrf_c",OP8(0x00LL), MASK_RRF_U0RR,	   INSTR_RRF_U0RR,    3,  0, 256|1, NULL },
+  { "rrf_d",OP8(0x00LL), MASK_RRF_0URR,	   INSTR_RRF_0URR,    3,  0, 256, NULL },
+  { "rrf_e",OP8(0x00LL), MASK_RRF_UURR,	   INSTR_RRF_UURR,    3,  0, 256|1, NULL },
+  { "rrs",  OP8(0x00LL), MASK_RRS_RRRDU,   INSTR_RRS_RRRDU,   2,  6, 256, NULL },
   { "rs",   OP8(0x00LL), MASK_RS_RRRD,	   INSTR_RS_RRRD,     3,  0, 256, NULL },
+  { "rs_a", OP8(0x00LL), MASK_RS_RRRD2,	   INSTR_RS_RRRD2,    3,  0, 256|1, NULL },
+  { "rs_b", OP8(0x00LL), MASK_RS_RURD2,	   INSTR_RS_RURD2,    3,  0, 256, NULL },
   { "rse",  OP8(0x00LL), MASK_RSE_RRRD,	   INSTR_RSE_RRRD,    3,  0, 256, NULL },
   { "rsi",  OP8(0x00LL), MASK_RSI_RRP,	   INSTR_RSI_RRP,     3,  0, 256, NULL },
+  { "rsl_a",OP8(0x00LL), MASK_RSL_R0RD,	   INSTR_RSL_R0RD,    3,  0, 256, NULL },
+  { "rsl_b",OP8(0x00LL), MASK_RSL_LRDRU,   INSTR_RSL_LRDRU,   2,  8, 256, NULL },
   { "rsy",  OP8(0x00LL), MASK_RSY_RRRD,	   INSTR_RSY_RRRD,    3,  3, 256, NULL },
+  { "rsy_a",OP8(0x00LL), MASK_RSY_RRRD2,   INSTR_RSY_RRRD2,   3,  3, 256, NULL },
+  { "rsy_b",OP8(0x00LL), MASK_RSY_RURD2,   INSTR_RSY_RURD2,   2,  3, 256, NULL },
   { "rx",   OP8(0x00LL), MASK_RX_RRRD,	   INSTR_RX_RRRD,     3,  0, 256, NULL },
-  { "rxe",  OP8(0x00LL), MASK_RXE_RRRD,	   INSTR_RXE_RRRD,    3,  0, 256, NULL },
+  { "rx_a", OP8(0x00LL), MASK_RX_RRRD,	   INSTR_RX_RRRD,     3,  0, 256, NULL },
+  { "rx_b", OP8(0x00LL), MASK_RX_URRD,	   INSTR_RX_URRD,     3,  0, 256, NULL },
+  { "rxe",  OP8(0x00LL), MASK_RXE_RRRDU,   INSTR_RXE_RRRDU,   3,  0, 256|1, NULL },
   { "rxf",  OP8(0x00LL), MASK_RXF_RRRDR,   INSTR_RXF_RRRDR,   3,  0, 256, NULL },
   { "rxy",  OP8(0x00LL), MASK_RXY_RRRD,	   INSTR_RXY_RRRD,    3,  3, 256, NULL },
-  { "s",    OP8(0x00LL), MASK_S_RD,	   INSTR_S_RD,	      3,  0, 256, NULL },
-  { "si",   OP8(0x00LL), MASK_SI_URD,	   INSTR_SI_URD,      3,  0, 256, NULL },
-  { "siy",  OP8(0x00LL), MASK_SIY_URD,	   INSTR_SIY_URD,     3,  3, 256, NULL },
-  { "sil",  OP8(0x00LL), MASK_SIL_RDI,     INSTR_SIL_RDI,     3,  6, 256, NULL },
+  { "rxy_a",OP8(0x00LL), MASK_RXY_RRRD,	   INSTR_RXY_RRRD,    3,  3, 256, NULL },
+  { "rxy_b",OP8(0x00LL), MASK_RXY_URRD,	   INSTR_RXY_URRD,    2,  6, 256, NULL },
+  { "rxy_c",OP8(0x00LL), MASK_RXY_RRRD,	   INSTR_RXY_RRRD,    2, 13, 256, NULL },
+  { "s",    OP8(0x00LL), MASK_S_RD,	   INSTR_S_RD,	      3,  0, 256|1, NULL },
+  { "si",   OP8(0x00LL), MASK_SI_URD,	   INSTR_SI_URD,      3,  0, 256|1, NULL },
+  { "sil",  OP8(0x00LL), MASK_SIL_RDI,     INSTR_SIL_RDI,     2,  6, 256, NULL },
+  { "siy",  OP8(0x00LL), MASK_SIY_URD,	   INSTR_SIY_URD,     2,  3, 256|1, NULL },
+  { "smi",  OP8(0x00LL), MASK_SMI_U0RDP,   INSTR_SMI_U0RDP,   2,  8, 256, NULL },
   { "ss",   OP8(0x00LL), MASK_SS_RRRDRD,   INSTR_SS_RRRDRD,   3,  0, 256, NULL },
+  { "ss_a", OP8(0x00LL), MASK_SS_L0RDRD,   INSTR_SS_L0RDRD,   3,  0, 256, NULL },
+  { "ss_b", OP8(0x00LL), MASK_SS_LLRDRD,   INSTR_SS_LLRDRD,   3,  0, 256, NULL },
+  { "ss_c", OP8(0x00LL), MASK_SS_LIRDRD,   INSTR_SS_LIRDRD,   3,  0, 256, NULL },
+  { "ss_d", OP8(0x00LL), MASK_SS_RRRDRD,   INSTR_SS_RRRDRD,   3,  0, 256, NULL },
+  { "ss_e", OP8(0x00LL), MASK_SS_RRRDRD2,  INSTR_SS_RRRDRD2,  3,  0, 256, NULL },
+  { "ss_f", OP8(0x00LL), MASK_SS_L2RDRD,   INSTR_SS_L2RDRD,   3,  0, 256, NULL },
   { "sse",  OP8(0x00LL), MASK_SSE_RDRD,	   INSTR_SSE_RDRD,    3,  0, 256, NULL },
-  { "ssf",  OP8(0x00LL), MASK_SSF_RRDRD,   INSTR_SSF_RRDRD,   3,  0, 256, NULL },
-  { "vrv",  OP8(0x00LL), MASK_VRV_VVXRDU,  INSTR_VRV_VVXRDU,  3,  9, 256, NULL },
-  { "vri",  OP8(0x00LL), MASK_VRI_VVUUU,   INSTR_VRI_VVUUU,   3,  9, 256, NULL },
-  { "vrx",  OP8(0x00LL), MASK_VRX_VRRDU,   INSTR_VRX_VRRDU,   3,  9, 256, NULL },
-  { "vrs",  OP8(0x00LL), MASK_VRS_RVRDU,   INSTR_VRS_RVRDU,   3,  9, 256, NULL },
-  { "vrr",  OP8(0x00LL), MASK_VRR_VVV0UUU, INSTR_VRR_VVV0UUU, 3,  9, 256, NULL },
-  { "vsi",  OP8(0x00LL), MASK_VSI_URDV,	   INSTR_VSI_URDV,    3, 10, 256, NULL },
+  { "ssf",  OP8(0x00LL), MASK_SSF_RRDRD,   INSTR_SSF_RRDRD,   2,  4, 256, NULL },
+  { "vri",  OP8(0x00LL), MASK_VRI_VVUUU,   INSTR_VRI_VVUUU,   2,  9, 256, NULL },
+  { "vri_a",OP8(0x00LL), MASK_VRI_V0IU,	   INSTR_VRI_V0IU,    2,  9, 256|1, NULL },
+  { "vri_b",OP8(0x00LL), MASK_VRI_V0UUU,   INSTR_VRI_V0UUU,   2,  9, 256, NULL },
+  { "vri_c",OP8(0x00LL), MASK_VRI_VVUU2,   INSTR_VRI_VVUU2,   2,  9, 256, NULL },
+  { "vri_d",OP8(0x00LL), MASK_VRI_VVV0UU,  INSTR_VRI_VVV0UU,  2,  9, 256|1, NULL },
+  { "vri_e",OP8(0x00LL), MASK_VRI_VVUUU,   INSTR_VRI_VVUUU,   2,  9, 256, NULL },
+  { "vri_f",OP8(0x00LL), MASK_VRI_VVV0UU2, INSTR_VRI_VVV0UU2, 2, 10, 256, NULL },
+  { "vri_g",OP8(0x00LL), MASK_VRI_VVUUU2,  INSTR_VRI_VVUUU2,  2, 10, 256, NULL },
+  { "vri_h",OP8(0x00LL), MASK_VRI_V0UU2,   INSTR_VRI_V0UU2,   2, 10, 256, NULL },
+  { "vri_i",OP8(0x00LL), MASK_VRI_VR0UU,   INSTR_VRI_VR0UU,   2, 10, 256, NULL },
+  { "vri_j",OP8(0x00LL), MASK_VRI_VV0UU,   INSTR_VRI_VV0UU,   2, 13, 256, NULL },
+  { "vri_k",OP8(0x00LL), MASK_VRI_VVV0UV,  INSTR_VRI_VVV0UV,  2, 13, 256, NULL },
+  { "vri_l",OP8(0x00LL), MASK_VRI_0VVU,	   INSTR_VRI_0VVU,    2, 13, 256, NULL },
+  { "vrr",  OP8(0x00LL), MASK_VRR_VVV0UUU, INSTR_VRR_VVV0UUU, 2,  9, 256, NULL },
+  { "vrr_a",OP8(0x00LL), MASK_VRR_VV0UUU,  INSTR_VRR_VV0UUU,  2,  9, 256|3, NULL },
+  { "vrr_b",OP8(0x00LL), MASK_VRR_VVV0U0U, INSTR_VRR_VVV0U0U, 2,  9, 256|2, NULL },
+  { "vrr_c",OP8(0x00LL), MASK_VRR_VVV0UUU, INSTR_VRR_VVV0UUU, 2,  9, 256|3, NULL },
+  { "vrr_d",OP8(0x00LL), MASK_VRR_VVVUU0V, INSTR_VRR_VVVUU0V, 2,  9, 256|2, NULL },
+  { "vrr_e",OP8(0x00LL), MASK_VRR_VVVU0UV, INSTR_VRR_VVVU0UV, 2,  9, 256|2, NULL },
+  { "vrr_f",OP8(0x00LL), MASK_VRR_VRR,	   INSTR_VRR_VRR,     2,  9, 256, NULL },
+  { "vrr_g",OP8(0x00LL), MASK_VRR_0V0U,	   INSTR_VRR_0V0U,    2, 10, 256|1, NULL },
+  { "vrr_h",OP8(0x00LL), MASK_VRR_0VV0U,   INSTR_VRR_0VV0U,   2, 10, 256|1, NULL },
+  { "vrr_i",OP8(0x00LL), MASK_VRR_RV0UU,   INSTR_VRR_RV0UU,   2, 10, 256|1, NULL },
+  { "vrr_j",OP8(0x00LL), MASK_VRR_VVV0U0,  INSTR_VRR_VVV0U0,  2, 12, 256, NULL },
+  { "vrr_k",OP8(0x00LL), MASK_VRR_VV0U2,   INSTR_VRR_VV0U2,   2, 12, 256, NULL },
+  { "vrs",  OP8(0x00LL), MASK_VRS_RVRDU,   INSTR_VRS_RVRDU,   2,  9, 256, NULL },
+  { "vrs_a",OP8(0x00LL), MASK_VRS_VVRDU2,  INSTR_VRS_VVRDU2,  2,  9, 256|1, NULL },
+  { "vrs_b",OP8(0x00LL), MASK_VRS_VRRDU2,  INSTR_VRS_VRRDU2,  2,  9, 256|1, NULL },
+  { "vrs_c",OP8(0x00LL), MASK_VRS_RVRDU2,  INSTR_VRS_RVRDU2,  2,  9, 256, NULL },
+  { "vrs_d",OP8(0x00LL), MASK_VRS_RRDV2,   INSTR_VRS_RRDV2,   2, 10, 256, NULL },
+  { "vrv",  OP8(0x00LL), MASK_VRV_VVXRDU,  INSTR_VRV_VVXRDU,  2,  9, 256|1, NULL },
+  { "vrx",  OP8(0x00LL), MASK_VRX_VRRDU,   INSTR_VRX_VRRDU,   2,  9, 256|1, NULL },
+  { "vsi",  OP8(0x00LL), MASK_VSI_URDV,	   INSTR_VSI_URDV,    2, 10, 256, NULL },
 };
 
 const int s390_num_opformats =

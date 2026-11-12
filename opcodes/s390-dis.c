@@ -180,6 +180,37 @@ s390_extract_operand (const bfd_byte *insn,
   return ret;
 }
 
+/* Extract an operand value from an instruction.  Additionally mask any
+   constant operand bits set in the instruction template of unsigned
+   integer operands.  Constant operand bits do not make sense for registers,
+   displacements, PC-relative offsets, lengths, and signed values.  */
+
+static inline union operand_value
+s390_extract_operand_masked (const bfd_byte *insn,
+			     const struct s390_opcode *opcode,
+			     const struct s390_operand *operand)
+{
+  union operand_value val = s390_extract_operand (insn, operand);
+
+  if (!(operand->flags & (S390_OPERAND_GPR
+			  | S390_OPERAND_FPR
+			  | S390_OPERAND_VR
+			  | S390_OPERAND_AR
+			  | S390_OPERAND_CR
+			  | S390_OPERAND_DISP
+			  | S390_OPERAND_PCREL
+			  | S390_OPERAND_LENGTH
+			  | S390_OPERAND_SIGNED)))
+    {
+      union operand_value insn_opval
+	= s390_extract_operand (opcode->opcode, operand);
+
+      val.u &= ~insn_opval.u;
+    }
+
+  return val;
+}
+
 /* Return remaining operand count.  */
 
 static unsigned int
@@ -205,36 +236,32 @@ operand_count (const unsigned char *opindex_ptr)
 static bool
 skip_optargs_p (unsigned int opcode_flags, const unsigned char *opindex_ptr)
 {
-  if ((opcode_flags & (S390_INSTR_FLAG_OPTPARM | S390_INSTR_FLAG_OPTPARM2)))
-    {
-      unsigned int opcount = operand_count (opindex_ptr);
+  unsigned int optparm = opcode_flags & S390_INSTR_FLAG_OPTPARM_MASK;
+  unsigned int opcount;
 
-      if (opcount == 1)
-	return true;
-
-      if ((opcode_flags & S390_INSTR_FLAG_OPTPARM2) && opcount == 2)
-	return true;
-    }
-
-  return false;
+  return (optparm > 0
+	  && (opcount = operand_count (opindex_ptr)) > 0
+	  && opcount <= optparm);
 }
 
 /* Return true if all remaining instruction operands are optional
    and their values are zero.  */
 
 static bool
-skip_optargs_zero_p (const bfd_byte *buffer, unsigned int opcode_flags,
+skip_optargs_zero_p (const bfd_byte *buffer, const struct s390_opcode *opcode,
 		     const unsigned char *opindex_ptr)
 {
   /* Test if remaining operands are optional.  */
-  if (!skip_optargs_p (opcode_flags, opindex_ptr))
+  if (!skip_optargs_p (opcode->flags, opindex_ptr))
     return false;
 
-  /* Test if remaining operand values are zero.  */
+  /* Test if remaining operand values are zero, ignoring any constant
+     operand bits set in the insn template.  */
   for (; *opindex_ptr != 0; opindex_ptr++)
     {
       const struct s390_operand *operand = &s390_operands[*opindex_ptr];
-      union operand_value value = s390_extract_operand (buffer, operand);
+      union operand_value value
+	= s390_extract_operand_masked (buffer, opcode, operand);
 
       if (value.u != 0)
 	return false;
@@ -264,7 +291,8 @@ s390_print_insn_with_opcode (bfd_vma memaddr,
   for (opindex = opcode->operands; *opindex != 0; opindex++)
     {
       const struct s390_operand *operand = s390_operands + *opindex;
-      union operand_value val = s390_extract_operand (buffer, operand);
+      union operand_value val
+	= s390_extract_operand_masked (buffer, opcode, operand);
       unsigned long flags = operand->flags;
 
       /* Omit index register 0, except for vector index register 0.  */
@@ -285,7 +313,7 @@ s390_print_insn_with_opcode (bfd_vma memaddr,
       if (!(operand->flags & (S390_OPERAND_BASE
 			      | S390_OPERAND_INDEX
 			      | S390_OPERAND_LENGTH))
-	  && skip_optargs_zero_p (buffer, opcode->flags, opindex))
+	  && skip_optargs_zero_p (buffer, opcode, opindex))
 	break;
 
       if (flags & S390_OPERAND_GPR)
@@ -352,20 +380,6 @@ s390_print_insn_with_opcode (bfd_vma memaddr,
       else
 	{
 	  enum disassembler_style style;
-
-	  if (!(flags & S390_OPERAND_LENGTH))
-	    {
-	      union operand_value insn_opval;
-
-	      /* Mask any constant operand bits set in insn template.  */
-	      insn_opval = s390_extract_operand (opcode->opcode, operand);
-	      val.u &= ~insn_opval.u;
-	    }
-
-	  if ((opcode->flags & S390_INSTR_FLAG_OPTPARM)
-	      && val.u == 0
-	      && opindex[1] == 0)
-	    break;
 
 	  info->fprintf_styled_func (info->stream, dis_style_text,
 				     "%c", separator);

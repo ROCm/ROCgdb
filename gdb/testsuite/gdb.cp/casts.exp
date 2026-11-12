@@ -213,6 +213,12 @@ gdb_test "print &dynamic_cast<VirtualRight &> (*vlr) == vr" " = true"
 gdb_test "print &dynamic_cast<VirtualRight &> (*vl) == vr" " = true"
 gdb_test "print &dynamic_cast<VirtualRight &> (*vr) == vr" " = true"
 
+# dynamic_cast<void *> gives the address of the most derived object,
+# also through a base at a non-zero offset.
+gdb_test "print dynamic_cast<void *> (vlr) == vlr" " = true"
+gdb_test "print dynamic_cast<void *> (vl) == vlr" " = true"
+gdb_test "print dynamic_cast<void *> (vr) == vlr" " = true"
+
 if {[prepare_for_testing "failed to prepare" ${testfile}03 $srcfile2 \
 			 {debug c++ additional_flags=-std=c++03}]} {
     return

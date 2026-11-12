@@ -1076,7 +1076,7 @@ enclosing function for address %s"), paddress (gdbarch, orig_pc));
 	  gdb_printf (_("\
 This warning occurs if you are debugging a function without any symbols\n\
 (for example, in a stripped executable).  In that case, you may wish to\n\
-increase the size of the search with the `set heuristic-fence-post' command.\n\
+increase the size of the search with the \"set heuristic-fence-post\" command.\n\
 \n\
 Otherwise, you told GDB there was a function where there isn't one, or\n\
 (more likely) you have encountered a bug in GDB.\n"));

@@ -540,7 +540,7 @@ variable:	name_not_typename
 			    {
 			      /* TODO(dje): Can we get here?
 				 E.g., via a mix of c++ and go?  */
-			      gdb_assert_not_reached ("go with `this' field");
+			      gdb_assert_not_reached ("go with \"this\" field");
 			    }
 			  else
 			    {

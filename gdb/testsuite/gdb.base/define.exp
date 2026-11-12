@@ -253,12 +253,12 @@ gdb_test "next" "#0\[ \t\]*main.*:$bp_location11.*" \
 gdb_test "define hook-bar" \
     "Not confirmed.*" \
     "define hook undefined command aborted: bar" \
-    "warning: Your new `hook-bar' command does not hook any existing command.\r\nProceed.*y or n. $" \
+    "warning: Your new \"hook-bar\" command does not hook any existing command.\r\nProceed.*y or n. $" \
     "n"
 
 send_gdb "define hook-bar\n"
 gdb_expect {
-  -re "warning: Your new `hook-bar' command does not hook any existing command.\r\nProceed.*y or n. $"\
+  -re "warning: Your new \"hook-bar\" command does not hook any existing command.\r\nProceed.*y or n. $"\
 	  {send_gdb "y\n"
 	   gdb_expect {
 	     -re "Type commands for definition of \"hook-bar\".\r\nEnd with a line saying just \"end\".\r\n>$"\

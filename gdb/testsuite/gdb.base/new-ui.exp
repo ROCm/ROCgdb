@@ -180,7 +180,7 @@ proc_with_prefix do_test_invalid_args {} {
 
     # Test bad interpreter name.
     gdb_test "new-ui bloop $extra_tty_name" \
-	     "Interpreter `bloop' unrecognized" \
+	     "Interpreter \"bloop\" unrecognized" \
 	     "new-ui with bad interpreter name"
 
     # Test that the TUI cannot be used for a new UI.

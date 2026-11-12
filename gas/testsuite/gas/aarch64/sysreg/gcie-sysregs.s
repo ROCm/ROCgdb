@@ -69,6 +69,8 @@
 	rw_sys_reg ich_ppi_dvir1_el2
 	rw_sys_reg ich_ppi_enabler0_el2
 	rw_sys_reg ich_ppi_enabler1_el2
+	rw_sys_reg ich_ppi_hvir0_el2
+	rw_sys_reg ich_ppi_hvir1_el2
 	rw_sys_reg ich_ppi_pendr0_el2
 	rw_sys_reg ich_ppi_pendr1_el2
 	rw_sys_reg ich_ppi_priorityr0_el2

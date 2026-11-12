@@ -714,7 +714,7 @@ classify_unsafe_function (struct stoken function_name)
       return SIZEOF_KEYWORD;
     }
 
-  error (_("Unknown function in `unsafe' package: %s"), copy.c_str ());
+  error (_("Unknown function in \"unsafe\" package: %s"), copy.c_str ());
 }
 
 /* Classify token(s) "name1.name2" where name1 is known to be a package.

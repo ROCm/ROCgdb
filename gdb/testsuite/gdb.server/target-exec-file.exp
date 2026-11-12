@@ -164,7 +164,7 @@ proc start_inferior { testname expect_reread } {
 	    -re "^start\\s*\r\n" {
 		exp_continue
 	    }
-	    -re "^`\[^\r\n\]+' has changed; re-reading symbols\\.\r\n" {
+	    -re "^\"\[^\r\n\]+\" has changed; re-reading symbols\\.\r\n" {
 		set saw_reread true
 		exp_continue
 	    }

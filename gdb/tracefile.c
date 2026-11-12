@@ -334,7 +334,7 @@ tsave_command (const char *args, int from_tty)
       if (streq (*argv, "-r"))
 	target_does_save = 1;
       else if (**argv == '-')
-	error (_("unknown option `%s'"), *argv);
+	error (_("unknown option \"%s\""), *argv);
       else
 	filename = *argv;
     }

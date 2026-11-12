@@ -28,7 +28,7 @@ proc goto_probe { probe_name } {
 }
 
 goto_probe foo
-gdb_test "print \$_probe_arg0" "Invalid operator `\\\(' on expression .*" \
+gdb_test "print \$_probe_arg0" "Invalid operator \"\\\(\" on expression .*" \
     "print probe foo arg0"
 
 goto_probe bar

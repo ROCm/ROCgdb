@@ -3979,6 +3979,7 @@ class Target_mips : public Sized_target<size, big_endian>
     mach_mips16000            = 16000,
     mach_mips16               = 16,
     mach_mips5                = 5,
+    mach_mips_allegrex        = 10111431, // octal 'AL', 31
     mach_mips_loongson_2e     = 3001,
     mach_mips_loongson_2f     = 3002,
     mach_mips_gs464           = 3003,
@@ -3990,6 +3991,7 @@ class Target_mips : public Sized_target<size, big_endian>
     mach_mips_octeon2         = 6502,
     mach_mips_octeon3         = 6503,
     mach_mips_xlr             = 887682,   // decimal 'XLR'
+    mach_mips_interaptiv_mr2  = 736550,   // decimal 'IA2'
     mach_mipsisa32            = 32,
     mach_mipsisa32r2          = 33,
     mach_mipsisa32r3          = 34,
@@ -4194,8 +4196,10 @@ class Target_mips : public Sized_target<size, big_endian>
     this->add_extension(mach_mips4400, mach_mips4000);
     this->add_extension(mach_mips4300, mach_mips4000);
     this->add_extension(mach_mips4100, mach_mips4000);
-    this->add_extension(mach_mips4010, mach_mips4000);
     this->add_extension(mach_mips5900, mach_mips4000);
+
+    // MIPS32r2 extensions.
+    this->add_extension(mach_mips_interaptiv_mr2, mach_mipsisa32r2);
 
     // MIPS32 extensions.
     this->add_extension(mach_mipsisa32r2, mach_mipsisa32);
@@ -4203,6 +4207,8 @@ class Target_mips : public Sized_target<size, big_endian>
     // MIPS II extensions.
     this->add_extension(mach_mips4000, mach_mips6000);
     this->add_extension(mach_mipsisa32, mach_mips6000);
+    this->add_extension(mach_mips_allegrex, mach_mips6000);
+    this->add_extension(mach_mips4010, mach_mips6000);
 
     // MIPS I extensions.
     this->add_extension(mach_mips6000, mach_mips3000);
@@ -8866,6 +8872,9 @@ Target_mips<size, big_endian>::elf_mips_mach(elfcpp::Elf_Word flags)
     case elfcpp::EF_MIPS_MACH_4010:
       return mach_mips4010;
 
+    case elfcpp::EF_MIPS_MACH_ALLEGREX:
+      return mach_mips_allegrex;
+
     case elfcpp::EF_MIPS_MACH_4100:
       return mach_mips4100;
 
@@ -8919,6 +8928,9 @@ Target_mips<size, big_endian>::elf_mips_mach(elfcpp::Elf_Word flags)
 
     case elfcpp::EF_MIPS_MACH_XLR:
       return mach_mips_xlr;
+
+    case elfcpp::EF_MIPS_MACH_IAMR2:
+      return mach_mips_interaptiv_mr2;
 
     default:
       switch (flags & elfcpp::EF_MIPS_ARCH)
@@ -8976,6 +8988,9 @@ Target_mips<size, big_endian>::mips_isa_ext_mach(unsigned int isa_ext)
     case elfcpp::AFL_EXT_4010:
       return mach_mips4010;
 
+    case elfcpp::AFL_EXT_ALLEGREX:
+      return mach_mips_allegrex;
+
     case elfcpp::AFL_EXT_4100:
       return mach_mips4100;
 
@@ -9018,8 +9033,14 @@ Target_mips<size, big_endian>::mips_isa_ext_mach(unsigned int isa_ext)
     case elfcpp::AFL_EXT_OCTEON2:
       return mach_mips_octeon2;
 
+    case elfcpp::AFL_EXT_OCTEON3:
+      return mach_mips_octeon3;
+
     case elfcpp::AFL_EXT_XLR:
       return mach_mips_xlr;
+
+    case elfcpp::AFL_EXT_INTERAPTIV_MR2:
+      return mach_mips_interaptiv_mr2;
 
     default:
       return mach_mips3000;
@@ -9039,6 +9060,9 @@ Target_mips<size, big_endian>::mips_isa_ext(unsigned int mips_mach)
 
     case mach_mips4010:
       return elfcpp::AFL_EXT_4010;
+
+    case mach_mips_allegrex:
+      return elfcpp::AFL_EXT_ALLEGREX;
 
     case mach_mips4100:
       return elfcpp::AFL_EXT_4100;
@@ -9087,6 +9111,9 @@ Target_mips<size, big_endian>::mips_isa_ext(unsigned int mips_mach)
 
     case mach_mips_xlr:
       return elfcpp::AFL_EXT_XLR;
+
+    case mach_mips_interaptiv_mr2:
+      return elfcpp::AFL_EXT_INTERAPTIV_MR2;
 
     default:
       return 0;
@@ -12559,6 +12586,8 @@ Target_mips<size, big_endian>::elf_mips_mach_name(elfcpp::Elf_Word e_flags)
       return "mips:4010";
     case elfcpp::EF_MIPS_MACH_4100:
       return "mips:4100";
+    case elfcpp::EF_MIPS_MACH_ALLEGREX:
+      return "mips:allegrex";
     case elfcpp::EF_MIPS_MACH_4111:
       return "mips:4111";
     case elfcpp::EF_MIPS_MACH_4120:
@@ -12593,6 +12622,8 @@ Target_mips<size, big_endian>::elf_mips_mach_name(elfcpp::Elf_Word e_flags)
       return "mips:octeon3";
     case elfcpp::EF_MIPS_MACH_XLR:
       return "mips:xlr";
+    case elfcpp::EF_MIPS_MACH_IAMR2:
+      return "mips:interaptiv-mr2";
     default:
       switch (e_flags & elfcpp::EF_MIPS_ARCH)
         {

@@ -24,6 +24,18 @@
 
 struct fix;
 
+struct s390_fix_data {
+  const struct s390_opcode *opcode;
+  const struct s390_operand *operand;
+};
+
+#define TC_FIX_TYPE struct s390_fix_data
+#define TC_INIT_FIX_DATA(FIX)		\
+  {					\
+    (FIX)->tc_fix_data.opcode = NULL;	\
+    (FIX)->tc_fix_data.operand = NULL;	\
+  }
+
 #define TC_FORCE_RELOCATION(FIX) tc_s390_force_relocation(FIX)
 extern int tc_s390_force_relocation (struct fix *);
 

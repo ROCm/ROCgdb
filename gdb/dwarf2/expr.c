@@ -427,7 +427,7 @@ private:
 class dwarf_entry : public std::enable_shared_from_this<dwarf_entry>
 {
 public:
-  /* Not expected to be called on it's own.  */
+  /* Not expected to be called on its own.  */
   dwarf_entry () = default;
 
   virtual ~dwarf_entry () = 0;
@@ -467,7 +467,7 @@ dwarf_entry::~dwarf_entry () = default;
 class dwarf_location : public dwarf_entry
 {
 public:
-  /* Not expected to be called on it's own.  */
+  /* Not expected to be called on its own.  */
   dwarf_location (gdbarch *arch, LONGEST offset = 0,
 		  LONGEST bit_suboffset = 0)
     : m_arch (arch), m_initialised (true)
@@ -1919,7 +1919,7 @@ public:
 
 private:
   /* Composite piece that contains a piece location
-     description and it's size.  */
+     description and its size.  */
   class piece
   {
   public:
@@ -3460,7 +3460,7 @@ dwarf_expr_require_composition (const gdb_byte *op_ptr, const gdb_byte *op_end,
 {
   if (op_ptr != op_end && *op_ptr != DW_OP_piece && *op_ptr != DW_OP_bit_piece
       && *op_ptr != DW_OP_GNU_uninit)
-    error (_("DWARF-2 expression error: `%s' operations must be "
+    error (_("DWARF-2 expression error: \"%s\" operations must be "
 	     "used either alone or in conjunction with DW_OP_piece "
 	     "or DW_OP_bit_piece."),
 	   op_name);

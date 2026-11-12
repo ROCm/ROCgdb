@@ -38,7 +38,7 @@ set bad_dir [standard_output_file "non-existent"]
 # Try to write the index into a non-existent directory.
 foreach_with_prefix flag { "" "-dwarf-5" } {
     gdb_test "save gdb-index ${flag} ${bad_dir}" \
-	"Error while writing index for `[string_to_regexp $binfile]': `[string_to_regexp $bad_dir]': No such file or directory\\." \
+	"Error while writing index for \"[string_to_regexp $binfile]\": \"[string_to_regexp $bad_dir]\": No such file or directory\\." \
 	"try to write index to non-existent directory"
 }
 
@@ -51,7 +51,7 @@ close $fd
 # Try to write the index into something that is not a directory.
 foreach_with_prefix flag { "" "-dwarf-5" } {
     gdb_test "save gdb-index ${flag} ${text_file}" \
-	"Error while writing index for `[string_to_regexp $binfile]': `[string_to_regexp $text_file]': Is not a directory\\." \
+	"Error while writing index for \"[string_to_regexp $binfile]\": \"[string_to_regexp $text_file]\": Is not a directory\\." \
 	"try to write index to something that's not a directory"
 }
 
@@ -69,7 +69,7 @@ foreach_with_prefix flag { "" "-dwarf-5" } {
     }
 
     gdb_test "save gdb-index ${flag} ${non_writable_dir}" \
-	"Error while writing index for `[string_to_regexp $binfile]': couldn't open `[string_to_regexp $non_writable_dir]/${gdb_test_file_name}.*': Permission denied\\." \
+	"Error while writing index for \"[string_to_regexp $binfile]\": couldn't open \"[string_to_regexp $non_writable_dir]/${gdb_test_file_name}.*\": Permission denied\\." \
 	$test
 }
 
@@ -98,6 +98,6 @@ foreach_with_prefix flag { "" "-dwarf-5" } {
     # generate and index from it.  This will fail.
     clean_restart $testfile.$extension
     gdb_test "save gdb-index ${flag} $already_indexed_dir" \
-	"Error while writing index for `[string_to_regexp $binfile.$extension]': Cannot use an index to create the index" \
+	"Error while writing index for \"[string_to_regexp $binfile.$extension]\": Cannot use an index to create the index" \
 	"try to generate an index from a binary with an index"
 }

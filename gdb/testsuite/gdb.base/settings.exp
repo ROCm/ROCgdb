@@ -134,11 +134,11 @@ proc test-integer {variant} {
 
     # Valid value followed by garbage.
     gdb_test "$set_cmd 1 1" \
-	"A syntax error in expression, near `1'\\."
+	"A syntax error in expression, near \"1\"\\."
 
     # Valid value followed by garbage.
     gdb_test "$set_cmd 1 x" \
-	"A syntax error in expression, near `x'\\."
+	"A syntax error in expression, near \"x\"\\."
 
     if {$variant == "zuinteger-unlimited"} {
 	# -1 means unlimited.  Other negative values are rejected.  -1

@@ -2833,7 +2833,7 @@ locexpr_describe_location_piece (struct symbol *symbol, struct ui_file *stream,
 
       gdb_printf (stream,
 		  _("a thread-local variable at offset 0x%s "
-		    "in the thread-local storage for `%s'"),
+		    "in the thread-local storage for \"%s\""),
 		  phex_nz (offset, addr_size), objfile_name (objfile));
 
       data += 1 + addr_size + 1;
@@ -2860,7 +2860,7 @@ locexpr_describe_location_piece (struct symbol *symbol, struct ui_file *stream,
       offset = (uint64_t) dwarf2_read_addr_index (per_cu, per_objfile, offset);
       gdb_printf (stream,
 		  _("a thread-local variable at offset 0x%s "
-		    "in the thread-local storage for `%s'"),
+		    "in the thread-local storage for \"%s\""),
 		  phex_nz (offset, addr_size), objfile_name (objfile));
       ++data;
     }
@@ -3973,8 +3973,8 @@ function entry point and tail call frames will be printed."),
 
   add_setshow_boolean_cmd ("always-disassemble", class_obscure,
 			   &dwarf_always_disassemble, _("\
-Set whether `info address' always disassembles DWARF expressions."), _("\
-Show whether `info address' always disassembles DWARF expressions."), _("\
+Set whether \"info address\" always disassembles DWARF expressions."), _("\
+Show whether \"info address\" always disassembles DWARF expressions."), _("\
 When enabled, DWARF expressions are always printed in an assembly-like\n\
 syntax.  When disabled, expressions will be printed in a more\n\
 conversational style, when possible."),

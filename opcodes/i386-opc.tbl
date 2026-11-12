@@ -319,12 +319,12 @@ sti, 0xfb, 0, NoSuf, {}
 
 <alu2:opc:c:optz:optt:opti:optiE:nf, +
     add:0:C:::::NF|Optimize, +
-    or:1:C::Optimize:::NF, +
+    or:1:C::Optimize::Optimize:NF, +
     adc:2:C:::::, +
     sbb:3::::::, +
-    and:4:C::Optimize:Optimize::NF, +
+    and:4:C::Optimize:Optimize:Optimize:NF, +
     sub:5::Optimize:::Optimize:NF, +
-    xor:6:C:Optimize::::NF>
+    xor:6:C:Optimize:::Optimize:NF>
 
 <alu2>, <alu2:opc> << 3, APX_NDD, D|<alu2:c>|W|CheckOperandSize|Modrm|No_sSuf|DstVVVV|EVexMap4|<alu2:nf>|<alu2:optz>, { Reg8|Reg16|Reg32|Reg64, Reg8|Reg16|Reg32|Reg64|Unspecified|BaseIndex, Reg8|Reg16|Reg32|Reg64 }
 <alu2>, <alu2:opc> << 3, 0, D|W|CheckOperandSize|Modrm|No_sSuf|HLEPrefixLock|<alu2:optz>|<alu2:optt>, { Reg8|Reg16|Reg32|Reg64, Reg8|Reg16|Reg32|Reg64|Unspecified|BaseIndex }

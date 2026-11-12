@@ -381,7 +381,7 @@ go32_nat_target::attach (const char *args, int from_tty)
 {
   error (_("\
 You cannot attach to a running program on this platform.\n\
-Use the `run' command to run DJGPP programs."));
+Use the \"run\" command to run DJGPP programs."));
 }
 
 static int resume_is_step;
@@ -898,7 +898,7 @@ go32_nat_target::terminal_info (const char *args, int from_tty)
       for (i = 0; i < DBG_HANDLES; i++)
 	{
 	  if (child_cmd.redirection[i]->file_name)
-	    gdb_printf ("\tFile handle %d is redirected to `%s'.\n",
+	    gdb_printf ("\tFile handle %d is redirected to \"%s\".\n",
 			i, child_cmd.redirection[i]->file_name);
 	  else if (_get_dev_info (child_cmd.redirection[i]->inf_handle) == -1)
 	    gdb_printf
@@ -2111,9 +2111,9 @@ The address argument must be a linear address, after adding to\n\
 it the base address of the appropriate segment.\n\
 The base address of variables and functions in the debuggee's data\n\
 or code segment is stored in the variable __djgpp_base_address,\n\
-so use `__djgpp_base_address + (char *)&var' as the argument.\n\
+so use \"__djgpp_base_address + (char *)&var\" as the argument.\n\
 For other segments, look up their base address in the output of\n\
-the `info dos ldt' command."),
+the \"info dos ldt\" command."),
 	   &info_dos_cmdlist);
 }
 

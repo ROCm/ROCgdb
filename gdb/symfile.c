@@ -1202,7 +1202,7 @@ symbol_file_clear (int from_tty)
        || current_program_space->has_partial_symbols ())
       && from_tty
       && (current_program_space->symfile_object_file
-	  ? !query (_("Discard symbol table from `%s'? "),
+	  ? !query (_("Discard symbol table from \"%s\"? "),
 		    objfile_name (current_program_space->symfile_object_file))
 	  : !query (_("Discard symbol table? "))))
     error (_("Not confirmed."));
@@ -1703,12 +1703,12 @@ symfile_bfd_open (const char *name)
 
   gdb_bfd_ref_ptr sym_bfd (gdb_bfd_open (name, gnutarget, desc));
   if (sym_bfd == NULL)
-    error (_("`%ps': can't open to read symbols: %s."),
+    error (_("\"%ps\": can't open to read symbols: %s."),
 	   styled_string (file_name_style.style (), name),
 	   bfd_errmsg (bfd_get_error ()));
 
   if (!gdb_bfd_check_format (sym_bfd.get (), bfd_object))
-    error (_("`%ps': can't read symbols: %s."),
+    error (_("\"%ps\": can't read symbols: %s."),
 	   styled_string (file_name_style.style (), name),
 	   bfd_errmsg (bfd_get_error ()));
 
@@ -1772,7 +1772,7 @@ find_sym_fns (bfd *abfd)
       iter != symtab_fns.end ())
     return iter->second;
 
-  error (_("Object file %ps could not be read.  Symbol format `%s' unknown."),
+  error (_("Object file %ps could not be read.  Symbol format \"%s\" unknown."),
 	 styled_string (file_name_style.style (), abfd->filename),
 	 bfd_get_target (abfd));
 }
@@ -2500,14 +2500,14 @@ reread_symbols (int from_tty)
 	  else
 	    filename = objfile_name (&objfile);
 
-	  warning (_("`%ps' has disappeared; keeping its symbols."),
+	  warning (_("\"%ps\" has disappeared; keeping its symbols."),
 		   styled_string (file_name_style.style (), filename));
 	  continue;
 	}
       time_t new_modtime = new_statbuf.st_mtime;
       if (new_modtime != objfile.mtime)
 	{
-	  gdb_printf (_("`%ps' has changed; re-reading symbols.\n"),
+	  gdb_printf (_("\"%ps\" has changed; re-reading symbols.\n"),
 		      styled_string (file_name_style.style (),
 				     objfile_name (&objfile)));
 
@@ -3427,8 +3427,8 @@ simple_read_overlay_table (void)
   if (! novlys_msym.minsym)
     {
       error (_("Error reading inferior's overlay table: "
-	     "couldn't find `_novlys' variable\n"
-	     "in inferior.  Use `overlay manual' mode."));
+	     "couldn't find \"_novlys\" variable\n"
+	     "in inferior.  Use \"overlay manual\" mode."));
       return 0;
     }
 
@@ -3437,8 +3437,8 @@ simple_read_overlay_table (void)
   if (! ovly_table_msym.minsym)
     {
       error (_("Error reading inferior's overlay table: couldn't find "
-	     "`_ovly_table' array\n"
-	     "in inferior.  Use `overlay manual' mode."));
+	     "\"_ovly_table\" array\n"
+	     "in inferior.  Use \"overlay manual\" mode."));
       return 0;
     }
 
@@ -3517,8 +3517,8 @@ simple_overlay_update (struct obj_section *osect)
 
 	if (minsym.minsym == NULL)
 	  error (_("Error reading inferior's overlay table: couldn't "
-		   "find `_ovly_table' array\n"
-		   "in inferior.  Use `overlay manual' mode."));
+		   "find \"_ovly_table\" array\n"
+		   "in inferior.  Use \"overlay manual\" mode."));
 
 	if (cache_ovly_table_base == minsym.value_address ())
 	  /* Then go ahead and try to look up this single section in
@@ -3794,7 +3794,7 @@ symbolic debug information."
 Load symbol table from executable file FILE.\n\
 Usage: symbol-file [-readnow | -readnever] [-o OFF] FILE\n\
 OFF is an optional offset which is added to each section address.\n\
-The `file' command can also load symbol tables, as well as setting the file\n\
+The \"file\" command can also load symbol tables, as well as setting the file\n\
 to execute.\n" READNOW_READNEVER_HELP), &cmdlist);
   set_cmd_completer (c, filename_maybe_quoted_completer);
 
@@ -3882,7 +3882,7 @@ Usage: set extension-language .foo bar"),
 Set the directories where separate debug symbols are searched for."), _("\
 Show the directories where separate debug symbols are searched for."), _("\
 Separate debug symbols are first searched for in the same\n\
-directory as the binary, then in the `" DEBUG_SUBDIRECTORY "' subdirectory,\n\
+directory as the binary, then in the \"" DEBUG_SUBDIRECTORY "\" subdirectory,\n\
 and lastly at the path of the directory of the binary with\n\
 each global debug-file-directory component prepended."),
 				     NULL,

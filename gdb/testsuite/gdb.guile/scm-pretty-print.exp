@@ -93,7 +93,8 @@ proc run_lang_tests {exefile lang} {
 	gdb_test "print estring" " = \"embedded x\\\\201\\\\202\\\\203\\\\204\""
 
 	gdb_test_no_output "guile (set! *pp-ls-encoding* \"UTF-8\")"
-	gdb_test "print estring2" "\"embedded \", <incomplete sequence \\\\302>"
+	gdb_test "print estring2" \
+	    [string_to_regexp {"embedded x", <incomplete sequence \302>}]
 
 	gdb_test_no_output "set guile print-stack full"
 	gdb_test "print hint_error" "ERROR: Invalid display hint: 42\r\nhint_error_val"

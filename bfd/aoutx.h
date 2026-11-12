@@ -785,10 +785,11 @@ NAME (aout, machine_type) (enum bfd_architecture arch,
 	  arch_flags = M_MIPS1;
 	  break;
 	case bfd_mach_mips6000:
+	case bfd_mach_mips4010:
+	case bfd_mach_mips_allegrex:
 	  arch_flags = M_MIPS2;
 	  break;
 	case bfd_mach_mips4000:
-	case bfd_mach_mips4010:
 	case bfd_mach_mips4100:
 	case bfd_mach_mips4300:
 	case bfd_mach_mips4400:
@@ -813,7 +814,12 @@ NAME (aout, machine_type) (enum bfd_architecture arch,
 	case bfd_mach_mipsisa64r5:
 	case bfd_mach_mipsisa64r6:
 	case bfd_mach_mips_sb1:
+	case bfd_mach_mips_octeon:
+	case bfd_mach_mips_octeonp:
+	case bfd_mach_mips_octeon2:
+	case bfd_mach_mips_octeon3:
 	case bfd_mach_mips_xlr:
+	case bfd_mach_mips_interaptiv_mr2:
 	  /* FIXME: These should be MIPS3, MIPS4, MIPS16, MIPS32, etc.  */
 	  arch_flags = M_MIPS2;
 	  break;

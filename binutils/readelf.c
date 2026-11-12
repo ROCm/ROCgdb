@@ -20131,6 +20131,9 @@ print_mips_isa_ext (unsigned int isa_ext)
     case AFL_EXT_INTERAPTIV_MR2:
       fputs ("Imagination interAptiv MR2", stdout);
       break;
+    case AFL_EXT_ALLEGREX:
+      fputs ("Sony PSP Allegrex", stdout);
+      break;
     default:
       fprintf (stdout, "%s (%d)", _("Unknown"), isa_ext);
     }

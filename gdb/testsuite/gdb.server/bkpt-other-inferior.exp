@@ -57,7 +57,7 @@ set test "discard symbol table"
 gdb_test_multiple "file" $test {
     -re "A program is being debugged already..*Are you sure you want to change the file.*y or n. $" {
 	gdb_test "y" ".*" $test \
-	    {Discard symbol table from `.*'\? \(y or n\) } "y"
+	    {Discard symbol table from \".*\"\? \(y or n\) } "y"
     }
 }
 

@@ -19,7 +19,7 @@ lr_signing:
 	retaasppc .+0xc // future PC target is invalid: encoded offset would be negative
 	retaasppc external_symbol
 
-	.balign 0x40000 // NOP filling
+	.org 0x40000, 0
 
 	retaasppc lr_signing // the distance between the label and the reta<k>sppc instruction
 			     // is above the limit that can be encoded (=0x3fffc).

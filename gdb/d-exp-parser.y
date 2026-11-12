@@ -477,7 +477,7 @@ PrimaryExpression:
 			      /* Check if the qualified name resolves as a member
 				 of an aggregate or an enum type.  */
 			      if (!type_aggregate_p (type))
-				error (_("`%s' is not defined as an aggregate type."),
+				error (_("\"%s\" is not defined as an aggregate type."),
 				       type->safe_name ());
 
 			      pstate->push_new<scope_operation>

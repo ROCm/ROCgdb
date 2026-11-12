@@ -1134,7 +1134,8 @@ xtensa_scan_prologue (struct gdbarch *gdbarch, CORE_ADDR current_pc)
 	    RETURN_FP;
 	}
 
-      xtensa_insnbuf_from_chars (isa, ins, &ibuf[ia-ba], 0);
+      if (xtensa_insnbuf_from_chars (isa, ins, &ibuf[ia - ba], bt - ia) < 0)
+	RETURN_FP;
       ifmt = xtensa_format_decode (isa, ins);
       if (ifmt == XTENSA_UNDEFINED)
 	RETURN_FP;
@@ -2010,7 +2011,8 @@ call0_ret (CORE_ADDR start_pc, CORE_ADDR finish_pc)
 	    RETURN_RET;
 	}
 
-      xtensa_insnbuf_from_chars (isa, ins, &ibuf[ia-ba], 0);
+      if (xtensa_insnbuf_from_chars (isa, ins, &ibuf[ia - ba], bt - ia) < 0)
+	RETURN_RET;
       ifmt = xtensa_format_decode (isa, ins);
       if (ifmt == XTENSA_UNDEFINED)
 	RETURN_RET;
@@ -2415,7 +2417,11 @@ call0_analyze_prologue (struct gdbarch *gdbarch,
 
       /* Decode format information.  */
 
-      xtensa_insnbuf_from_chars (isa, ins, &ibuf[ia-ba], 0);
+      if (xtensa_insnbuf_from_chars (isa, ins, &ibuf[ia - ba], bt - ia) < 0)
+	{
+	  fail = 1;
+	  goto done;
+	}
       ifmt = xtensa_format_decode (isa, ins);
       if (ifmt == XTENSA_UNDEFINED)
 	{
@@ -2795,7 +2801,8 @@ execute_code (struct gdbarch *gdbarch, CORE_ADDR current_pc, CORE_ADDR wb)
 	  if (target_read_memory (ba, ibuf, bt - ba) != 0)
 	    return xtNoExceptionHandler;
 	}
-      xtensa_insnbuf_from_chars (isa, ins, &ibuf[ia-ba], 0);
+      if (xtensa_insnbuf_from_chars (isa, ins, &ibuf[ia - ba], bt - ia) < 0)
+	return xtNoExceptionHandler;
       ifmt = xtensa_format_decode (isa, ins);
       if (ifmt == XTENSA_UNDEFINED)
 	return xtNoExceptionHandler;

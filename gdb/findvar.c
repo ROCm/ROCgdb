@@ -321,9 +321,9 @@ language_defn::read_var_value (struct symbol *var,
   sym_need = symbol_read_needs (var);
 
   if (sym_need == SYMBOL_NEEDS_FRAME && frame == nullptr)
-    error (_("Cannot read `%s' without a frame"), var->print_name ());
+    error (_("Cannot read \"%s\" without a frame"), var->print_name ());
   else if (sym_need == SYMBOL_NEEDS_REGISTERS && !target_has_registers ())
-    error (_("Cannot read `%ps' without registers"),
+    error (_("Cannot read \"%ps\" without registers"),
 	   styled_string (variable_name_style.style (), var->print_name ()));
 
   switch (var->loc_class ())
@@ -404,7 +404,7 @@ language_defn::read_var_value (struct symbol *var,
     case LOC_ARG:
       addr = get_frame_args_address (frame);
       if (!addr)
-	error (_("Unknown argument list address for `%s'."),
+	error (_("Unknown argument list address for \"%s\"."),
 	       var->print_name ());
       addr += var->value_longest ();
       break;
@@ -416,7 +416,7 @@ language_defn::read_var_value (struct symbol *var,
 
 	argref = get_frame_args_address (frame);
 	if (!argref)
-	  error (_("Unknown argument list address for `%s'."),
+	  error (_("Unknown argument list address for \"%s\"."),
 		 var->print_name ());
 	argref += var->value_longest ();
 	ref = value_at (lookup_pointer_type (type), argref);
@@ -430,7 +430,7 @@ language_defn::read_var_value (struct symbol *var,
       break;
 
     case LOC_TYPEDEF:
-      error (_("Cannot look up value of a typedef `%s'."),
+      error (_("Cannot look up value of a typedef \"%s\"."),
 	     var->print_name ());
       break;
 
@@ -519,7 +519,7 @@ language_defn::read_var_value (struct symbol *var,
       return value::allocate_optimized_out (type);
 
     default:
-      error (_("Cannot look up value of a botched symbol `%s'."),
+      error (_("Cannot look up value of a botched symbol \"%s\"."),
 	     var->print_name ());
       break;
     }

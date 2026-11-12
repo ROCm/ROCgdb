@@ -308,7 +308,7 @@ tui_source_window_base::show_source_line (int lineno)
 void
 tui_source_window_base::refresh_window ()
 {
-  TUI_SCOPED_DEBUG_START_END ("window `%s`", name ());
+  TUI_SCOPED_DEBUG_START_END ("window \"%s\"", name ());
 
   gdb_assert (handle != nullptr);
 
@@ -355,7 +355,7 @@ tui_source_window_base::refresh_window ()
 void
 tui_source_window_base::show_source_content ()
 {
-  TUI_SCOPED_DEBUG_START_END ("window `%s`", name ());
+  TUI_SCOPED_DEBUG_START_END ("window \"%s\"", name ());
 
   gdb_assert (!m_content.empty ());
 
@@ -442,7 +442,7 @@ tui_source_window_base::update_tab_width ()
 void
 tui_source_window_base::rerender ()
 {
-  TUI_SCOPED_DEBUG_START_END ("window `%s`", name ());
+  TUI_SCOPED_DEBUG_START_END ("window \"%s\"", name ());
 
   if (!m_content.empty ())
     {
@@ -515,7 +515,7 @@ tui_source_window_base::refill ()
 bool
 tui_source_window_base::validate_scroll_offsets ()
 {
-  TUI_SCOPED_DEBUG_START_END ("window `%s`", name ());
+  TUI_SCOPED_DEBUG_START_END ("window \"%s\"", name ());
 
   int original_pad_offset = m_pad_offset;
 

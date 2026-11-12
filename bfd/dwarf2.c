@@ -271,6 +271,9 @@ struct dwarf2_debug_file
   /* Last comp unit in list above.  */
   struct comp_unit *last_comp_unit;
 
+  /* Unsearched CUs parsed via DW_FORM_ref_addr.  */
+  struct comp_unit *unsearched_units;
+
   /* Line table at line_offset zero.  */
   struct line_info_table *line_table;
 
@@ -356,6 +359,9 @@ struct comp_unit
      We scan these separately when we have a trie over the ranges.
      Unused if arange.high != 0. */
   struct comp_unit *next_unit_without_ranges;
+
+  /* Chain of CUs parsed via DW_FORM_ref_addr.  */
+  struct comp_unit *next_unsearched;
 
   /* Likewise, chain the compilation unit read after this one.
      The comp units are stored in reversed reading order.  */
@@ -2924,8 +2930,12 @@ decode_line_info (struct comp_unit *unit)
       if (table->num_files)
 	{
 	  /* PR 30783: Always start with a file index of 1, even
-	     for DWARF-5.  */
-	  filename = concat_filename (table, 1);
+	     for DWARF-5.  Use file 0 if file 1 is absent.  */
+	  unsigned int file_index = 1;
+
+	  if (table->use_dir_and_file_0 && file_index >= table->num_files)
+	    file_index = 0;
+	  filename = concat_filename (table, file_index);
 	}
 
       /* Decode the table.  */
@@ -3563,6 +3573,8 @@ find_abstract_instance (struct comp_unit *unit,
 		u = stash_comp_unit (unit->stash, &unit->stash->f);
 		if (u == NULL)
 		  break;
+		u->next_unsearched = unit->file->unsearched_units;
+		unit->file->unsearched_units = u;
 		if (info_ptr >= u->info_ptr_unit && info_ptr < u->end_ptr)
 		  break;
 		u = NULL;
@@ -3574,6 +3586,8 @@ find_abstract_instance (struct comp_unit *unit,
 		u = stash_comp_unit (unit->stash, &unit->stash->alt);
 		if (u == NULL)
 		  break;
+		u->next_unsearched = unit->stash->alt.unsearched_units;
+		unit->stash->alt.unsearched_units = u;
 		if (info_ptr >= u->info_ptr_unit && info_ptr < u->end_ptr)
 		  break;
 		u = NULL;
@@ -6016,6 +6030,19 @@ _bfd_dwarf2_find_nearest_line_with_alt
       if (found)
 	break;
     }
+
+  /* Search CUs parsed via DW_FORM_ref_addr.  */
+  if (!do_line)
+    while (!found && stash->f.unsearched_units != NULL)
+      {
+	each = stash->f.unsearched_units;
+	stash->f.unsearched_units = each->next_unsearched;
+	each->next_unsearched = NULL;
+	found = (comp_unit_may_contain_address (each, addr)
+		 && comp_unit_find_nearest_line (each, addr, filename_ptr,
+						 &function, linenumber_ptr,
+						 discriminator_ptr));
+      }
 
  done:
   if (functionname_ptr && function && function->is_linkage)

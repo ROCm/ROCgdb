@@ -4048,7 +4048,7 @@ show_dbgapi_version (const char *args, int from_tty)
   uint32_t major, minor, patch;
   amd_dbgapi_get_version (&major, &minor, &patch);
 
-  gdb_printf ("%p[ROCdbgapi %d.%d.%d (%s)%p]\nLoaded from `%ps'\n",
+  gdb_printf ("%p[ROCdbgapi %d.%d.%d (%s)%p]\nLoaded from \"%ps\"\n",
 	      version_style.style ().ptr (), major, minor, patch,
 	      amd_dbgapi_get_build_name (), nullptr,
 	      styled_string (file_name_style.style (),

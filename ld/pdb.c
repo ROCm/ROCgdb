@@ -1879,7 +1879,7 @@ parse_inlinee_lines (uint8_t *data, uint32_t size, uint8_t **bufptr,
       return false;
     }
 
-  version = bfd_getl32 (data + sizeof (uint32_t) + sizeof (uint32_t));
+  version = bfd_getl32 (data);
   if (version != CV_INLINEE_SOURCE_LINE_SIGNATURE)
     {
       einfo (_("%P: warning: unexpected DEBUG_S_INLINEELINES version %u\n"),
@@ -1940,34 +1940,25 @@ handle_debugs_section (asection *s, bfd *mod, struct string_table *strings,
       struct internal_syment *symbols;
       asection **sectlist;
       unsigned int syment_count;
-      int sect_num;
-      struct external_syment *ext;
+      bfd_byte *ext = coff_data (mod)->external_syms;
+      bfd_size_type symesz = bfd_coff_symesz (mod);
 
       syment_count = obj_raw_syment_count (mod);
 
       relocs = bfd_coff_read_internal_relocs (mod, s, false, NULL, true, NULL);
 
       symbols = xmalloc (sizeof (struct internal_syment) * syment_count);
-      sectlist = xmalloc (sizeof (asection *) * syment_count);
-
-      ext = (struct external_syment *) (coff_data (mod)->external_syms);
+      sectlist = xcalloc (syment_count, sizeof (*sectlist));
 
       for (unsigned int i = 0; i < syment_count; i++)
 	{
-	  bfd_coff_swap_sym_in (mod, &ext[i], &symbols[i]);
-	}
+	  bfd_coff_swap_sym_in (mod, ext + i * symesz, &symbols[i]);
 
-      sect_num = 1;
+	  if (symbols[i].n_scnum > 0)
+	    sectlist[i] = coff_section_from_bfd_index (mod, symbols[i].n_scnum);
 
-      for (asection *sect = mod->sections; sect; sect = sect->next)
-	{
-	  for (unsigned int i = 0; i < syment_count; i++)
-	    {
-	      if (symbols[i].n_scnum == sect_num)
-		sectlist[i] = sect;
-	    }
-
-	  sect_num++;
+	  memset (&symbols[i + 1], 0, symbols[i].n_numaux * sizeof (*symbols));
+	  i += symbols[i].n_numaux;
 	}
 
       if (!bfd_coff_relocate_section (abfd, coff_data (abfd)->link_info, mod,

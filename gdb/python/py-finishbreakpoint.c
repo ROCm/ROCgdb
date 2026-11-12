@@ -186,7 +186,7 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
       if (frame == NULL)
 	{
 	  PyErr_SetString (PyExc_ValueError,
-			   _("Invalid ID for the `frame' object."));
+			   _("Invalid ID for the \"frame\" object."));
 	}
       else if (get_frame_type (frame) == INLINE_FRAME)
 	{
@@ -241,7 +241,7 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
       if (internal_bp == -1)
 	{
 	  PyErr_SetString (PyExc_ValueError,
-			   _("The value of `internal' must be a boolean."));
+			   _("The value of \"internal\" must be a boolean."));
 	  return -1;
 	}
     }

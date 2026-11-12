@@ -101,7 +101,7 @@ with_test_prefix "scenario 2" {
 }
 
 mi_gdb_test "-catch-exception -e Program_Error" \
-    "\\^done,bkptno=\"$decimal\",bkpt={.*disp=\"keep\",enabled=\"y\",what=\"`Program_Error' Ada exception\",.*}" \
+    "\\^done,bkptno=\"$decimal\",bkpt={.*disp=\"keep\",enabled=\"y\",what=\"\\\\\"Program_Error\\\\\" Ada exception\",.*}" \
     "catch Program_Error"
 
 mi_gdb_test "-catch-assert" \

@@ -107,7 +107,7 @@ proc test_first_component {} {
 }
 
 proc test_namespace {} {
-    gdb_test "maint cp namespace" "The `maint namespace' command was removed."
+    gdb_test "maint cp namespace" "The \"maint namespace\" command was removed."
 }
 
 gdb_exit

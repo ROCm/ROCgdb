@@ -623,7 +623,7 @@ qualified_name:	typebase COLONCOLON name
 
 			  if (type->code () != TYPE_CODE_STRUCT
 			      && type->code () != TYPE_CODE_UNION)
-			    error (_("`%s' is not defined as an aggregate type."),
+			    error (_("\"%s\" is not defined as an aggregate type."),
 				   type->name ());
 
 			  pstate->push_new<scope_operation>

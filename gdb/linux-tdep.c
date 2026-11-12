@@ -960,7 +960,8 @@ linux_info_proc (struct gdbarch *gdbarch, const char *args,
 	  gdb_printf ("cmdline = '%s'\n", buffer);
 	}
       else
-	warning (_("unable to open /proc file '%s'"), filename);
+	warning (_("unable to open /proc file '%ps'"),
+		 styled_string (file_name_style.style (), filename));
     }
   if (cwd_f)
     {
@@ -970,7 +971,8 @@ linux_info_proc (struct gdbarch *gdbarch, const char *args,
       if (contents.has_value ())
 	gdb_printf ("cwd = '%s'\n", contents->c_str ());
       else
-	warning (_("unable to read link '%s'"), filename);
+	warning (_("unable to read link '%ps'"),
+		 styled_string (file_name_style.style (), filename));
     }
   if (environ_f)
     {
@@ -994,7 +996,8 @@ linux_info_proc (struct gdbarch *gdbarch, const char *args,
 	    }
 	}
       else
-	warning (_("unable to open /proc file '%s'"), filename);
+	warning (_("unable to open /proc file '%ps'"),
+		 styled_string (file_name_style.style (), filename));
     }
   if (exe_f)
     {
@@ -1004,7 +1007,8 @@ linux_info_proc (struct gdbarch *gdbarch, const char *args,
       if (contents.has_value ())
 	gdb_printf ("exe = '%s'\n", contents->c_str ());
       else
-	warning (_("unable to read link '%s'"), filename);
+	warning (_("unable to read link '%ps'"),
+		 styled_string (file_name_style.style (), filename));
     }
   if (mappings_f)
     {
@@ -1049,7 +1053,8 @@ linux_info_proc (struct gdbarch *gdbarch, const char *args,
 	    }
 	}
       else
-	warning (_("unable to open /proc file '%s'"), filename);
+	warning (_("unable to open /proc file '%ps'"),
+		 styled_string (file_name_style.style (), filename));
     }
   if (status_f)
     {
@@ -1059,7 +1064,8 @@ linux_info_proc (struct gdbarch *gdbarch, const char *args,
       if (status)
 	gdb_puts (status.get ());
       else
-	warning (_("unable to open /proc file '%s'"), filename);
+	warning (_("unable to open /proc file '%ps'"),
+		 styled_string (file_name_style.style (), filename));
     }
   if (stat_f)
     {
@@ -1195,7 +1201,8 @@ linux_info_proc (struct gdbarch *gdbarch, const char *args,
 #endif
 	}
       else
-	warning (_("unable to open /proc file '%s'"), filename);
+	warning (_("unable to open /proc file '%ps'"),
+		 styled_string (file_name_style.style (), filename));
     }
 }
 
@@ -1579,7 +1586,7 @@ parse_smaps_key_value (const char *keyword, const char *line,
    DATA is the contents of the smaps file.  The parsed contents are stored
    into the SMAPS vector.  */
 
-static std::vector<struct smaps_data>
+static std::vector<smaps_data>
 parse_smaps_data (const char *data,
 		  const std::string &maps_filename)
 {
@@ -1589,7 +1596,7 @@ parse_smaps_data (const char *data,
 
   line = strtok_r ((char *) data, "\n", &t);
 
-  std::vector<struct smaps_data> smaps;
+  std::vector<smaps_data> smaps;
 
   while (line != NULL)
     {
@@ -1701,7 +1708,7 @@ parse_smaps_data (const char *data,
 	    }
 	}
       /* Save the smaps entry to the vector.  */
-	struct smaps_data map;
+	smaps_data map;
 
 	map.start_address = m.addr;
 	map.end_address = m.endaddr;
@@ -1744,7 +1751,7 @@ linux_process_address_in_memtag_page (CORE_ADDR address)
     return false;
 
   /* Parse the contents of smaps into a vector.  */
-  std::vector<struct smaps_data> smaps
+  std::vector<smaps_data> smaps
     = parse_smaps_data (data.get (), smaps_file);
 
   for (const smaps_data &map : smaps)
@@ -1840,10 +1847,10 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
     }
 
   /* Parse the contents of smaps into a vector.  */
-  std::vector<struct smaps_data> smaps
+  std::vector<smaps_data> smaps
     = parse_smaps_data (data.get (), maps_filename);
 
-  for (const struct smaps_data &map : smaps)
+  for (const smaps_data &map : smaps)
     {
       /* Invoke the callback function to create the corefile segment.  */
       if (should_dump_mapping_p (filterflags, map))
@@ -2980,7 +2987,8 @@ linux_vsyscall_range_raw (struct gdbarch *gdbarch, struct mem_range *range)
 	}
     }
   else
-    warning (_("unable to open /proc file '%s'"), filename);
+    warning (_("unable to open /proc file '%ps'"),
+	     styled_string (file_name_style.style (), filename));
 
   return false;
 }

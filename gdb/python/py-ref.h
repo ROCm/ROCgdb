@@ -108,6 +108,13 @@ public:
     gdb_assert (this->m_obj != nullptr);
   }
 
+  template<typename U>
+  gdbpy_borrowed_ref (const gdbpy_opt_borrowed_ref<U> &ref)
+    : gdbpy_opt_borrowed_ref<T> (ref)
+  {
+    gdb_assert (this->m_obj != nullptr);
+  }
+
   gdbpy_borrowed_ref (std::nullptr_t) = delete;
 
   /* Allow a (checked) conversion to any subclass of T.  */

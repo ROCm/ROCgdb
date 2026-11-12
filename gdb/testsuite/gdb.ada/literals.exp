@@ -24,7 +24,7 @@ clean_restart
 gdb_test_no_output "set lang ada"
 gdb_test "print 7#10#" " = 7"
 gdb_test "print 77#10#" "Invalid base: 77."
-gdb_test "print 7#8#" "Invalid digit `8' in based literal"
+gdb_test "print 7#8#" "Invalid digit \"8\" in based literal"
 
 gdb_test "print 8e2" " = 800"
 gdb_test "print 9999999999999999999999999999999999999999999999" \

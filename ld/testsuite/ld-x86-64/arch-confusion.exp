@@ -1,0 +1,212 @@
+# Expect script for x86 ELF output target confusion tests.
+#
+# Copyright (C) 2026 Free Software Foundation, Inc.
+#
+# This file is part of the GNU Binutils.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <http://www.gnu.org/licenses/>.
+
+# A linker script can retarget the output BFD away from x86 with
+# OUTPUT_FORMAT.  The x86 emulation still calls
+# bfd_elf_linker_x86_set_options, and ldelf_after_open_output runs too.
+# Neither may mistake a foreign link hash table for the one it expects.
+
+# The linker scripts below are written to the local tmpdir, which a
+# remote host cannot see.
+if { [is_remote host] } {
+    return
+}
+
+set test "x86-64 output target confusion"
+
+# A different target has neither this test's assembler nor its emulation,
+# so skip silently there, as the rest of ld-x86-64 does.  Once the target
+# matches, both remaining preconditions record a result, so a missing
+# emulation or a failed assembly cannot go unreported.
+if { !([istarget "x86_64-*-elf*"] || [istarget "x86_64-*-linux*"]) } {
+    return
+}
+
+if { ![ld_supports_emul "elf_x86_64"] } {
+    unsupported "$test (elf_x86_64 emulation not supported)"
+    return
+}
+
+# Write a minimal linker script that selects an output format.  ARCH may
+# be empty, in which case the format's own default is used.
+proc arch_confusion_script { path format arch } {
+    set fp [open $path w]
+    puts $fp "OUTPUT_FORMAT(\"$format\")"
+    if { $arch ne "" } {
+	puts $fp "OUTPUT_ARCH($arch)"
+    }
+    puts $fp "SECTIONS"
+    puts $fp "{"
+    puts $fp "  .text : { *(.text) }"
+    puts $fp "}"
+    close $fp
+}
+
+# Link OBJ with -melf_x86_64 and the linker script at SCRIPT, and return
+# the linker diagnostics.  binutils' run_host_cmd returns the output
+# text only, so the exit status is not available here.
+proc arch_confusion_link { script obj out } {
+    global ld
+    catch { file delete -force $out }
+    return [run_host_cmd "$ld" "-melf_x86_64 -T $script -o $out $obj"]
+}
+
+# Foreign ELF output formats to try, as {format architecture}.  Both
+# names have to be valid for the BFD backend, or ld rejects the script
+# before the x86 emulation hook runs and nothing is tested.  A name this
+# build does not know is recognised from the diagnostic and the next
+# candidate is tried.  Each format has an ELF link hash table, and the
+# unpatched tree overflows under AddressSanitizer for each of them.
+set arch_confusion_elf_targets {
+    {elf64-bpfle          bpf}
+    {elf32-littlearc      arc}
+    {elf64-littleriscv    riscv}
+    {elf32-xtensa-le      xtensa}
+    {elf32-microblaze     microblaze}
+    {elf64-tilegx-le      tilegx}
+    {elf32-or1k           or1k}
+    {elf32-bfin           bfin}
+}
+
+# Generic output formats to try, as {format architecture}.  Both names
+# have to be valid, as above.  The empty architecture is left to the
+# format's own default.
+set arch_confusion_generic_targets {
+    {elf64-nfp            nfp}
+    {elf32-little         {}}
+}
+
+if { ![ld_assemble $as "--64 $srcdir/$subdir/arch-confusion.s" \
+	 tmpdir/arch-confusion.o] } {
+    unsupported "$test (could not assemble the input)"
+    return
+}
+
+# A non-ELF output format has no ELF backend data.  The x86 hook must
+# decline to touch it.  Such a link is unaffected and must succeed.
+#
+# This block does not reproduce the original overflow.  What it pins is
+# the ORDER of the tests in elf_x86_hash_table.  is_elf_hash_table must
+# stay first: it short circuits for a non-ELF output, so bed->target_id
+# is never read and the link has no ELF backend data to read from.  Move
+# the id test in front of it and this link segfaults.
+arch_confusion_script tmpdir/arch-confusion-binary.t "binary" ""
+if { [ld_link $ld tmpdir/arch-confusion-binary.out \
+	 "-melf_x86_64 -T tmpdir/arch-confusion-binary.t \
+	  tmpdir/arch-confusion.o"] } {
+    pass "$test (non-ELF output format)"
+} else {
+    fail "$test (link to the binary output format should have succeeded)"
+}
+
+# A foreign ELF output format still gets an ELF link hash table, just
+# not an x86 one.  The link is expected to fail, but only because the
+# input object does not match the foreign architecture.  That diagnostic
+# is printed after the output file has been opened and the x86 hook has
+# run, so requiring it proves the hook returned cleanly.  Any other
+# result, in particular a sanitizer report from the out of bounds store,
+# is a failure.  A candidate this build lacks is logged and skipped.  The
+# test is unsupported only when no candidate is available.
+set found 0
+foreach target $arch_confusion_elf_targets {
+    set format [lindex $target 0]
+    set arch [lindex $target 1]
+
+    arch_confusion_script tmpdir/arch-confusion-elf.t $format $arch
+    set output [arch_confusion_link tmpdir/arch-confusion-elf.t \
+		    tmpdir/arch-confusion.o tmpdir/arch-confusion-elf.out]
+
+    if { [regexp "target $format not found" $output]
+	 || [regexp "cannot represent machine" $output] } {
+	verbose -log "no $format target in this build, skipping it"
+	continue
+    }
+
+    set found 1
+
+    if { [regexp "architecture of input file .* is incompatible with" \
+		 $output] } {
+	pass "$test (foreign ELF output format $format)"
+    } else {
+	fail "$test (foreign ELF output format $format: $output)"
+    }
+    break
+}
+
+if { !$found } {
+    unsupported "$test (foreign ELF output format)"
+}
+
+# Some ELF flavours use the generic link hash table rather than an ELF
+# one.  ldelf_after_open_output runs for them too, and must not read ELF
+# fields out of the generic table.  elf64-nfp enforces its machine, so
+# OUTPUT_ARCH is needed there, or ld rejects the script before the hook
+# runs.
+#
+# The result differs by format, and a clean link is accepted.  elf64-nfp
+# is a real port with its own machine and rejects the x86-64 input with
+# the architecture diagnostic.  A generic backend such as elf32-little
+# accepts any input machine, so there is no diagnostic and the link
+# simply has to produce its output.  Either way a sanitizer report from
+# the out of bounds read, or any other diagnostic, is a failure.  As
+# above, a candidate this build lacks is logged and skipped, and the test
+# is unsupported only when no candidate is available.
+set found 0
+foreach target $arch_confusion_generic_targets {
+    set format [lindex $target 0]
+    set arch [lindex $target 1]
+
+    arch_confusion_script tmpdir/arch-confusion-generic.t $format $arch
+    set output [arch_confusion_link tmpdir/arch-confusion-generic.t \
+		    tmpdir/arch-confusion.o tmpdir/arch-confusion-generic.out]
+
+    if { [regexp "target $format not found" $output]
+	 || [regexp "cannot represent machine" $output] } {
+	verbose -log "no $format target in this build, skipping it"
+	continue
+    }
+
+    set found 1
+
+    # ld removes its output file when the link fails, so an empty
+    # diagnostic together with the file present means the link really
+    # did complete.
+    if { [regexp "architecture of input file .* is incompatible with" \
+		 $output] } {
+	pass "$test (generic link hash table, output format $format)"
+    } elseif { $output eq "" \
+	       && [file exists tmpdir/arch-confusion-generic.out] } {
+	pass "$test (generic link hash table, output format $format)"
+    } else {
+	fail "$test (generic link hash table, output format $format: $output)"
+    }
+    break
+}
+
+if { !$found } {
+    unsupported "$test (generic link hash table, output format)"
+}
+
+catch { file delete -force tmpdir/arch-confusion-binary.t }
+catch { file delete -force tmpdir/arch-confusion-binary.out }
+catch { file delete -force tmpdir/arch-confusion-elf.t }
+catch { file delete -force tmpdir/arch-confusion-elf.out }
+catch { file delete -force tmpdir/arch-confusion-generic.t }
+catch { file delete -force tmpdir/arch-confusion-generic.out }
+catch { file delete -force tmpdir/arch-confusion.o }

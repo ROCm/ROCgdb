@@ -1086,8 +1086,8 @@ i386_linux_core_read_xsave_info (bfd *abfd, x86_xsave_layout &layout)
   if (! bfd_get_section_contents (abfd, xstate, contents,
 				  I386_LINUX_XSAVE_XCR0_OFFSET, 8))
     {
-      warning (_("Couldn't read `xcr0' bytes from "
-		 "`.reg-xstate' section in core file."));
+      warning (_("Couldn't read \"xcr0\" bytes from "
+		 "\".reg-xstate\" section in core file."));
       return 0;
     }
 

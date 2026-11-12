@@ -182,7 +182,7 @@ xtensa_insnbuf_to_chars (xtensa_isa isa,
    xtensa_insnbuf_to_chars for a discussion of why this is complicated
    by endianness.  */
 
-void
+int
 xtensa_insnbuf_from_chars (xtensa_isa isa,
 			   xtensa_insnbuf insn,
 			   const unsigned char *cp,
@@ -193,16 +193,19 @@ xtensa_insnbuf_from_chars (xtensa_isa isa,
 
   max_size = xtensa_isa_maxlength (isa);
 
+  /* No insn is smaller than 2 bytes, and we must be able to read
+     at least one byte to decode the insn.  */
+  if (num_chars < 2)
+    return XTENSA_UNDEFINED;
+
   /* Decode the instruction length so we know how many bytes to read.  */
   insn_size = (intisa->length_decode_fn) (cp);
   if (insn_size == XTENSA_UNDEFINED)
-    {
-      /* This should never happen when the byte stream contains a
-	 valid instruction.  Just read the maximum number of bytes....  */
-      insn_size = max_size;
-    }
+    return XTENSA_UNDEFINED;
 
-  if (num_chars == 0 || num_chars > insn_size)
+  if (num_chars < insn_size)
+    return XTENSA_UNDEFINED;
+  if (num_chars > insn_size)
     num_chars = insn_size;
 
   if (intisa->is_big_endian)
@@ -226,6 +229,7 @@ xtensa_insnbuf_from_chars (xtensa_isa isa,
 
       insn[word_inx] |= (unsigned) (*cp & 0xff) << bit_inx;
     }
+  return 0;
 }
 
 

@@ -249,7 +249,7 @@ tracepoint_look_up_symbols (void)
 
       if (look_up_one_symbol (symbol_list[i].name, addrp, 1) == 0)
 	{
-	  threads_debug_printf ("symbol `%s' not found", symbol_list[i].name);
+	  threads_debug_printf ("symbol \"%s\" not found", symbol_list[i].name);
 	  return;
 	}
     }
@@ -5163,23 +5163,23 @@ fast_tracepoint_collecting (CORE_ADDR thread_area,
   if (read_inferior_data_pointer (ipa_sym_addrs.addr_gdb_jump_pad_buffer,
 				  &ipa_gdb_jump_pad_buffer))
     {
-      internal_error ("error extracting `gdb_jump_pad_buffer'");
+      internal_error ("error extracting \"gdb_jump_pad_buffer\"");
     }
   if (read_inferior_data_pointer (ipa_sym_addrs.addr_gdb_jump_pad_buffer_end,
 				  &ipa_gdb_jump_pad_buffer_end))
     {
-      internal_error ("error extracting `gdb_jump_pad_buffer_end'");
+      internal_error ("error extracting \"gdb_jump_pad_buffer_end\"");
     }
 
   if (read_inferior_data_pointer (ipa_sym_addrs.addr_gdb_trampoline_buffer,
 				  &ipa_gdb_trampoline_buffer))
     {
-      internal_error ("error extracting `gdb_trampoline_buffer'");
+      internal_error ("error extracting \"gdb_trampoline_buffer\"");
     }
   if (read_inferior_data_pointer (ipa_sym_addrs.addr_gdb_trampoline_buffer_end,
 				  &ipa_gdb_trampoline_buffer_end))
     {
-      internal_error ("error extracting `gdb_trampoline_buffer_end'");
+      internal_error ("error extracting \"gdb_trampoline_buffer_end\"");
     }
 
   if (ipa_gdb_jump_pad_buffer <= stop_pc
@@ -5761,7 +5761,7 @@ download_tracepoint (struct tracepoint *tpoint)
 				      + offsetof (struct tracepoint, next),
 				      &tp_prev_target_next_addr))
 	{
-	  internal_error ("error reading `tp_prev->next'");
+	  internal_error ("error reading \"tp_prev->next\"");
 	}
 
       /* tpoint->next = tp_prev->next */

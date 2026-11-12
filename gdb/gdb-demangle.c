@@ -249,7 +249,7 @@ Show demangling of C++/ObjC names in disassembly listings."), NULL,
 			&current_demangling_style_string, _("\
 Set the current C++ demangling style."), _("\
 Show the current C++ demangling style."), _("\
-Use `set demangle-style' without arguments for a list of demangling styles."),
+Use \"set demangle-style\" without arguments for a list of demangling styles."),
 			set_demangling_command,
 			show_demangling_style_names,
 			&setlist, &showlist);

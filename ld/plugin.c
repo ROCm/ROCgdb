@@ -59,6 +59,12 @@ extern int errno;
 /* Report plugin symbols.  */
 bool report_plugin_symbols;
 
+/* Set at all symbols read time, to avoid recursively offering the plugin
+   its own newly-added input files and libs to claim.  */
+bool no_more_claiming = false;
+
+#if BFD_SUPPORTS_PLUGINS
+
 /* The suffix to append to the name of the real (claimed) object file
    when generating a dummy BFD to hold the IR symbols sent from the
    plugin.  For cosmetic use only; appears in maps, crefs etc.  */
@@ -140,10 +146,6 @@ static bool orig_notice_all;
 /* Original linker callbacks, and the plugin version.  */
 static const struct bfd_link_callbacks *orig_callbacks;
 static struct bfd_link_callbacks plugin_callbacks;
-
-/* Set at all symbols read time, to avoid recursively offering the plugin
-   its own newly-added input files and libs to claim.  */
-bool no_more_claiming = false;
 
 #if HAVE_MMAP && HAVE_GETPAGESIZE
 /* Page size used by mmap.  */
@@ -1540,3 +1542,44 @@ plugin_notice (struct bfd_link_info *info,
 				      abfd, section, value, flags);
   return true;
 }
+
+#else /* !BFD_SUPPORTS_PLUGINS */
+
+void
+plugin_opt_plugin (const char *plugin ATTRIBUTE_UNUSED)
+{
+}
+
+int
+plugin_opt_plugin_arg (const char *arg ATTRIBUTE_UNUSED)
+{
+  return 0;
+}
+
+void
+plugin_load_plugins (void)
+{
+}
+
+const char *
+plugin_error_plugin (void)
+{
+  return "";
+}
+
+void
+plugin_maybe_claim (lang_input_statement_type *entry ATTRIBUTE_UNUSED)
+{
+}
+
+int
+plugin_call_all_symbols_read (void)
+{
+  return 0;
+}
+
+void
+plugin_call_cleanup (void)
+{
+}
+#endif /* !BFD_SUPPORTS_PLUGINS */

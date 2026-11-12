@@ -117,27 +117,27 @@ set re_complaint3 \
 set re_complaint4 \
     [multi_line \
 	 "macro debug info contains a malformed macro definition:" \
-	 "`M1_07_MALFORMED'"]
+	 "\"M1_07_MALFORMED\""]
 
 set re_complaint5 \
     [multi_line \
 	 "macro debug info contains a malformed macro definition:" \
-	 [string_to_regexp "`M1_11_MALFORMED(ARG'"]]
+	 [string_to_regexp "\"M1_11_MALFORMED(ARG\""]]
 
 set re_complaint6 \
     [multi_line \
 	 "macro debug info contains a malformed macro definition:" \
-	 [string_to_regexp "`M1_12_MALFORMED(ARG,'"]]
+	 [string_to_regexp "\"M1_12_MALFORMED(ARG,\""]]
 
 set re_complaint7 \
     [multi_line \
 	 "macro debug info contains a malformed macro definition:" \
-	 [string_to_regexp "`M1_13_MALFORMED(ARG,)'"]]
+	 [string_to_regexp "\"M1_13_MALFORMED(ARG,)\""]]
 
 set re_complaint8 \
     [multi_line \
 	 "macro debug info contains a malformed macro definition:" \
-	 [string_to_regexp "`M1_14_MALFORMED()1'"]]
+	 [string_to_regexp "\"M1_14_MALFORMED()1\""]]
 
 set prefix \
     "During symbol reading"

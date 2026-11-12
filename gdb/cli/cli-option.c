@@ -315,7 +315,7 @@ parse_option (gdb::array_view<const option_def_group> options_group,
 		  }
 
 		if (have_delimiter)
-		  error (_("Value given for `-%s' is not a boolean: %.*s"),
+		  error (_("Value given for \"-%s\" is not a boolean: %.*s"),
 			 match->name, (int) (end - val_str), val_str);
 		/* The user didn't separate options from operands
 		   using "--", so treat this unrecognized value as the

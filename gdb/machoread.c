@@ -424,7 +424,7 @@ macho_add_oso_symfile (oso_el *oso, const gdb_bfd_ref_ptr &abfd,
 
   if (!gdb_bfd_check_format (abfd.get (), bfd_object))
     {
-      warning (_("`%s': can't read symbols: %s."), oso->name,
+      warning (_("\"%s\": can't read symbols: %s."), oso->name,
 	       bfd_errmsg (bfd_get_error ()));
       return;
     }
@@ -432,7 +432,7 @@ macho_add_oso_symfile (oso_el *oso, const gdb_bfd_ref_ptr &abfd,
   if (abfd->my_archive == nullptr
       && oso->mtime != gdb_bfd_get_mtime (abfd.get ()))
     {
-      warning (_("`%s': file time stamp mismatch."), oso->name);
+      warning (_("\"%s\": file time stamp mismatch."), oso->name);
       return;
     }
 
@@ -440,7 +440,7 @@ macho_add_oso_symfile (oso_el *oso, const gdb_bfd_ref_ptr &abfd,
 			      sizeof (struct macho_sym_hash_entry),
 			      oso->nbr_syms))
     {
-      warning (_("`%s': can't create hash table"), oso->name);
+      warning (_("\"%s\": can't create hash table"), oso->name);
       return;
     }
 
@@ -694,7 +694,7 @@ macho_symfile_read_all_oso (std::vector<oso_el> *oso_vector_ptr,
 	{
 	  gdb_bfd_ref_ptr abfd (gdb_bfd_open (oso->name, gnutarget));
 	  if (abfd == NULL)
-	    warning (_("`%s': can't open to read symbols: %s."), oso->name,
+	    warning (_("\"%s\": can't open to read symbols: %s."), oso->name,
 		     bfd_errmsg (bfd_get_error ()));
 	  else
 	    macho_add_oso_symfile (oso, abfd, oso->name, main_objfile,

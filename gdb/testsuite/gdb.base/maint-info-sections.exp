@@ -95,7 +95,7 @@ proc check_maint_info_target_sections_output {prefix} {
 set seen_header false
 set seen_a_section false
 gdb_test_multiple "maint info sections" "general output check" {
-    -re "Exec file: `\[^'\]+', file type \[^.\]+\.\r\n" {
+    -re "Exec file: \"\[^'\"]+\", file type \[^.\]+\.\r\n" {
 	set seen_header true
 	exp_continue
     }
@@ -207,7 +207,7 @@ gdb_test_no_output "maint info sections" \
 set seen_header false
 set seen_a_section false
 gdb_test_multiple "maint info sections -all-objects" "" {
-    -re "Object file: `${binfile}', file type \[^.\]+\.\r\n" {
+    -re "Object file: \"${binfile}\", file type \[^.\]+\.\r\n" {
 	set seen_header true
 	exp_continue
     }

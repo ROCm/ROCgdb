@@ -78,6 +78,11 @@ ldelf_after_open_output (void)
   if (bfd_get_flavour (link_info.output_bfd) != bfd_target_elf_flavour)
     return;
 
+  /* An ELF output does not imply an ELF link hash table: a linker
+     script can select an ELF flavour that uses a generic one.  */
+  if (!is_elf_hash_table (link_info.hash))
+    return;
+
   struct elf_link_hash_table *htab = elf_hash_table (&link_info);
   if (elf_object_id (link_info.output_bfd) != elf_hash_table_id (htab))
     return;
@@ -780,18 +785,29 @@ ldelf_check_ld_elf_hints (const struct bfd_link_needed_list *l, int force,
       if (f != NULL)
 	{
 	  struct elfhints_hdr hdr;
+	  bfd_vma (*get32) (const void *) = NULL;
 
-	  if (fread (&hdr, 1, sizeof (hdr), f) == sizeof (hdr)
-	      && hdr.magic == ELFHINTS_MAGIC
-	      && hdr.version == 1)
+	  /* FreeBSD's ldconfig writes the hints file in little-endian
+	     byte order on all architectures unless it is run with -B,
+	     so the header is not necessarily in host byte order.  */
+	  if (fread (&hdr, 1, sizeof (hdr), f) == sizeof (hdr))
 	    {
-	      if (fseek (f, hdr.strtab + hdr.dirlist, SEEK_SET) != -1)
+	      if (bfd_getl32 (&hdr.magic) == ELFHINTS_MAGIC)
+		get32 = bfd_getl32;
+	      else if (bfd_getb32 (&hdr.magic) == ELFHINTS_MAGIC)
+		get32 = bfd_getb32;
+	    }
+
+	  if (get32 != NULL && get32 (&hdr.version) == 1)
+	    {
+	      if (fseek (f, get32 (&hdr.strtab) + get32 (&hdr.dirlist),
+			 SEEK_SET) != -1)
 		{
+		  unsigned long dirlistlen = get32 (&hdr.dirlistlen);
 		  char *b;
 
-		  b = xmalloc (hdr.dirlistlen + 1);
-		  if (fread (b, 1, hdr.dirlistlen + 1, f) ==
-		      hdr.dirlistlen + 1)
+		  b = xmalloc (dirlistlen + 1);
+		  if (fread (b, 1, dirlistlen + 1, f) == dirlistlen + 1)
 		    ld_elf_hints = ldelf_add_sysroot (b);
 
 		  free (b);

@@ -769,7 +769,7 @@ show_riscv_debug_variable (struct ui_file *file, int from_tty,
 			   const char *value)
 {
   gdb_printf (file,
-	      _("RiscV debug variable `%s' is set to: %s\n"),
+	      _("RiscV debug variable \"%s\" is set to: %s\n"),
 	      c->name, value);
 }
 

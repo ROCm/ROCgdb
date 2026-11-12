@@ -717,6 +717,7 @@ s390_bad_operand_out_of_range (int operand_number,
 
 static void
 s390_insert_operand (unsigned char *insn,
+		     const struct s390_opcode *opcode,
 		     const struct s390_operand *operand,
 		     offsetT val,
 		     const char *file,
@@ -726,7 +727,28 @@ s390_insert_operand (unsigned char *insn,
   addressT uval;
   int offset;
 
-  if (operand->flags & (S390_OPERAND_SIGNED|S390_OPERAND_PCREL))
+  if ((opcode->flags & S390_INSTR_FLAG_PSEUDO_MNEMONIC) &&
+      ((operand->flags & ~S390_OPERAND_SIGNED) == 0))
+    {
+      /* Signed/unsigned immediate in .insn pseudo-mnemonic.
+	 Treat as either.  */
+      offsetT min, max;
+
+      max = (((addressT) 1 << (operand->bits - 1)) << 1) - 1;
+      min = - ((offsetT) 1 << (operand->bits - 1));
+
+      /* Check for underflow / overflow.  */
+      if (val < min || val > max)
+	{
+	  s390_bad_operand_out_of_range (operand_number, val, min, max,
+					 file, line);
+
+	  return;
+	}
+      /* val is ok, now restrict it to operand->bits bits.  */
+      uval = val & ((((addressT) 1 << (operand->bits-1)) << 1) - 1);
+    }
+  else if (operand->flags & (S390_OPERAND_SIGNED|S390_OPERAND_PCREL))
     {
       offsetT min, max;
 
@@ -1397,18 +1419,12 @@ operand_count (const unsigned char *opindex_ptr)
 static bool
 skip_optargs_p (unsigned int opcode_flags, const unsigned char *opindex_ptr)
 {
-  if ((opcode_flags & (S390_INSTR_FLAG_OPTPARM | S390_INSTR_FLAG_OPTPARM2)))
-    {
-      unsigned int opcount = operand_count (opindex_ptr);
+  unsigned int optparm = opcode_flags & S390_INSTR_FLAG_OPTPARM_MASK;
+  unsigned int opcount;
 
-      if (opcount == 1)
-	return true;
-
-      if ((opcode_flags & S390_INSTR_FLAG_OPTPARM2) && opcount == 2)
-	return true;
-    }
-
-  return false;
+  return (optparm > 0
+	  && (opcount = operand_count (opindex_ptr)) > 0
+	  && opcount <= optparm);
 }
 
 /* We need to keep a list of fixups.  We can't simply generate them as
@@ -1418,7 +1434,7 @@ skip_optargs_p (unsigned int opcode_flags, const unsigned char *opindex_ptr)
 struct s390_fixup
   {
     expressionS exp;
-    int opindex;
+    const struct s390_operand *operand;
     bfd_reloc_code_real_type reloc;
   };
 
@@ -1459,7 +1475,7 @@ md_gather_operands (char *str,
 	{
 	  /* Optional parameters might need to be ORed with a
 	     value so calling s390_insert_operand is needed.  */
-	  s390_insert_operand (insn, operand, 0, NULL, 0, operand_number);
+	  s390_insert_operand (insn, opcode, operand, 0, NULL, 0, operand_number);
 	  break;
 	}
 
@@ -1513,7 +1529,7 @@ md_gather_operands (char *str,
 	      if (fc >= MAX_INSN_FIXUPS)
 		as_fatal (_("operand %d: too many fixups"), operand_number);
 	      fixups[fc].exp = ex;
-	      fixups[fc].opindex = *opindex_ptr;
+	      fixups[fc].operand = operand;
 	      fixups[fc].reloc = BFD_RELOC_UNUSED;
 	      ++fc;
 	    }
@@ -1586,7 +1602,7 @@ md_gather_operands (char *str,
 				 operand_number, expected_regtype);
 		    }
 		}
-	      s390_insert_operand (insn, operand, ex.X_add_number, NULL, 0, operand_number);
+	      s390_insert_operand (insn, opcode, operand, ex.X_add_number, NULL, 0, operand_number);
 	    }
 	}
       else
@@ -1678,7 +1694,7 @@ md_gather_operands (char *str,
 	  if (fc >= MAX_INSN_FIXUPS)
 	    as_fatal (_("operand %d: too many fixups"), operand_number);
 	  fixups[fc].exp = ex;
-	  fixups[fc].opindex = *opindex_ptr;
+	  fixups[fc].operand = operand;
 	  fixups[fc].reloc = reloc;
 	  ++fc;
 	}
@@ -1845,7 +1861,7 @@ md_gather_operands (char *str,
       if (fc >= MAX_INSN_FIXUPS)
 	as_fatal (_("too many fixups"));
       fixups[fc].exp = ex;
-      fixups[fc].opindex = -1;
+      fixups[fc].operand = NULL;
       fixups[fc].reloc = reloc;
       ++fc;
     }
@@ -1868,7 +1884,8 @@ md_gather_operands (char *str,
 
   /* Create any fixups.  At this point we do not use a
      bfd_reloc_code_real_type, but instead just use the
-     BFD_RELOC_UNUSED plus the operand index.  This lets us easily
+     BFD_RELOC_UNUSED and store opcode and operand in the
+     target-specific fixup data.  This lets us easily
      handle fixups for any operand type, although that is admittedly
      not a very exciting feature.  We pick a BFD reloc type in
      md_apply_fix.  */
@@ -1876,7 +1893,7 @@ md_gather_operands (char *str,
     {
       fixS *fixP;
 
-      if (fixups[i].opindex < 0)
+      if (fixups[i].operand == NULL)
 	{
 	  /* Create tls instruction marker relocation.  */
 	  fix_new_exp (frag_now, f - frag_now->fr_literal, opcode->oplen,
@@ -1884,7 +1901,7 @@ md_gather_operands (char *str,
 	  continue;
 	}
 
-      operand = s390_operands + fixups[i].opindex;
+      operand = fixups[i].operand;
 
       if (fixups[i].reloc != BFD_RELOC_UNUSED)
 	{
@@ -1916,10 +1933,15 @@ md_gather_operands (char *str,
 	    fixP->fx_pcrel_adjust = operand->shift / 8;
 	}
       else
-	fixP = fix_new_exp (frag_now, f - frag_now->fr_literal, 4,
-			    &fixups[i].exp,
-			    (operand->flags & S390_OPERAND_PCREL) != 0,
-			    fixups[i].opindex + BFD_RELOC_UNUSED);
+	{
+	  fixP = fix_new_exp (frag_now, f - frag_now->fr_literal, 4,
+			      &fixups[i].exp,
+			      (operand->flags & S390_OPERAND_PCREL) != 0,
+			      BFD_RELOC_UNUSED);
+	  fixP->tc_fix_data.opcode = opcode;
+	  fixP->tc_fix_data.operand = fixups[i].operand;
+	}
+
       /* s390_insert_operand () does the range checking.  */
       if (operand->flags & S390_OPERAND_PCREL)
 	fixP->fx_no_overflow = 1;
@@ -2036,7 +2058,10 @@ s390_insn (int ignore ATTRIBUTE_UNUSED)
   else
     as_bad (_("second operand of .insn not a constant\n"));
 
-  if (strcmp (opformat->name, "e") != 0 && *input_line_pointer++ != ',')
+  if (opformat->operands[0] != '\0'
+      && !(skip_optargs_p (opformat->flags, opformat->operands)
+	   && is_end_of_stmt (*input_line_pointer))
+      && *input_line_pointer++ != ',')
     as_bad (_("missing comma after insn constant\n"));
 
   if ((s = strchr (input_line_pointer, '\n')) != NULL)
@@ -2477,9 +2502,9 @@ tc_s390_force_relocation (struct fix *fixp)
 
 /* Apply a fixup to the object code.  This is called for all the
    fixups we generated by the call to fix_new_exp, above.  In the call
-   above we used a reloc code which was the largest legal reloc code
-   plus the operand index.  Here we undo that to recover the operand
-   index.  At this point all symbol values should be fully resolved,
+   above we used a reloc code which was the largest legal reloc code.
+   Recover the opcode and operand from the target-specific fixup data.
+   At this point all symbol values should be fully resolved,
    and we attempt to completely resolve the reloc.  If we can not do
    that, we determine the correct reloc code and put it back in the
    fixup.  */
@@ -2503,18 +2528,18 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
   else
     fixP->fx_done = 1;
 
-  if (fixP->fx_r_type >= BFD_RELOC_UNUSED)
+  if (fixP->fx_r_type == BFD_RELOC_UNUSED)
     {
+      const struct s390_opcode *opcode;
       const struct s390_operand *operand;
-      int opindex;
 
-      opindex = fixP->fx_r_type - BFD_RELOC_UNUSED;
-      operand = &s390_operands[opindex];
+      opcode = fixP->tc_fix_data.opcode;
+      operand = fixP->tc_fix_data.operand;
 
       if (fixP->fx_done)
 	{
 	  /* Insert the fully resolved operand value.  */
-	  s390_insert_operand ((unsigned char *) where, operand,
+	  s390_insert_operand ((unsigned char *) where, opcode, operand,
 			       value, fixP->fx_file, fixP->fx_line, 0);
 	  return;
 	}

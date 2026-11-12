@@ -35,7 +35,7 @@ if {[mi_clean_restart $testfile]} {
 
 mi_gdb_test {-catch-exception -c "the_test_index = 2" -e constraint_error} \
     [quotemeta \
-	 {^done,bkptno="@DECIMAL",bkpt={@...disp="keep",enabled="y",what="`constraint_error' Ada exception",@/(.*,)?/cond="the_test_index = 2",@...}}] \
+	 {^done,bkptno="@DECIMAL",bkpt={@...disp="keep",enabled="y",what="\"constraint_error\" Ada exception",@/(.*,)?/cond="the_test_index = 2",@...}}] \
     "catch C_E if the_test_index = 2"
 
 # It is important that we start the program's execution after having
@@ -58,5 +58,5 @@ mi_expect_stop \
 
 mi_gdb_test "-break-list" \
     [quotemeta \
-	 {^done,@...,what="`constraint_error' Ada exception",@...,cond="the_test_index = 2",@...}] \
+	 {^done,@...,what="\"constraint_error\" Ada exception",@...,cond="the_test_index = 2",@...}] \
     "-break-list"

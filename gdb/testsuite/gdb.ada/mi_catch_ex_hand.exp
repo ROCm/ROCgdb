@@ -91,7 +91,7 @@ with_test_prefix "scenario 2" {
 }
 
 mi_gdb_test "-catch-handlers -e Constraint_Error" \
-    "\\^done,bkptno=\"$decimal\",bkpt={.*disp=\"keep\",enabled=\"y\",what=\"`Constraint_Error' Ada exception handlers\",.*}" \
+    "\\^done,bkptno=\"$decimal\",bkpt={.*disp=\"keep\",enabled=\"y\",what=\"\\\\\"Constraint_Error\\\\\" Ada exception handlers\",.*}" \
     "catch Constraint_Error"
 
 mi_execute_to "exec-continue" \

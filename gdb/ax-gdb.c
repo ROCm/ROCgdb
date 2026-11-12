@@ -418,7 +418,7 @@ gen_fetch (struct agent_expr *ax, struct type *type)
       /* Our caller requested us to dereference a pointer from an unsupported
 	 type.  Error out and give callers a chance to handle the failure
 	 gracefully.  */
-      error (_("gen_fetch: Unsupported type code `%s'."),
+      error (_("gen_fetch: Unsupported type code \"%s\"."),
 	     type->name ());
     }
 }
@@ -569,7 +569,7 @@ gen_var_ref (struct agent_expr *ax, struct axs_value *value, struct symbol *var)
       break;
 
     case LOC_TYPEDEF:
-      error (_("Cannot compute value of typedef `%s'."),
+      error (_("Cannot compute value of typedef \"%s\"."),
 	     var->print_name ());
       break;
 
@@ -601,7 +601,7 @@ gen_var_ref (struct agent_expr *ax, struct axs_value *value, struct symbol *var)
 	  = lookup_minimal_symbol (current_program_space,
 				   var->linkage_name ());
 	if (!msym.minsym)
-	  error (_("Couldn't resolve symbol `%s'."), var->print_name ());
+	  error (_("Couldn't resolve symbol \"%s\"."), var->print_name ());
 
 	/* Push the address of the variable.  */
 	ax_const_l (ax, msym.value_address ());
@@ -619,7 +619,7 @@ gen_var_ref (struct agent_expr *ax, struct axs_value *value, struct symbol *var)
       break;
 
     default:
-      error (_("Cannot find value of botched symbol `%s'."),
+      error (_("Cannot find value of botched symbol \"%s\"."),
 	     var->print_name ());
       break;
     }
@@ -1003,7 +1003,7 @@ gen_ptrdiff (struct agent_expr *ax, struct axs_value *value,
   if (value1->type->target_type ()->length ()
       != value2->type->target_type ()->length ())
     error (_("\
-First argument of `-' is a pointer, but second argument is neither\n\
+First argument of \"-\" is a pointer, but second argument is neither\n\
 an integer nor a pointer of the same type."));
 
   ax_simple (ax, aop_sub);
@@ -1073,7 +1073,7 @@ gen_logical_not (struct agent_expr *ax, struct axs_value *value,
   struct type *type = strip_range_type (value->type);
   if (type->code () != TYPE_CODE_INT
       && type->code () != TYPE_CODE_PTR)
-    error (_("Invalid type of operand to `!'."));
+    error (_("Invalid type of operand to \"!\"."));
 
   ax_simple (ax, aop_log_not);
   value->type = result_type;
@@ -1085,7 +1085,7 @@ gen_complement (struct agent_expr *ax, struct axs_value *value)
 {
   struct type *type = strip_range_type (value->type);
   if (type->code () != TYPE_CODE_INT)
-    error (_("Invalid type of operand to `~'."));
+    error (_("Invalid type of operand to \"~\"."));
 
   ax_simple (ax, aop_bit_not);
   gen_extend (ax, type);
@@ -1132,10 +1132,10 @@ gen_address_of (struct axs_value *value)
     switch (value->kind)
       {
       case axs_rvalue:
-	error (_("Operand of `&' is an rvalue, which has no address."));
+	error (_("Operand of \"&\" is an rvalue, which has no address."));
 
       case axs_lvalue_register:
-	error (_("Operand of `&' is in a register, and has no address."));
+	error (_("Operand of \"&\" is in a register, and has no address."));
 
       case axs_lvalue_memory:
 	value->kind = axs_rvalue;
@@ -1355,7 +1355,7 @@ gen_struct_ref_recursive (struct agent_expr *ax, struct axs_value *value,
 		{
 		  gen_static_field (ax, value, type, i);
 		  if (value->optimized_out)
-		    error (_("static field `%s' has been "
+		    error (_("static field \"%s\" has been "
 			     "optimized out, cannot use"),
 			   field);
 		  return 1;
@@ -1414,7 +1414,7 @@ gen_struct_ref (struct agent_expr *ax, struct axs_value *value,
   /* This must yield a structure or a union.  */
   if (type->code () != TYPE_CODE_STRUCT
       && type->code () != TYPE_CODE_UNION)
-    error (_("The left operand of `%s' is not a %s."),
+    error (_("The left operand of \"%s\" is not a %s."),
 	   operator_name, operand_name);
 
   /* And it must be in memory; we don't deal with structure rvalues,
@@ -1426,7 +1426,7 @@ gen_struct_ref (struct agent_expr *ax, struct axs_value *value,
   found = gen_struct_ref_recursive (ax, value, field, 0, type);
 
   if (!found)
-    error (_("Couldn't find member named `%s' in struct/union/class `%s'"),
+    error (_("Couldn't find member named \"%s\" in struct/union/class \"%s\""),
 	   field, type->name ());
 }
 
@@ -1492,7 +1492,7 @@ gen_struct_elt_for_reference (struct agent_expr *ax, struct axs_value *value,
 	    {
 	      gen_static_field (ax, value, t, i);
 	      if (value->optimized_out)
-		error (_("static field `%s' has been "
+		error (_("static field \"%s\" has been "
 			 "optimized out, cannot use"),
 		       fieldname);
 	      return 1;
@@ -1551,7 +1551,7 @@ gen_maybe_namespace_elt (struct agent_expr *ax, struct axs_value *value,
   gen_var_ref (ax, value, sym.symbol);
 
   if (value->optimized_out)
-    error (_("`%s' has been optimized out, cannot use"),
+    error (_("\"%s\" has been optimized out, cannot use"),
 	   sym.symbol->print_name ());
 
   return 1;
@@ -1743,21 +1743,21 @@ repeat_operation::do_generate_ax (struct expression *exp,
      here.  */
   std::get<0> (m_storage)->generate_ax (exp, ax, &value1);
   if (value1.kind != axs_lvalue_memory)
-    error (_("Left operand of `@' must be an object in memory."));
+    error (_("Left operand of \"@\" must be an object in memory."));
 
   /* Evaluate the length; it had better be a constant.  */
   if (!std::get<1> (m_storage)->constant_p ())
-    error (_("Right operand of `@' must be a "
+    error (_("Right operand of \"@\" must be a "
 	     "constant, in agent expressions."));
 
   struct value *v
     = std::get<1> (m_storage)->evaluate (nullptr, exp,
 					 EVAL_AVOID_SIDE_EFFECTS);
   if (v->type ()->code () != TYPE_CODE_INT)
-    error (_("Right operand of `@' must be an integer."));
+    error (_("Right operand of \"@\" must be an integer."));
   int length = value_as_long (v);
   if (length <= 0)
-    error (_("Right operand of `@' must be positive."));
+    error (_("Right operand of \"@\" must be positive."));
 
   /* The top of the stack is already the address of the object, so
      all we need to do is frob the type of the lvalue.  */
@@ -1900,12 +1900,12 @@ op_this_operation::do_generate_ax (struct expression *exp,
 
   sym = lookup_language_this (lang, b).symbol;
   if (!sym)
-    error (_("no `%s' found"), lang->name_of_this ());
+    error (_("no \"%s\" found"), lang->name_of_this ());
 
   gen_var_ref (ax, value, sym);
 
   if (value->optimized_out)
-    error (_("`%s' has been optimized out, cannot use"),
+    error (_("\"%s\" has been optimized out, cannot use"),
 	   sym->print_name ());
 }
 
@@ -2000,7 +2000,7 @@ var_value_operation::do_generate_ax (struct expression *exp,
   gen_var_ref (ax, value, std::get<0> (m_storage).symbol);
 
   if (value->optimized_out)
-    error (_("`%s' has been optimized out, cannot use"),
+    error (_("\"%s\" has been optimized out, cannot use"),
 	   std::get<0> (m_storage).symbol->print_name ());
 
   if (value->type->code () == TYPE_CODE_ERROR)
@@ -2152,7 +2152,7 @@ gen_expr_binop_rest (struct expression *exp,
 		&& type->code () != TYPE_CODE_PTR)
 	      {
 		if (type->name ())
-		  error (_("cannot subscript something of type `%s'"),
+		  error (_("cannot subscript something of type \"%s\""),
 			 type->name ());
 		else
 		  error (_("cannot subscript requested type"));
@@ -2301,7 +2301,7 @@ gen_expr_unop (struct expression *exp,
       lhs->generate_ax (exp, ax, value);
       gen_usual_unary (ax, value);
       if (!value->type->is_pointer_or_reference ())
-	error (_("Argument of unary `*' is not a pointer."));
+	error (_("Argument of unary \"*\" is not a pointer."));
       gen_deref (value);
       break;
 

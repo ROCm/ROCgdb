@@ -14730,8 +14730,8 @@ static const struct mips_mach_extension mips_mach_extensions[] =
   /* MIPS II extensions.  */
   { bfd_mach_mips4000, bfd_mach_mips6000 },
   { bfd_mach_mipsisa32, bfd_mach_mips6000 },
-  { bfd_mach_mips4010, bfd_mach_mips6000 },
   { bfd_mach_mips_allegrex, bfd_mach_mips6000 },
+  { bfd_mach_mips4010, bfd_mach_mips6000 },
 
   /* MIPS I extensions.  */
   { bfd_mach_mips6000, bfd_mach_mips3000 },
@@ -14784,6 +14784,7 @@ bfd_mips_isa_ext_mach (unsigned int isa_ext)
     {
     case AFL_EXT_3900:	      return bfd_mach_mips3900;
     case AFL_EXT_4010:	      return bfd_mach_mips4010;
+    case AFL_EXT_ALLEGREX:    return bfd_mach_mips_allegrex;
     case AFL_EXT_4100:	      return bfd_mach_mips4100;
     case AFL_EXT_4111:	      return bfd_mach_mips4111;
     case AFL_EXT_4120:	      return bfd_mach_mips4120;
@@ -14798,7 +14799,9 @@ bfd_mips_isa_ext_mach (unsigned int isa_ext)
     case AFL_EXT_OCTEON:      return bfd_mach_mips_octeon;
     case AFL_EXT_OCTEONP:     return bfd_mach_mips_octeonp;
     case AFL_EXT_OCTEON2:     return bfd_mach_mips_octeon2;
+    case AFL_EXT_OCTEON3:     return bfd_mach_mips_octeon3;
     case AFL_EXT_XLR:	      return bfd_mach_mips_xlr;
+    case AFL_EXT_INTERAPTIV_MR2: return bfd_mach_mips_interaptiv_mr2;
     default:		      return bfd_mach_mips3000;
     }
 }
@@ -14812,6 +14815,7 @@ bfd_mips_isa_ext (bfd *abfd)
     {
     case bfd_mach_mips3900:	    return AFL_EXT_3900;
     case bfd_mach_mips4010:	    return AFL_EXT_4010;
+    case bfd_mach_mips_allegrex:    return AFL_EXT_ALLEGREX;
     case bfd_mach_mips4100:	    return AFL_EXT_4100;
     case bfd_mach_mips4111:	    return AFL_EXT_4111;
     case bfd_mach_mips4120:	    return AFL_EXT_4120;

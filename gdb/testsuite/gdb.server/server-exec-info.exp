@@ -34,7 +34,7 @@ gdb_test \
     "Support for the 'qXfer:exec-file:read' packet on future remote targets is set to \"off\"."
 
 gdb_test "file" ".*" "file" \
-	 {Discard symbol table from `.*'\? \(y or n\) } "y"
+	 {Discard symbol table from \".*\"\? \(y or n\) } "y"
 gdbserver_run ""
 gdb_test "set sysroot remote:"
 gdb_test "info files" "\r\nLocal exec file:\r\n\t<no file loaded>"

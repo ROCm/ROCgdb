@@ -125,7 +125,7 @@ thpy_set_name (PyObject *self, PyObject *newvalue, void *ignore)
   if (newvalue == NULL)
     {
       PyErr_SetString (PyExc_TypeError,
-		       _("Cannot delete `name' attribute."));
+		       _("Cannot delete \"name\" attribute."));
       return -1;
     }
   else if (newvalue == Py_None)
@@ -135,7 +135,7 @@ thpy_set_name (PyObject *self, PyObject *newvalue, void *ignore)
   else if (! gdbpy_is_string (newvalue))
     {
       PyErr_SetString (PyExc_TypeError,
-		       _("The value of `name' must be a string."));
+		       _("The value of \"name\" must be a string."));
       return -1;
     }
   else

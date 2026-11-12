@@ -68,8 +68,8 @@ lassign [dap_wait_for_event_and_check "inferior started" \
 	     thread "body reason" started] \
     unused objs1
 lassign [dap_wait_for_event_and_check "stopped at breakpoint" stopped \
-	    "body reason" breakpoint \
-	    "body hitBreakpointIds" $fn_bpno] unused objs2
+	     "body reason" breakpoint \
+	     "body hitBreakpointIds" $fn_bpno] unused objs2
 
 set found_bp_event 0
 foreach obj [concat $objs0 $objs1 $objs2] {

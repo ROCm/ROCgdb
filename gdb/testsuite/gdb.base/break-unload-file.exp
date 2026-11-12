@@ -100,7 +100,7 @@ proc test_break { initial_load always_inserted break_command } {
 		send_gdb "y\n"
 		exp_continue
 	    }
-	    -re "Discard symbol table from `.*'? .y or n. $" {
+	    -re "Discard symbol table from \".*\"? .y or n. $" {
 		send_gdb "y\n"
 		exp_continue
 	    }

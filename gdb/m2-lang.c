@@ -99,7 +99,7 @@ eval_op_m2_subscript (struct type *expect_type, struct expression *exp,
     if (type->code () != TYPE_CODE_ARRAY)
       {
 	if (type->name ())
-	  error (_("cannot subscript something of type `%s'"),
+	  error (_("cannot subscript something of type \"%s\""),
 		 type->name ());
 	else
 	  error (_("cannot subscript requested type"));

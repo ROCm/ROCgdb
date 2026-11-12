@@ -545,9 +545,12 @@ The default doesn't align branches.
 @item -mlfence-after-load=@var{no}
 @itemx -mlfence-after-load=@var{yes}
 These options control whether the assembler should generate lfence
-after load instructions.  @option{-mlfence-after-load=@var{yes}} will
-generate lfence.  @option{-mlfence-after-load=@var{no}} will not generate
-lfence, which is the default.
+after load instructions altering registers which may be used by address
+calculations of subsequent memory accesses.  Only ISAs available on
+hardware affected by Intel SA-00334 will be reliably covered.
+@option{-mlfence-after-load=@var{yes}} will generate lfence.
+@option{-mlfence-after-load=@var{no}} will not generate lfence, which is
+the default.
 
 @cindex @samp{-mlfence-before-indirect-branch=} option, i386
 @cindex @samp{-mlfence-before-indirect-branch=} option, x86-64

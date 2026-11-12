@@ -553,6 +553,7 @@ void   as_report_context (void);
 const char * as_where (unsigned int *);
 const char * as_where_top (unsigned int *);
 const char * as_where_physical (unsigned int *);
+const char * as_where_primary (void);
 void   predefine_symbol (const char *, valueT);
 void   bump_line_counters (void);
 void   do_scrub_begin (int);

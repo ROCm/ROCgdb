@@ -42,7 +42,7 @@ lr_signing:
 	retaasppc 0x20
 	retaasppc .-0x58 // point to pacm
 
-	.balign 0x40000 // NOP filling
+	.org 0x40000, 0
 
 	retaasppc 0x1234c // a random value in the valid range
 	retaasppc 0x3fffc // max

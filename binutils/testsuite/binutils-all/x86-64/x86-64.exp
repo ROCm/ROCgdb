@@ -147,7 +147,11 @@ proc run_pr33198_test { fat strip_flags } {
     if ![regexp "0+ T foo" $got] then {
 	send_log "$got\n"
 	verbose "$got" 1
-	fail "$testname ($obj)"
+	if [regexp ".* without plugin support" $got] then {
+	    untested "$testname (nm $obj)"
+	} else {
+	    fail "$testname (nm $obj)"
+	}
 	return
     }
 
@@ -183,7 +187,7 @@ proc run_pr33198_test { fat strip_flags } {
 	if [regexp "\.llvm\.lto *LLVM_LTO *" $got] then {
 	    send_log "$got\n"
 	    verbose "$got" 1
-	    fail "$testname (strip $obj)"
+	    fail "$testname (nm stripped $obj)"
 	    return
 	}
     }
@@ -208,7 +212,7 @@ proc run_pr33198_test { fat strip_flags } {
     if ![regexp "0+ T foo" $got] then {
 	send_log "$got\n"
 	verbose "$got" 1
-	fail "$testname ($archive)"
+	fail "$testname (nm $archive)"
 	return
     }
 
@@ -232,7 +236,7 @@ proc run_pr33198_test { fat strip_flags } {
     if ![regexp "0+ T foo" $got] then {
 	send_log "$got\n"
 	verbose "$got" 1
-	fail "$testname (strip $archive)"
+	fail "$testname (nm strip $archive)"
 	return
     }
 
@@ -244,7 +248,7 @@ proc run_pr33198_test { fat strip_flags } {
 	if [regexp "\.llvm\.lto *LLVM_LTO *" $got] then {
 	    send_log "$got\n"
 	    verbose "$got" 1
-	    fail "$testname (strip $archive)"
+	    fail "$testname (readelf strip $archive)"
 	    return
 	}
     }

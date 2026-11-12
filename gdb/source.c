@@ -1731,14 +1731,14 @@ show_substitute_path_command (const char *args, int from_tty)
 
   if (from != NULL)
     gdb_printf
-      (_("Source path substitution rule matching `%s':\n"), from);
+      (_("Source path substitution rule matching \"%s\":\n"), from);
   else
     gdb_printf (_("List of all source path substitution rules:\n"));
 
   for (substitute_path_rule &rule : substitute_path_rules)
     {
       if (from == NULL || substitute_path_rule_matches (&rule, from) != 0)
-	gdb_printf ("  `%s' -> `%s'.\n", rule.from.c_str (),
+	gdb_printf ("  \"%s\" -> \"%s\".\n", rule.from.c_str (),
 		    rule.to.c_str ());
     }
 }
@@ -1789,7 +1789,7 @@ unset_substitute_path_command (const char *args, int from_tty)
 	 we could not find it, then report an error.  */
 
       if (!rule_found)
-	error (_("No substitution rule defined for `%s'"), from);
+	error (_("No substitution rule defined for \"%s\""), from);
     }
 
   forget_cached_source_info ();

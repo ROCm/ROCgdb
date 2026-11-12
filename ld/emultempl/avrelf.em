@@ -117,14 +117,21 @@ avr_elf_after_open_output (void)
 {
   flagword flags;
 
-  if (bfd_get_flavour (link_info.output_bfd) != bfd_target_elf_flavour)
+  ldelf_after_open_output ();
+
+  /* ldelf_after_open_output only creates the stub file when the output
+     backend wants one.  A linker script may still select an ELF output
+     format whose backend does not, in which case there is nowhere to
+     link AVR trampolines into and we cannot proceed.  Test the state we
+     are about to use rather than the output flavour, which is ELF in
+     exactly this case.  */
+
+  if (stub_file == NULL)
     {
       fatal (_("%P: error: cannot change output format "
 	       "whilst linking %s binaries\n"), "AVR");
       return;
     }
-
-  ldelf_after_open_output ();
 
   /* Now we add the stub section.  */
 

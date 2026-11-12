@@ -113,7 +113,7 @@ processInt (struct parser_state *par_state, const char *base0,
     {
       int dig = fromhex (*num0);
       if (dig >= base)
-	error (_("Invalid digit `%c' in based literal"), *num0);
+	error (_("Invalid digit \"%c\" in based literal"), *num0);
       result *= base;
       result += dig;
       ++num0;
@@ -394,10 +394,10 @@ processAttribute (const char *str)
 	if (!found.has_value ())
 	  found = item.code;
 	else
-	  error (_("ambiguous attribute name: `%s'"), str);
+	  error (_("ambiguous attribute name: \"%s\""), str);
       }
   if (!found.has_value ())
-    error (_("unrecognized attribute: `%s'"), str);
+    error (_("unrecognized attribute: \"%s\""), str);
 
   return *found;
 }
