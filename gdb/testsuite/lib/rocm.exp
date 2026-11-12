@@ -156,6 +156,28 @@ gdb_caching_proc find_amdgpu_devices {} {
     return {}
 }
 
+# Return 1 if the first GPU is on a target where KFD corrupts the
+# watchpoint configuration during the first dispatch's queue mapping.
+# Watchpoints set before the first dispatch are then not triggered.
+# Tests that set such watchpoints should expect to fail.
+
+gdb_caching_proc target_has_kfd_watchpoint_corruption {} {
+    set affected_arches {gfx1100 gfx1101 gfx1103 gfx1150 gfx1151 gfx1200
+	gfx1201 gfx1250 gfx1250-strict}
+
+    set targets [find_amdgpu_devices]
+    if {[llength $targets] == 0} {
+	# Can't determine GPU type, don't set up xfail.  The test will
+	# probably not run correctly anyway.
+	return 0
+    }
+
+    # Tests run on GPU-0, so it should be the first of the list.
+    set target [lindex $targets 0]
+
+    return [expr {[lsearch -exact $affected_arches $target] != -1}]
+}
+
 # Return the generic AMDGPU target for ARCH, or "" if no generic target
 # exists for it.
 
