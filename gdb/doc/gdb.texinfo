@@ -29906,7 +29906,7 @@ For example:
 @smallexample
 (@value{GDBP}) set amdgpu precise-memory off
 (@value{GDBP}) show amdgpu precise-memory
-AMDGPU precise memory access reporting is off
+AMDGPU precise memory access reporting is off (currently disabled)
 (@value{GDBP})
 @end smallexample
 
@@ -29951,7 +29951,7 @@ then a warning is reported and the mode is not enabled.  For example:
 (@value{GDBP}) show amdgpu precise-memory
 AMDGPU precise memory access reporting is on (currently disabled)
 (@value{GDBP}) run
-AMDGPU precise memory access reporting could not be enabled
+AMDGPU precise memory access reporting could not be changed
 (@value{GDBP})
 @end smallexample
 
@@ -29960,7 +29960,7 @@ then a warning will be reported immediately.  For example:
 
 @smallexample
 (@value{GDBP}) set amdgpu precise-memory on
-AMDGPU precise memory access reporting could not be enabled
+AMDGPU precise memory access reporting could not be changed
 (@value{GDBP}) show amdgpu precise-memory
 AMDGPU precise memory access reporting is on (currently disabled)
 (@value{GDBP})
@@ -30025,7 +30025,7 @@ and applies as soon as possible.  For example:
  set amdgpu precise-alu-exceptions on
 (@value{GDBP}) set amdgpu precise-alu-exceptions on
 (@value{GDBP}) show amdgpu precise-alu-exceptions
-AMDGPU precise ALU exceptions reporting is on (currently disabled).
+AMDGPU precise ALU exception reporting is on (currently disabled)
 (@value{GDBP}) start
 Temporary breakpoint 1 at 0x218cc9: file /tmp/alu-exceptions.cpp, line 100.
 Starting program: /tmp/a.out
@@ -30035,7 +30035,7 @@ Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
 Temporary breakpoint 1, main (argc=1, argv=0x7fffffffe628) at /tmp/alu-exceptions.cpp:100
 100	  if (argc != 2)
 (@value{GDBP}) show amdgpu precise-alu-exceptions
-AMDGPU precise ALU exceptions reporting is on (currently enabled).
+AMDGPU precise ALU exception reporting is on (currently enabled)
 @end smallexample
 @end table
 
@@ -30086,12 +30086,12 @@ then it is enabled.  For example:
 (@value{GDBP}) set amdgpu lds-exception on
 (@value{GDBP}) show amdgpu lds-exception
 AMDGPU local memory out-of-range address exception reporting is on
-(currently disabled).
+(currently disabled)
 (@value{GDBP}) run
 ...
 (@value{GDBP}) show amdgpu lds-exception
 AMDGPU local memory out-of-range address exception reporting is on
-(currently enabled).
+(currently enabled)
 (@value{GDBP})
 @end smallexample
 
@@ -30103,11 +30103,11 @@ not enabled.  For example:
 (@value{GDBP}) set amdgpu lds-exception on
 (@value{GDBP}) show amdgpu lds-exception
 AMDGPU local memory out-of-range address exception reporting is on
-(currently disabled).
+(currently disabled)
 (@value{GDBP}) run
 Starting program: ...
 warning: AMDGPU local memory out-of-range address exception reporting could
-not be enabled.
+not be changed.
 ...
 (@value{GDBP})
 @end smallexample
@@ -42931,7 +42931,7 @@ include an @samp{effective-value} field.
 ^done,value="auto",verbose="The target character set is auto; currently UTF-8."
 (@value{GDBP})
 -gdb-show amdgpu precise-memory
-^done,value="on",verbose="AMDGPU precise memory access reporting is on (currently disabled).\n",effective-value="off"
+^done,value="on",verbose="AMDGPU precise memory access reporting is on (currently disabled)\n",effective-value="off"
 (@value{GDBP})
 @end smallexample
 

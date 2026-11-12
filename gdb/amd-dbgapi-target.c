@@ -220,11 +220,6 @@ struct wave_info
 #if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
 /* amd-dbgapi-specific property data.  */
 
-/* Properties' names we're interested in.  */
-static const char *PROPERTY_PRECISE_MEMORY = "precise-memory";
-static const char *PROPERTY_PRECISE_ALU = "precise-alu-exceptions";
-static const char *PROPERTY_LDS_EXCEPTION = "lds-exception";
-
 struct dbgapi_property_t
 {
   amd_dbgapi_property_id_t property_id;
@@ -242,20 +237,15 @@ struct dbgapi_property_t
     }
 };
 
-/* The properties supported by the library, keyed by property name.
+/* The properties supported by the dbgapi, keyed by property name.
 
    A property handle is only unique within a single library instance, so it
    cannot identify a property across the amd_dbgapi_finalize /
-   amd_dbgapi_initialize pair done by maybe_reset_amd_dbgapi.  The name is
-   stable, so it is what everything outliving a library instance refers to;
-   the handle lives in the mapped value and is rebuilt wholesale by
-   fetch_amd_dbgapi_properties.  */
+   amd_dbgapi_initialize pair done by maybe_reset_amd_dbgapi.  The name,
+   on the other hand, remains the same.  The handle lives in the mapped
+   value and is renewed by fetch_amd_dbgapi_properties().  */
 
 static gdb::unordered_string_map<dbgapi_property_t> amd_dbgapi_properties;
-
-class property_setter
-{
-};
 
 /* Initialize "amd_dbgapi_properties" with every property the library
    exposes that we know how to drive: those with process scope whose value
@@ -343,15 +333,9 @@ fetch_amd_dbgapi_properties ()
 
 struct amd_dbgapi_inferior_info
 {
-  explicit amd_dbgapi_inferior_info
-    (inferior *inf, bool precise_memory_requested = false,
-     bool precise_alu_exceptions_requested = false,
-     bool lds_exception_requested = false)
+  explicit amd_dbgapi_inferior_info (inferior *inf)
     : inf (inf)
   {
-    precise_memory.requested = precise_memory_requested;
-    precise_alu_exceptions.requested = precise_alu_exceptions_requested;
-    lds_exception.requested = lds_exception_requested;
   }
 
   /* Backlink to inferior.  */
@@ -376,7 +360,7 @@ struct amd_dbgapi_inferior_info
   struct dbgapi_feature_request
   {
     /* Whether the feature is requested.  */
-    bool requested;
+    bool requested = false;
 
     /* Whether feature was requested and successfully enabled by
        dbgapi (it may not be available for the current hardware, for
@@ -397,10 +381,6 @@ struct amd_dbgapi_inferior_info
   /* Track the status of precise ALU exception reporting request and
      enablement.  */
   struct dbgapi_feature_request precise_alu_exceptions;
-
-  /* Track the status of local memory out-of-range address exception reporting
-     request and enablement.  */
-  struct dbgapi_feature_request lds_exception;
 #endif
 
   gdb::unordered_map<decltype (amd_dbgapi_breakpoint_id_t::handle),
@@ -439,6 +419,137 @@ struct amd_dbgapi_inferior_info
   gdb::unordered_map<decltype (amd_dbgapi_wave_id_t::handle), wave_info>
     wave_info_map;
 };
+
+#if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
+
+static amd_dbgapi_inferior_info &get_amd_dbgapi_inferior_info (inferior *);
+
+/* A functor class that provides setters and getters for the generic
+   style "set amdgpu <property-name> on|off" and its "show" counterpart.
+
+   The functor records one state: the property name.  That is used as
+   a key to:
+
+   - Get all the property details needed for printing texts
+   - Get the corresponding "feature" to get/set
+
+   Since the "add_setshow_boolean_cmd()" only expects raw function pointers,
+   these instances of these class are paired with a set of trampolines
+   that wrap around them.  */
+
+class property_setter
+{
+public:
+  /* Bind this instance to a property named NAME.  */
+  void initialize (const char *name);
+
+  /* Whether this instance has been bound to a property.  */
+  bool initialized () const
+  { return !m_name.empty (); }
+
+  /* The bound property's name.  */
+  const char *name () const
+  { return m_name.c_str (); }
+
+  /* The bound property's description.  */
+  const char *description () const
+  { return m_description.c_str (); }
+
+  /* Request that the property be turned on or off for the current
+     inferior, pushing the request to dbgapi if it is attached.  */
+  void set (bool value);
+
+  /* The value requested by the user for the current inferior.  */
+  bool get () const
+  { return feature ().requested; }
+
+  /* The value actually applied for the current inferior, which may
+     differ when the hardware does not support the property.  */
+  bool effective () const
+  { return feature ().enabled; }
+
+  /* Implement "show amdgpu NAME".  */
+  void show (struct ui_file *file) const
+  {
+    gdb_printf (file, _("AMDGPU %s is %s (currently %s)\n"),
+		description (), get () ? "on" : "off",
+		effective () ? "enabled" : "disabled");
+  }
+
+private:
+  /* Current inferior's state for this property, created on first use.  */
+  amd_dbgapi_inferior_info::dbgapi_feature_request &feature () const
+  {
+    gdb_assert (initialized ());
+    return get_amd_dbgapi_inferior_info (current_inferior ()).features[m_name];
+  }
+
+  /* "add_setshow_boolean_cmd()" borrows command name rather than copying
+     it, so the M_NAME's pointer must outlive the command.  As long as the
+     objects are allocated statically and the names are not changed after
+     initialization, it should be safe.  */
+  std::string m_name;
+
+  /* A copy of property description from amd_dbgapi_properties that
+     survives maybe_reset_amd_dbgapi ().  */
+  std::string m_description;
+};
+
+/* Maximum number of properties that can be turned into "set/show amdgpu"
+   commands.  dbgapi exposes three at the moment.  */
+
+#define MAX_PROPERTY_SETTERS 8
+static property_setter property_setters[MAX_PROPERTY_SETTERS];
+
+/* Return the instance driving the command generated for SLOT.  */
+
+static property_setter &
+get_property_setter (int slot)
+{
+  gdb_assert (slot >= 0 && slot < MAX_PROPERTY_SETTERS);
+  gdb_assert (property_setters[slot].initialized ());
+
+  return property_setters[slot];
+}
+
+void
+property_setter::initialize (const char *name)
+{
+  gdb_assert (name != nullptr && *name != '\0' /* non-empty name  */);
+
+  /* Get the description.  Leave this instance unbound if the property is
+     unknown, so that the trampolines cannot reach a half-initialized
+     instance.  */
+  auto it = amd_dbgapi_properties.find (name);
+  if (it == amd_dbgapi_properties.end ())
+    {
+      warning (_("AMDGPU \"%s\" property not found."), name);
+      return;
+    }
+
+  m_name = name;
+  m_description = it->second.description.get ();
+}
+
+static void
+set_process_property (amd_dbgapi_process_id_t,
+		      const char *,
+		      amd_dbgapi_inferior_info::dbgapi_feature_request &);
+
+void
+property_setter::set (bool value)
+{
+  amd_dbgapi_inferior_info::dbgapi_feature_request &feat = feature ();
+  feat.requested = value;
+
+  amd_dbgapi_inferior_info &info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
+
+  if (info.process_id != AMD_DBGAPI_PROCESS_NONE)
+    set_process_property (info.process_id, name (), feat);
+}
+
+#endif /* HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY  */
 
 static amd_dbgapi_event_id_t process_event_queue
   (amd_dbgapi_inferior_info &info,
@@ -570,6 +681,53 @@ static amd_dbgapi_inferior_info &
 get_amd_dbgapi_inferior_info (inferior *inferior)
 {
   return amd_dbgapi_inferior_data.try_emplace (inferior, inferior);
+}
+
+/* Copy the property feature requests of SRC to DEST.
+
+   Only the requests are copied which are user preferences and
+   are carried over to a new process.  */
+
+static void
+copy_feature_requests (amd_dbgapi_inferior_info &dest,
+		       const amd_dbgapi_inferior_info &src)
+{
+#if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
+  /* const std::string &name;
+     const amd_dbgapi_inferior_info::dbgapi_feature_request &feature;  */
+  for (const auto &[name, feature] : src.features)
+    dest.features[name].requested = feature.requested;
+#else
+  dest.precise_memory.requested = src.precise_memory.requested;
+  dest.precise_alu_exceptions.requested = src.precise_alu_exceptions.requested;
+#endif
+}
+
+/* Names of the properties whose status must be known when reporting
+   stop locations.  */
+
+static const char *PROPERTY_PRECISE_MEMORY = "precise-memory";
+static const char *PROPERTY_PRECISE_ALU = "precise-alu-exceptions";
+
+/* Return whether property named NAME is enabled.
+
+   Check for NAME (one of hardcoded PROPERTY_* names) in INFO's feature
+   records.  */
+
+static bool
+feature_enabled (const amd_dbgapi_inferior_info &info, const char *name)
+{
+#if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
+  auto it = info.features.find (name);
+
+  return it != info.features.end () && it->second.enabled;
+#else
+  if (strcmp (name, PROPERTY_PRECISE_MEMORY) == 0)
+    return info.precise_memory.enabled;
+
+  gdb_assert (strcmp (name, PROPERTY_PRECISE_ALU) == 0);
+  return info.precise_alu_exceptions.enabled;
+#endif
 }
 
 /* The async event handler registered with the event loop, indicating that we
@@ -2676,7 +2834,7 @@ amd_dbgapi_target::stopped_by_hw_breakpoint ()
 
 /* Set the process property.
 
-   - First look for PROPERTY_NAME.  Warn if it is not found.
+   - First look for PROPERTY_NAME.  Warn if it is not found and return.
 
    - At the moment, current implementation only supports properties that
      can be enabled or disabled (boolean type).  For any other type, report
@@ -2685,7 +2843,7 @@ amd_dbgapi_target::stopped_by_hw_breakpoint ()
    - Try to change the property to FEATURE.requested.
 
    - If the requested feature is not supported (by at least one of the
-     agents in the process), give a warning.
+     agents in the process), give a warning and return.
 
    - If any other error occurs, report a failure.
 
@@ -2701,7 +2859,7 @@ set_process_property (
   if (amd_dbgapi_properties.find (property_name)
       == amd_dbgapi_properties.end ())
     {
-      warning (_("AMDGPU %s property could not be found."), property_name);
+      warning (_("AMDGPU \"%s\" property not found."), property_name);
       return;
     }
 
@@ -2727,7 +2885,8 @@ set_process_property (
     error (_("amd_dbgapi_process_set_property (..., %s, ...) failed (%s)"),
 	   property.name.get (), get_status_string (status));
 }
-#endif
+
+#else /* !HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY  */
 
 /* Set the process' memory access reporting precision mode.
 
@@ -2739,10 +2898,6 @@ set_process_property (
 static void
 set_process_memory_precision (amd_dbgapi_inferior_info &info)
 {
-#if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
-  set_process_property (info.process_id, PROPERTY_PRECISE_MEMORY,
-			info.precise_memory);
-#else
   auto mode = (info.precise_memory.requested
 	       ? AMD_DBGAPI_MEMORY_PRECISION_PRECISE
 	       : AMD_DBGAPI_MEMORY_PRECISION_NONE);
@@ -2751,11 +2906,10 @@ set_process_memory_precision (amd_dbgapi_inferior_info &info)
   if (status == AMD_DBGAPI_STATUS_SUCCESS)
     info.precise_memory.enabled = info.precise_memory.requested;
   else if (status == AMD_DBGAPI_STATUS_ERROR_NOT_SUPPORTED)
-    warning (_("AMDGPU precise memory access reporting could not be enabled."));
+    warning (_("AMDGPU precise memory access reporting could not be changed."));
   else
     error (_("amd_dbgapi_set_memory_precision failed (%s)"),
 	   get_status_string (status));
-#endif
 }
 
 /* Set the process' alu exception reporting precision mode.
@@ -2766,10 +2920,6 @@ set_process_memory_precision (amd_dbgapi_inferior_info &info)
 static void
 set_process_alu_exceptions_precision (amd_dbgapi_inferior_info &info)
 {
-#if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
-  set_process_property (info.process_id, PROPERTY_PRECISE_ALU,
-			info.precise_alu_exceptions);
-#else
   auto mode = (info.precise_alu_exceptions.requested
 	       ? AMD_DBGAPI_ALU_EXCEPTIONS_PRECISION_PRECISE
 	       : AMD_DBGAPI_ALU_EXCEPTIONS_PRECISION_NONE);
@@ -2780,30 +2930,13 @@ set_process_alu_exceptions_precision (amd_dbgapi_inferior_info &info)
     info.precise_alu_exceptions.enabled
       = info.precise_alu_exceptions.requested;
   else if (status == AMD_DBGAPI_STATUS_ERROR_NOT_SUPPORTED)
-    warning (_("AMDGPU precise ALU exceptions reporting could not be enabled."));
+    warning (_("AMDGPU precise ALU exception reporting could not be changed."));
   else
     error (_("amd_dbgapi_set_alu_exceptions_precision failed (%s)"),
 	   get_status_string (status));
-#endif
 }
 
-
-/* Set the process' LDS exception reporting mode.
-
-   Warn if the requested mode is not supported by at least one of
-   the agents in the process or the dbgapi interface does not provide
-   a way to set it.  */
-
-static void
-set_process_lds_exception (amd_dbgapi_inferior_info &info)
-{
-#if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
-  set_process_property (info.process_id, PROPERTY_LDS_EXCEPTION,
-			info.lds_exception);
-#else
-  warning (_("dbgapi does not support lds exception setting"));
-#endif
-}
+#endif /* !HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY  */
 
 /* Handle extra initialisation after we have attached to a AMDGPU corefile.  */
 
@@ -2927,12 +3060,17 @@ attach_amd_dbgapi (inferior *inf)
 			   amd_dbgapi_notifier_get_fd (info.notifier));
 
 #if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
+  /* std::string &property_name;
+     amd_dbgapi_inferior_info::dbgapi_feature_request &feature;  */
   for (auto &[property_name, feature] : info.features)
-    set_process_property (info.process_id, property_name.c_str (), feature);
+    {
+      /* Nothing is enabled until this process says so.  */
+      feature.enabled = false;
+      set_process_property (info.process_id, property_name.c_str (), feature);
+    }
 #else
   set_process_memory_precision (info);
   set_process_alu_exceptions_precision (info);
-  set_process_lds_exception (info);
 #endif
 
   /* If GDB is attaching to a process that has the runtime loaded, there will
@@ -2984,10 +3122,9 @@ detach_amd_dbgapi (inferior *inf)
     delete_breakpoint (value.second);
 
   /* Reset the amd_dbgapi_inferior_info, except for the requested fields.  */
-  info = amd_dbgapi_inferior_info (
-    inf, info.precise_memory.requested,
-    info.precise_alu_exceptions.requested,
-    info.lds_exception.requested);
+  amd_dbgapi_inferior_info fresh_info (inf);
+  copy_feature_requests (fresh_info, info);
+  info = std::move (fresh_info);
 
   maybe_reset_amd_dbgapi ();
 }
@@ -3420,10 +3557,7 @@ amd_dbgapi_target_inferior_cloned (inferior *original_inferior,
      to copy the precise memory and local memory requests, they will be
      applied when the process starts.  */
   gdb_assert (new_info.process_id == AMD_DBGAPI_PROCESS_NONE);
-  new_info.precise_memory.requested = orig_info.precise_memory.requested;
-  new_info.precise_alu_exceptions.requested
-    = orig_info.precise_alu_exceptions.requested;
-  new_info.lds_exception.requested = orig_info.lds_exception.requested;
+  copy_feature_requests (new_info, orig_info);
 }
 
 /* inferior_execd observer.  */
@@ -3443,10 +3577,7 @@ amd_dbgapi_inferior_execd (inferior *exec_inf, inferior *follow_inf)
     = get_amd_dbgapi_inferior_info (exec_inf);
   amd_dbgapi_inferior_info &follow_info
     = get_amd_dbgapi_inferior_info (follow_inf);
-  follow_info.precise_memory.requested = exec_info.precise_memory.requested;
-  follow_info.precise_alu_exceptions.requested
-    = exec_info.precise_alu_exceptions.requested;
-  follow_info.lds_exception.requested = exec_info.lds_exception.requested;
+  copy_feature_requests (follow_info, exec_info);
 
   attach_amd_dbgapi (follow_inf);
 }
@@ -3465,11 +3596,7 @@ amd_dbgapi_inferior_forked (inferior *parent_inf, inferior *child_inf,
 	= get_amd_dbgapi_inferior_info (parent_inf);
       amd_dbgapi_inferior_info &child_info
 	= get_amd_dbgapi_inferior_info (child_inf);
-      child_info.precise_memory.requested
-	= parent_info.precise_memory.requested;
-      child_info.precise_alu_exceptions.requested
-	= parent_info.precise_alu_exceptions.requested;
-      child_info.lds_exception.requested = parent_info.lds_exception.requested;
+      copy_feature_requests (child_info, parent_info);
 
       if (fork_kind != TARGET_WAITKIND_VFORKED)
 	{
@@ -3696,7 +3823,7 @@ amd_dbgapi_target_signal_received (gdb_signal sig)
   switch (sig)
     {
     case GDB_SIGNAL_FPE:
-      if (!info.precise_alu_exceptions.enabled)
+      if (!feature_enabled (info, PROPERTY_PRECISE_ALU))
 	{
 	  gdb_printf (_("\
 Warning: precise ALU exception reporting is not enabled, reported location\n\
@@ -3705,7 +3832,7 @@ may not be accurate.  See \"show amdgpu precise-alu-exceptions\".\n"));
       return;
     case GDB_SIGNAL_SEGV:
     case GDB_SIGNAL_BUS:
-      if (!info.precise_memory.enabled)
+      if (!feature_enabled (info, PROPERTY_PRECISE_MEMORY))
 	{
 	gdb_printf (_("\
 Warning: precise memory violation signal reporting is not enabled, reported\n\
@@ -3732,7 +3859,7 @@ amd_dbgapi_target_normal_stop (bpstat *bs_list, int print_frame)
     = get_amd_dbgapi_inferior_info (current_inferior ());
 
   if (info.process_id == AMD_DBGAPI_PROCESS_NONE
-      || info.precise_memory.enabled)
+      || feature_enabled (info, PROPERTY_PRECISE_MEMORY))
     return;
 
   bool found_hardware_watchpoint = false;
@@ -3939,6 +4066,8 @@ amd_dbgapi_wave_id_make_value (struct gdbarch *gdbarch, struct internalvar *var,
 static const struct internalvar_funcs amd_dbgapi_wave_id_funcs
   = { amd_dbgapi_wave_id_make_value, NULL };
 
+#if !HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
+
 /* Callback for "show amdgpu precise-memory".  */
 
 static void
@@ -3950,7 +4079,7 @@ show_precise_memory_mode (struct ui_file *file, int from_tty,
 
   gdb_printf (file,
 	      _("AMDGPU precise memory access reporting is %s "
-		"(currently %s).\n"),
+		"(currently %s)\n"),
 	      info.precise_memory.requested ? "on" : "off",
 	      info.precise_memory.enabled ? "enabled" : "disabled");
 }
@@ -3999,7 +4128,7 @@ show_precise_alu_exceptions_mode (struct ui_file *file, int from_tty,
 
   gdb_printf (file,
 	      _("AMDGPU precise ALU exceptions reporting is %s "
-		"(currently %s).\n"),
+		"(currently %s)\n"),
 	      info.precise_alu_exceptions.requested ? "on" : "off",
 	      info.precise_alu_exceptions.enabled ? "enabled" : "disabled");
 }
@@ -4038,57 +4167,7 @@ get_effective_precise_alu_exception_mode ()
   return info.precise_alu_exceptions.enabled;
 }
 
-/* Callback for "show amdgpu lds-exception".  */
-
-static void
-show_lds_exception_mode (struct ui_file *file, int from_tty,
-			 struct cmd_list_element *c, const char *value)
-{
-  amd_dbgapi_inferior_info &info
-    = get_amd_dbgapi_inferior_info (current_inferior ());
-
-  gdb_printf (file,
-	      _("AMDGPU local memory out-of-range address exception "
-		"reporting is %s (currently %s).\n"),
-	      info.lds_exception.requested ? "on" : "off",
-	      info.lds_exception.enabled ? "enabled" : "disabled");
-}
-
-/* Callback for "set amdgpu lds-exception".  */
-
-static void
-set_lds_exception_mode (bool value)
-{
-  amd_dbgapi_inferior_info &info
-    = get_amd_dbgapi_inferior_info (current_inferior ());
-
-  info.lds_exception.requested = value;
-
-  if (info.process_id != AMD_DBGAPI_PROCESS_NONE)
-    set_process_lds_exception (info);
-}
-
-/* Get the local memory out-of-range address exception reporting
-   requested mode.  */
-
-static bool
-get_lds_exception_mode ()
-{
-  amd_dbgapi_inferior_info &info
-    = get_amd_dbgapi_inferior_info (current_inferior ());
-  return info.lds_exception.requested;
-}
-
-/* Get the local memory out-of-range address exception reporting
-   effective mode.  */
-
-static bool
-get_effective_lds_exception_mode ()
-{
-  amd_dbgapi_inferior_info &info
-    = get_amd_dbgapi_inferior_info (current_inferior ());
-  return info.lds_exception.enabled;
-}
+#endif /* !HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY  */
 
 static void
 show_dbgapi_version (const char *args, int from_tty)
@@ -4106,6 +4185,205 @@ show_dbgapi_version (const char *args, int from_tty)
 /* List of set/show amdgpu commands.  */
 struct cmd_list_element *set_amdgpu_list;
 struct cmd_list_element *show_amdgpu_list;
+
+#if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
+
+/* Define the property callbacks that add_setshow_boolean_cmd () needs.
+
+   add_setshow_boolean_cmd () expects function pointers and does not
+   provide much of a context when these function pointers are invoked.
+   We capture the context (name of property) in a functor (property_setter)
+   and use the trampoline as the function wrapper around the functor.
+
+   For example, assume a property named "easter" is assigned SLOT number 4
+   during the command registration in register_property_commands ():
+
+   property_setters[4].initialize ("easter");
+
+   set_property_4 { property_setters[4].set (); }
+   get_property_4 { property_setters[4].get (); }
+   ...
+
+   add_setshow_boolean_cmd (
+     ...,
+     property_trampolines[4].set,      // set_property_4 ()
+     property_trampolines[4].get,      // get_property_4 ()
+     ...);
+ */
+
+#define DEFINE_PROPERTY_TRAMPOLINES(slot)				 \
+  static void								 \
+  set_property_ ## slot (bool value)					 \
+  {									 \
+    get_property_setter (slot).set (value);				 \
+  }									 \
+									 \
+  static bool								 \
+  get_property_ ## slot ()						 \
+  {									 \
+    return get_property_setter (slot).get ();				 \
+  }									 \
+									 \
+  static bool								 \
+  get_effective_property_ ## slot ()					 \
+  {									 \
+    return get_property_setter (slot).effective ();			 \
+  }									 \
+									 \
+  static void								 \
+  show_property_ ## slot (struct ui_file *file, int from_tty,		 \
+			  struct cmd_list_element *c, const char *value) \
+  {									 \
+    get_property_setter (slot).show (file);				 \
+  }
+
+DEFINE_PROPERTY_TRAMPOLINES (0)
+DEFINE_PROPERTY_TRAMPOLINES (1)
+DEFINE_PROPERTY_TRAMPOLINES (2)
+DEFINE_PROPERTY_TRAMPOLINES (3)
+DEFINE_PROPERTY_TRAMPOLINES (4)
+DEFINE_PROPERTY_TRAMPOLINES (5)
+DEFINE_PROPERTY_TRAMPOLINES (6)
+DEFINE_PROPERTY_TRAMPOLINES (7)
+
+/* The callbacks of one slot in one struct, gathered so that
+   register_property_commands can pick them by slot by index.  */
+
+struct property_trampoline
+{
+  void (*set) (bool value);
+  bool (*get) ();
+  bool (*effective) ();
+  show_value_ftype *show;
+};
+
+#define PROPERTY_TRAMPOLINE_ENTRY(slot)					\
+  { set_property_ ## slot, get_property_ ## slot,			\
+    get_effective_property_ ## slot, show_property_ ## slot }
+
+static const struct property_trampoline property_trampolines[] =
+{
+  PROPERTY_TRAMPOLINE_ENTRY (0),
+  PROPERTY_TRAMPOLINE_ENTRY (1),
+  PROPERTY_TRAMPOLINE_ENTRY (2),
+  PROPERTY_TRAMPOLINE_ENTRY (3),
+  PROPERTY_TRAMPOLINE_ENTRY (4),
+  PROPERTY_TRAMPOLINE_ENTRY (5),
+  PROPERTY_TRAMPOLINE_ENTRY (6),
+  PROPERTY_TRAMPOLINE_ENTRY (7),
+};
+
+static_assert (ARRAY_SIZE (property_trampolines) == MAX_PROPERTY_SETTERS);
+
+/* Return TEXT with its spaces turned into newlines where needed to keep every
+   line within the length gdb allows in a help string.  Property descriptions
+   come from the library, so their length is not known at compile time.  */
+
+static std::string
+wrap_help_doc (const std::string &text)
+{
+  std::string wrapped;
+  size_t line_length = 0;
+
+  for (size_t start = 0; start < text.size (); )
+    {
+      /* Find the next word limits.  */
+      size_t end = text.find (' ', start);
+      if (end == std::string::npos)
+	end = text.size ();
+
+      size_t word_length = end - start;
+
+      /* First, adjust by adding space or a newline.  Then, add the
+	 next word.  */
+      if (line_length == 0)
+	{
+	  /* No adjustment for the first word of each line.  Even if the
+	     length of that word is above the limit, no split can be done.  */
+	  ;
+	}
+      else if (line_length + 1 + word_length > cli_help_line_length)
+	{
+	  wrapped += '\n';
+	  line_length = 0;
+	}
+      else
+	{
+	  wrapped += ' ';
+	  ++line_length;
+	}
+
+      /* Append the word after the adjustment is done.  */
+      wrapped.append (text, start, word_length);
+      line_length += word_length;
+
+      start = end + 1;
+    }
+
+  return wrapped;
+}
+
+/* Create a "set amdgpu NAME" / "show amdgpu NAME" command pair for each
+   property in "amd_dbgapi_properties".
+
+   Called once, at startup.  The commands cannot be removed afterwards, so
+   they are not re-created when maybe_reset_amd_dbgapi refreshes the property
+   list.  */
+
+static void
+register_property_commands ()
+{
+  int slot = 0;
+
+  /* const std::string &name;
+     const dbgapi_property_t &property;  */
+  for (const auto &[name, property] : amd_dbgapi_properties)
+    {
+      if (slot >= MAX_PROPERTY_SETTERS)
+	{
+	  warning (_("amd-dbgapi exposes more than %d properties, no command "
+		     "was created for \"%s\"."),
+		   MAX_PROPERTY_SETTERS, name.c_str ());
+	  /* Use "continue", and not "break", to record all extra instances.  */
+	  continue;
+	}
+
+      /* Pick one setter and one trampoline from their pools.
+	 These two are tied together by means of the SLOT number.  */
+      property_setter &setter = property_setters[slot];
+      const struct property_trampoline &trampoline
+	= property_trampolines[slot];
+
+      /* Bind the picked "property setter" to the current property
+	 through its NAME.  */
+      setter.initialize (name.c_str ());
+
+      std::string set_doc = string_printf (_("Set %s mode."), setter.name ());
+      std::string show_doc = string_printf (_("Show %s mode."), setter.name ());
+      /* The HELP_DOC assumes a boolean property with a process scope.  */
+      std::string help_doc
+	= wrap_help_doc (string_printf (_("\
+If on, %s is enabled if/when the inferior is running.  If off (default), \
+then it is disabled."),
+					property.description.get ()));
+
+      /* add_setshow_boolean_cmd borrows the command name.  Therefore, use
+	 SETTER.name () instead of NAME from AMD_DBGAPI_PROPERTIES that
+	 is cleared during maybe_reset_amd_dbgapi ().  */
+      set_show_commands cmds
+	= add_setshow_boolean_cmd (setter.name (), no_class,
+				   set_doc.c_str (), show_doc.c_str (),
+				   help_doc.c_str (), trampoline.set,
+				   trampoline.get, trampoline.show,
+				   &set_amdgpu_list, &show_amdgpu_list);
+
+      cmds.show->var->set_effective_value_getter<bool> (trampoline.effective);
+
+      ++slot;
+    }
+}
+
+#endif /* HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY  */
 
 /* List of set/show debug amd-dbgapi-lib commands.  */
 struct cmd_list_element *set_debug_amd_dbgapi_lib_list;
@@ -5601,6 +5879,9 @@ INIT_GDB_FILE (amd_dbgapi_target)
 		       _("Generic command for showing amdgpu flags."),
 		       &show_amdgpu_list, 0, &showlist);
 
+#if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
+  register_property_commands ();
+#else
   set_show_commands cmds
     = add_setshow_boolean_cmd ("precise-memory", no_class,
 			       _("Set precise-memory mode."),
@@ -5627,20 +5908,7 @@ running.  If off (default), precise ALU exceptions reporting is disabled."),
 
   cmds.show->var->set_effective_value_getter<bool>
     (get_effective_precise_alu_exception_mode);
-
-  cmds = add_setshow_boolean_cmd ("lds-exception", no_class,
-				  _("Set lds-exception mode."),
-				  _("Show lds-exception mode."), _("\
-If on, local memory out-of-range address exception reporting is enabled when\n\
-the inferior is running.  If off (default), the exception reporting is\n\
-disabled."),
-				  set_lds_exception_mode,
-				  get_lds_exception_mode,
-				  show_lds_exception_mode,
-				  &set_amdgpu_list, &show_amdgpu_list);
-
-  cmds.show->var->set_effective_value_getter<bool>
-    (get_effective_lds_exception_mode);
+#endif /* !HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY  */
 
   add_cmd ("version", no_set_class, show_dbgapi_version,
 	   _("Show the ROCdbgapi library version and build information."),

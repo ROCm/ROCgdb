@@ -41,7 +41,7 @@ if {![runto_main]} {
 gdb_breakpoint "kern" -allow-pending -qualified
 gdb_continue_to_breakpoint "with exception off"
 gdb_test "show amdgpu lds-exception" \
-    "exception reporting is off \\(currently disabled\\)\\." \
+    "exception reporting is off \\(currently disabled\\)" \
     "exception reporting for LDS access must be disabled"
 
 delete_breakpoints
@@ -59,13 +59,13 @@ if {![runto_main]} {
  }
 
 # Check if lds-exception can be enabled.
-# The first regex is for cases where the feature could not be enabled.
+# The first regex is for cases where the feature could not be changed.
 # The second regex is for dbgapi versions that don't support property
 # setting and hence, setting the LDS exception at the interface level.
 # This one must go away when we bump the dbgapi version requirement.
 set warning 0
 gdb_test_multiple "set amdgpu lds-exception on" "" {
-    -re -wrap "warning: .* could not be enabled\\." {
+    -re -wrap "warning: .* could not be changed\\." {
 	set warning 1
 	pass $gdb_test_name
     }
@@ -83,7 +83,7 @@ if {$warning} {
 }
 
 gdb_test "show amdgpu lds-exception" \
-    "exception reporting is on \\(currently enabled\\)\\." \
+    "exception reporting is on \\(currently enabled\\)" \
     "exception reporting for LDS access must be enabled"
 
 gdb_test "continue" \
