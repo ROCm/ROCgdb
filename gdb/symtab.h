@@ -907,10 +907,10 @@ constexpr domain_search_flags SEARCH_ALL_DOMAINS
 #undef SYM_DOMAIN
        );
 
-/* A convenience define for "C-like" name lookups, matching variables,
+/* A convenience value for "C-like" name lookups, matching variables,
    types, and functions.  */
-#define SEARCH_VFT \
-  (SEARCH_VAR_DOMAIN | SEARCH_FUNCTION_DOMAIN | SEARCH_TYPE_DOMAIN)
+constexpr domain_search_flags SEARCH_VFT
+    = (SEARCH_VAR_DOMAIN | SEARCH_FUNCTION_DOMAIN | SEARCH_TYPE_DOMAIN);
 
 /* Return a string representing the given flags.  */
 extern std::string domain_name (domain_search_flags);
