@@ -177,6 +177,10 @@ loongarch_elf_new_section_hook (bfd *abfd, asection *sec)
 #define loongarch_elf_hash_table(p)					\
     ((struct loongarch_elf_link_hash_table *) ((p)->hash))		\
 
+/* True if the STT_SECTION symbol of this section is referenced
+   by a relocation with a nonzero addend.  */
+#define loongarch_sec_sym_has_reloc_ref(sec) ((sec)->sec_flg1)
+
 /* During linker relaxation, indicates whether the section has already
    undergone alignment processing and no more byte deletion is permitted.  */
 #define loongarch_sec_closed_for_deletion(sec) ((sec)->sec_flg0)
@@ -1178,6 +1182,19 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		 || h->root.type == bfd_link_hash_warning)
 	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
 	  is_abs_symbol = bfd_is_abs_symbol (&h->root);
+	}
+
+      if (r_symndx < symtab_hdr->sh_info
+	  && rel->r_addend != 0
+	  && r_type != R_LARCH_ALIGN
+	  && ELF_ST_TYPE (isym->st_info) == STT_SECTION
+	  && isym->st_shndx < elf_numsections (abfd)
+	  && elf_elfsections (abfd)[isym->st_shndx] != NULL)
+	{
+	  asection *sym_sec
+	      = elf_elfsections (abfd)[isym->st_shndx]->bfd_section;
+	  if (sym_sec != NULL)
+	    loongarch_sec_sym_has_reloc_ref (sym_sec) = true;
 	}
 
       /* It is referenced by a non-shared object.  */
@@ -5236,7 +5253,61 @@ loongarch_relax_resize_symbol (bfd_size_type *size, bfd_vma orig_value,
     }
 }
 
-static void
+/* Adjust relocations that refer to STT_SECTION symbol.  The section symbol
+   value is zero, so the offset into SEC is stored in the addend.  */
+static bool
+loongarch_relax_adjust_reloc_addends (bfd *abfd, asection *sec,
+				      struct bfd_link_info *link_info)
+{
+  asection *relsec;
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (abfd);
+  Elf_Internal_Sym *local_syms = (Elf_Internal_Sym *) symtab_hdr->contents;
+  unsigned int sec_shndx = _bfd_elf_section_from_bfd_section (abfd, sec);
+
+  for (relsec = abfd->sections; relsec != NULL; relsec = relsec->next)
+    {
+      Elf_Internal_Rela *relocs;
+      unsigned int i;
+
+      if (relsec->reloc_count == 0)
+	continue;
+
+      relocs = elf_section_data (relsec)->relocs;
+      if (relocs == NULL)
+	{
+	  /* Keep addend updates for later relaxation passes.  */
+	  relocs = _bfd_elf_link_read_relocs (abfd, relsec, NULL, NULL,
+					      true);
+	  if (relocs == NULL)
+	    return false;
+	}
+
+      for (i = 0; i < relsec->reloc_count; i++)
+	{
+	  Elf_Internal_Rela *rel = relocs + i;
+	  if (rel->r_addend == 0)
+	    continue;
+
+	  unsigned int r_symndx = ELFNN_R_SYM (rel->r_info);
+	  unsigned int r_type = ELFNN_R_TYPE (rel->r_info);
+
+	  /* R_LARCH_ALIGN stores alignment information in r_addend.  */
+	  if (r_symndx >= symtab_hdr->sh_info
+	      || r_type == R_LARCH_ALIGN)
+	    continue;
+
+	  Elf_Internal_Sym *sym = local_syms + r_symndx;
+	  if (ELF_ST_TYPE (sym->st_info) == STT_SECTION
+	      && sym->st_shndx == sec_shndx)
+	    rel->r_addend = loongarch_calc_relaxed_addr (link_info,
+							 rel->r_addend);
+	}
+    }
+
+  return true;
+}
+
+static bool
 loongarch_relax_perform_deletes (bfd *abfd, asection *sec,
 				 struct bfd_link_info *link_info)
 {
@@ -5262,7 +5333,7 @@ loongarch_relax_perform_deletes (bfd *abfd, asection *sec,
 
   if (node1 == NULL)
     /* No pending delete ops, nothing to do.  */
-    return;
+    return true;
 
   /* Actually delete the bytes.  For each delete op the pointer arithmetics
      look like this:
@@ -5310,9 +5381,11 @@ loongarch_relax_perform_deletes (bfd *abfd, asection *sec,
 	sec->size -= op1->cumulative_offset;
     }
 
-  /* Adjust the location of all of the relocs.  Note that we need not
-     adjust the addends, since all PC-relative references must be against
-     symbols, which we will adjust below.  */
+  if (loongarch_sec_sym_has_reloc_ref (sec))
+      if (! loongarch_relax_adjust_reloc_addends (abfd, sec, link_info))
+	return false;
+
+  /* Adjust the location of all of the relocs.  */
   for (i = 0; i < sec->reloc_count; i++)
     if (data->relocs[i].r_offset < toaddr)
       data->relocs[i].r_offset = loongarch_calc_relaxed_addr (
@@ -5391,6 +5464,8 @@ loongarch_relax_perform_deletes (bfd *abfd, asection *sec,
 	    loongarch_relax_resize_symbol (&sym_hash->size, orig_value, pdops);
 	}
     }
+
+  return true;
 }
 
 /* Start perform TLS type transition.
@@ -6399,9 +6474,11 @@ loongarch_elf_relax_section (bfd *abfd, asection *sec,
 
   if (pdops)
     {
-      loongarch_relax_perform_deletes (abfd, sec, info);
+      bool ok = loongarch_relax_perform_deletes (abfd, sec, info);
       htab->pending_delete_ops = NULL;
       splay_tree_delete (pdops);
+      if (!ok)
+	return false;
     }
 
   return true;

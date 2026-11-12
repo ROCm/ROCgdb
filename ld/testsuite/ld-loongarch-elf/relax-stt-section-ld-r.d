@@ -1,0 +1,19 @@
+#name: LoongArch relax STT_SECTION addend
+#source: relax-stt-section-a.s
+#source: relax-stt-section-b.s
+#ld: -r
+#readelf: -rW
+
+#...
+0+4[ \t]+.*R_LARCH_CALL36.*\.text \+ 4
+#...
+0+c[ \t]+.*R_LARCH_CALL36.*\.data \+ 0
+#...
+0+14[ \t]+.*R_LARCH_CALL36.*a \+ 0
+#...
+0+24[ \t]+.*R_LARCH_CALL36.*\.text \+ 24
+#...
+0+2c[ \t]+.*R_LARCH_CALL36.*\.data \+ 4
+#...
+0+34[ \t]+.*R_LARCH_CALL36.*b \+ 0
+#pass

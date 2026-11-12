@@ -50,6 +50,8 @@ if [istarget loongarch*-*-*] {
   run_dump_test "relax-align-1"
   run_dump_test "relax-align-ld-r"
   run_dump_test "relax-align-ld-r-norelax"
+  run_dump_test "relax-stt-section-ld-r"
+  run_dump_test "relax-stt-section-ld"
 }
 
 if [istarget loongarch64-*-*] {
