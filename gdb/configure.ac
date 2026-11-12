@@ -378,12 +378,6 @@ if test "$gdb_require_amd_dbgapi" = true \
     AC_CHECK_DECLS(AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE,
 		   [], [], [[#include <amd-dbgapi/amd-dbgapi.h>]])
 
-    # Detect if amd_dbgapi_process_set_property is available.
-    # This function became available since amd-dbgapi version 0.83.0.
-    AC_MSG_CHECKING([whether amd_dbgapi_process_set_property is available])
-    AC_CHECK_DECLS(amd_dbgapi_process_set_property, [], [],
-		   [[#include <amd-dbgapi/amd-dbgapi.h>]])
-
     CPPFLAGS="$save_CPPFLAGS"
 
   elif test "$gdb_require_amd_dbgapi" = true -o "$with_amd_dbgapi" = yes; then
