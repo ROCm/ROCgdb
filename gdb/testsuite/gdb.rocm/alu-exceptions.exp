@@ -175,7 +175,7 @@ with_test_prefix "check_precise_alu_support" {
 	}
 
 	gdb_test_multiple "show amdgpu precise-alu-exceptions" "" {
-	    -re -wrap "AMDGPU precise ALU exceptions reporting is on \\(currently (enabled|disabled)\\).*" {
+	    -re -wrap "AMDGPU precise ALU exception reporting is on \\(currently (enabled|disabled)\\).*" {
 		if {$expect_out(1,string) == "enabled"} {
 			set precise_alu_exceptions_supported true
 		}
