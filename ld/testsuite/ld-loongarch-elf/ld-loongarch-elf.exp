@@ -147,6 +147,24 @@ if [istarget "loongarch64-*-*"] {
 	   ] \
       ]
 
+  run_ld_link_exec_tests [list \
+	[list \
+	    "get tls_var_pcaddi test" \
+	    "-mno-relax" \
+	    "" \
+	    { tls-got_pcaddi.s get-tls_var_pcaddi.c} \
+	    "tls-got_pcaddi" \
+	    "tls-got.out" \
+	] \
+	[list \
+	    "get tls_got test" \
+	    "-mno-relax" \
+	    "" \
+	    { tls-got.s get-tls_var.c} \
+	    "tls-got" \
+	    "tls-got.out" \
+	] \
+    ]
 
   run_ld_link_exec_tests [list \
 	[list \

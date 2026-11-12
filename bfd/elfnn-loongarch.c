@@ -1254,6 +1254,8 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	case R_LARCH_TLS_GD_PC_HI20:
 	case R_LARCH_TLS_GD_PCADD_HI20:
 	case R_LARCH_TLS_GD_HI20:
+	case R_LARCH_TLS_LD_PCREL20_S2:
+	case R_LARCH_TLS_GD_PCREL20_S2:
 	case R_LARCH_SOP_PUSH_TLS_GD:
 	  if (!loongarch_elf_record_tls_and_got_reference (abfd, info, h,
 							   r_symndx,
@@ -1293,6 +1295,7 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	case R_LARCH_TLS_DESC_PC_HI20:
 	case R_LARCH_TLS_DESC_PCADD_HI20:
 	case R_LARCH_TLS_DESC_HI20:
+	case R_LARCH_TLS_DESC_PCREL20_S2:
 	  if (!loongarch_elf_record_tls_and_got_reference (abfd, info, h,
 							   r_symndx,
 							   GOT_TLS_GDESC,
