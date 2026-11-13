@@ -2182,6 +2182,7 @@ alpha_ecoff_get_elt_at_filepos (bfd *archive, file_ptr filepos,
   if (bim == NULL)
     goto error_return;
   bim->size = size;
+  bim->capacity = size;
   bim->buffer = buf;
 
   nbfd->mtime_set = true;

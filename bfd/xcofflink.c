@@ -4341,6 +4341,7 @@ bfd_xcoff_link_generate_rtinit (bfd *abfd,
     return false;
 
   bim->size = 0;
+  bim->capacity = 0;
   bim->buffer = 0;
 
   abfd->link.next = 0;

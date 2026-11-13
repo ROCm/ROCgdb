@@ -41,8 +41,10 @@ extern "C" {
 
 struct bfd_in_memory
 {
-  /* Size of buffer.  */
+  /* Logical size of buffer.  */
   bfd_size_type size;
+  /* Number of bytes allocated for buffer.  */
+  bfd_size_type capacity;
   /* Buffer holding contents of BFD.  */
   bfd_byte *buffer;
 };

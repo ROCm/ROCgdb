@@ -784,32 +784,52 @@ memory_bread (bfd *abfd, void *ptr, file_ptr size)
   return get;
 }
 
+static bool
+memory_grow (struct bfd_in_memory *bim, bfd_size_type required)
+{
+  bfd_size_type increase, newsize;
+  bfd_byte *buffer;
+
+  increase = bim->capacity / 8;
+  if (increase < 128)
+    increase = 128;
+  if (increase > (bfd_size_type) -1 - bim->capacity)
+    newsize = required;
+  else
+    {
+      newsize = bim->capacity + increase;
+      if (newsize < required)
+	newsize = required;
+    }
+
+  buffer = bfd_realloc (bim->buffer, newsize);
+  if (buffer == NULL && newsize != required)
+    {
+      newsize = required;
+      buffer = bfd_realloc (bim->buffer, newsize);
+      if (buffer != NULL)
+	bfd_set_error (bfd_error_no_error);
+    }
+  if (buffer == NULL)
+    return false;
+
+  memset (buffer + bim->capacity, 0, newsize - bim->capacity);
+  bim->buffer = buffer;
+  bim->capacity = newsize;
+  return true;
+}
+
 static file_ptr
 memory_bwrite (bfd *abfd, const void *ptr, file_ptr size)
 {
   struct bfd_in_memory *bim = (struct bfd_in_memory *) abfd->iostream;
+  bfd_size_type end = abfd->where + size;
 
-  if (abfd->where + size > bim->size)
-    {
-      bfd_size_type newsize, oldsize;
-
-      oldsize = (bim->size + 127) & ~(bfd_size_type) 127;
-      bim->size = abfd->where + size;
-      /* Round up to cut down on memory fragmentation */
-      newsize = (bim->size + 127) & ~(bfd_size_type) 127;
-      if (newsize > oldsize)
-	{
-	  bim->buffer = (bfd_byte *) bfd_realloc_or_free (bim->buffer, newsize);
-	  if (bim->buffer == NULL)
-	    {
-	      bim->size = 0;
-	      return 0;
-	    }
-	  if (newsize > bim->size)
-	    memset (bim->buffer + bim->size, 0, newsize - bim->size);
-	}
-    }
+  if (end > bim->capacity && !memory_grow (bim, end))
+    return 0;
   memcpy (bim->buffer + abfd->where, ptr, (size_t) size);
+  if (end > bim->size)
+    bim->size = end;
   return size;
 }
 
@@ -844,23 +864,13 @@ memory_bseek (bfd *abfd, file_ptr position, int direction)
       if (abfd->direction == write_direction
 	  || abfd->direction == both_direction)
 	{
-	  bfd_size_type newsize, oldsize;
-
-	  oldsize = (bim->size + 127) & ~(bfd_size_type) 127;
-	  bim->size = nwhere;
-	  /* Round up to cut down on memory fragmentation */
-	  newsize = (bim->size + 127) & ~(bfd_size_type) 127;
-	  if (newsize > oldsize)
+	  if ((bfd_size_type) nwhere > bim->capacity
+	      && !memory_grow (bim, nwhere))
 	    {
-	      bim->buffer = (bfd_byte *) bfd_realloc_or_free (bim->buffer, newsize);
-	      if (bim->buffer == NULL)
-		{
-		  errno = EINVAL;
-		  bim->size = 0;
-		  return -1;
-		}
-	      memset (bim->buffer + oldsize, 0, newsize - oldsize);
+	      errno = ENOMEM;
+	      return -1;
 	    }
+	  bim->size = nwhere;
 	}
       else
 	{

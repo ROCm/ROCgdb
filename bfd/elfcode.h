@@ -2022,6 +2022,7 @@ NAME(_bfd_elf,bfd_from_remote_memory)
     }
   nbfd->xvec = templ->xvec;
   bim->size = high_offset;
+  bim->capacity = high_offset;
   bim->buffer = contents;
   nbfd->iostream = bim;
   nbfd->flags = BFD_IN_MEMORY;

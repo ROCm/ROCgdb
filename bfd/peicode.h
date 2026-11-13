@@ -872,6 +872,7 @@ pe_ILF_build_a_bfd (bfd *	    abfd,
   ptr = (bfd_byte *) bfd_zmalloc ((bfd_size_type) ILF_DATA_SIZE);
   vars.bim->buffer = ptr;
   vars.bim->size   = ILF_DATA_SIZE;
+  vars.bim->capacity = ILF_DATA_SIZE;
   if (ptr == NULL)
     goto error_return;
 

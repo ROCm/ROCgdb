@@ -1016,6 +1016,7 @@ bfd_make_writable (bfd *abfd)
   abfd->iostream = bim;
   /* bfd_write will grow these as needed.  */
   bim->size = 0;
+  bim->capacity = 0;
   bim->buffer = 0;
 
   abfd->flags |= BFD_IN_MEMORY;
