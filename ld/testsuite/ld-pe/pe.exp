@@ -151,6 +151,7 @@ run_dump_test "reloc"
 run_dump_test "reloc2a"
 run_dump_test "reloc2b"
 run_dump_test "reloc2c"
+run_dump_test "reloc-none"
 
 run_dump_test "weakdef-1"
 

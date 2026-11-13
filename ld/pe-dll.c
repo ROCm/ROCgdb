@@ -1724,6 +1724,9 @@ generate_reloc (bfd *abfd, struct bfd_link_info *info)
 		  switch BITS_AND_SHIFT (relocs[i]->howto->bitsize,
 					 relocs[i]->howto->rightshift)
 		    {
+		    case BITS_AND_SHIFT (0, 0):
+		      /* Skip relocations not altering the binary.   */
+		      break;
 #ifdef pe_use_plus
 		    case BITS_AND_SHIFT (64, 0):
 		      reloc_data[total_relocs].type = IMAGE_REL_BASED_DIR64;
