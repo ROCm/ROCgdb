@@ -224,6 +224,7 @@ static bool
 in_reloc_p (bfd *abfd ATTRIBUTE_UNUSED, reloc_howto_type *howto)
 {
   return ! howto->pc_relative
+    && howto->type != R_AMD64_ABS
     && howto->type != R_AMD64_IMAGEBASE
     && howto->type != R_AMD64_SECREL
     && howto->type != R_AMD64_SECTION;
@@ -236,7 +237,19 @@ in_reloc_p (bfd *abfd ATTRIBUTE_UNUSED, reloc_howto_type *howto)
 
 static reloc_howto_type howto_table[] =
 {
-  EMPTY_HOWTO (0),
+  HOWTO (R_AMD64_ABS,		/* type 0 */
+	 0,			/* rightshift */
+	 0,			/* size */
+	 0,			/* bitsize */
+	 false,			/* pc_relative */
+	 0,			/* bitpos */
+	 complain_overflow_dont,
+	 NULL,			/* special_function */
+	 "IMAGE_REL_AMD64_ABSOLUTE", /* name */
+	 false,			/* partial_inplace */
+	 0,			/* src_mask */
+	 0,			/* dst_mask */
+	 false),		/* pcrel_offset */
   HOWTO (R_AMD64_DIR64,		/* type  1*/
 	 0,			/* rightshift */
 	 8,			/* size */
@@ -811,6 +824,8 @@ coff_amd64_reloc_type_lookup (bfd *abfd ATTRIBUTE_UNUSED, bfd_reloc_code_real_ty
 {
   switch (code)
     {
+    case BFD_RELOC_NONE:
+      return howto_table + R_AMD64_ABS;
     case BFD_RELOC_RVA:
       return howto_table + R_AMD64_IMAGEBASE;
     case BFD_RELOC_32:
