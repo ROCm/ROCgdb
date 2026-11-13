@@ -1695,9 +1695,6 @@ elf32_rl78_relax_delete_bytes (bfd *abfd, asection *sec, bfd_vma addr, int count
 
   irelend = irel + sec->reloc_count;
 
-  if (! _bfd_elf_relax_delete_range_ok (abfd, sec, addr, count, toaddr))
-    return false;
-
   /* Actually delete the bytes.  */
   memmove (contents + addr, contents + addr + count,
 	   (size_t) (toaddr - addr - count));
@@ -2256,11 +2253,8 @@ rl78_elf_relax_section (bfd *abfd,
 	  nbytes /= alignment;
 	  nbytes *= alignment;
 
-	  if (! elf32_rl78_relax_delete_bytes (abfd, sec,
-					       erel->r_offset - nbytes,
-					       nbytes, next_alignment,
-					       erel->r_offset == sec->size))
-	    goto error_return;
+	  elf32_rl78_relax_delete_bytes (abfd, sec, erel->r_offset - nbytes, nbytes,
+					 next_alignment, erel->r_offset == sec->size);
 	  *again = true;
 
 	  continue;
@@ -2299,25 +2293,12 @@ rl78_elf_relax_section (bfd *abfd,
       pcrel = symval - pc + srel->r_addend;		\
       nrelocs --;
 
-      /* Delete bytes within an instruction pattern; on range check
-	 failure, abort relaxation and branch to error_return.  */
-#define SNIPNR(offset, nbytes)						\
-  do									\
-    {									\
-      if (! elf32_rl78_relax_delete_bytes (abfd, sec,			\
-					   (insn - contents) + offset,	\
-					   nbytes, next_alignment, 0))	\
-	goto error_return;						\
-    }									\
-  while (0)
+#define SNIPNR(offset, nbytes) \
+	elf32_rl78_relax_delete_bytes (abfd, sec, (insn - contents) + offset, nbytes, next_alignment, 0);
 
 #define SNIP(offset, nbytes, newtype)					\
-  do									\
-    {									\
-      SNIPNR (offset, nbytes);						\
-      srel->r_info = ELF32_R_INFO (ELF32_R_SYM (srel->r_info), newtype); \
-    }									\
-  while (0)
+	SNIPNR (offset, nbytes);					\
+	srel->r_info = ELF32_R_INFO (ELF32_R_SYM (srel->r_info), newtype)
 
       /* The order of these bit tests must match the order that the
 	 relocs appear in.  Since we sorted those by offset, we can
