@@ -2535,6 +2535,8 @@ extern bool _bfd_elf_find_inliner_info
 extern asymbol *_bfd_elf_find_function
   (bfd *, asymbol **, asection *, bfd_vma, const char **, const char **)
   ATTRIBUTE_HIDDEN;
+extern bool _bfd_elf_relax_delete_range_ok
+  (const bfd *, const asection *, bfd_vma, bfd_vma, bfd_vma) ATTRIBUTE_HIDDEN;
 #define _bfd_elf_read_minisymbols _bfd_generic_read_minisymbols
 #define _bfd_elf_minisymbol_to_symbol _bfd_generic_minisymbol_to_symbol
 extern int _bfd_elf_sizeof_headers

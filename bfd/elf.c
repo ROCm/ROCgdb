@@ -14245,6 +14245,35 @@ _bfd_elf_link_munmap_section_contents (asection *sec ATTRIBUTE_UNUSED)
 #endif
 }
 
+/* Validate that deleting COUNT bytes starting at OFFS up to the upper
+   bound LIMIT is within the section bounds of SEC (OFFS <= LIMIT,
+   COUNT <= LIMIT - OFFS, and LIMIT <= SEC->SIZE).  OFFS is derived
+   from an unvalidated relocation offset; without this check the
+   subtraction (LIMIT - OFFS - COUNT) wraps around, corrupting the heap
+   buffer.  */
+
+bool
+_bfd_elf_relax_delete_range_ok (const bfd *abfd,
+				const asection *sec,
+				bfd_vma offs,
+				bfd_vma count,
+				bfd_vma limit)
+{
+  if (offs <= limit
+      && count <= limit - offs
+      && limit <= sec->size)
+    return true;
+
+  _bfd_error_handler
+    /* xgettext:c-format */
+    (_("%pB: relax: cannot delete %" PRIu64 " bytes at %#" PRIx64
+       " (limit %#" PRIx64 ") in section `%pA' of size %#" PRIx64),
+     abfd, (uint64_t) count, (uint64_t) offs, (uint64_t) limit, sec,
+     (uint64_t) sec->size);
+  bfd_set_error (bfd_error_bad_value);
+  return false;
+}
+
 #ifndef OBJ_MAYBE_ELF_ATTRIBUTES
 
 bfd *_bfd_elf_link_setup_object_attributes
