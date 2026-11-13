@@ -474,7 +474,12 @@ static bool
 in_reloc_p (bfd * abfd ATTRIBUTE_UNUSED,
             reloc_howto_type * howto)
 {
-  return !howto->pc_relative;
+  return !howto->pc_relative
+	 && howto->type != IMAGE_REL_ARM64_ABSOLUTE
+	 && howto->type != IMAGE_REL_ARM64_ADDR32NB
+	 && howto->type != IMAGE_REL_ARM64_SECREL
+	 && howto->type != IMAGE_REL_ARM64_SECREL_LOW12L
+	 && howto->type != IMAGE_REL_ARM64_SECTION;
 }
 #endif
 

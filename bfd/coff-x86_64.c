@@ -227,6 +227,7 @@ in_reloc_p (bfd *abfd ATTRIBUTE_UNUSED, reloc_howto_type *howto)
     && howto->type != R_AMD64_ABS
     && howto->type != R_AMD64_IMAGEBASE
     && howto->type != R_AMD64_SECREL
+    && howto->type != R_AMD64_SECREL7
     && howto->type != R_AMD64_SECTION;
 }
 #endif /* COFF_WITH_PE */

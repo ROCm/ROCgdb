@@ -517,7 +517,12 @@ static bool
 in_reloc_p (bfd * abfd ATTRIBUTE_UNUSED,
 	    reloc_howto_type * howto)
 {
-  return !howto->pc_relative && howto->type != ARM_RVA32;
+  return !howto->pc_relative
+# ifdef ARM_WINCE
+	 && howto->type != ARM_SECREL
+	 && howto->type != ARM_SECTION
+# endif
+	 && howto->type != ARM_RVA32;
 }
 #endif
 

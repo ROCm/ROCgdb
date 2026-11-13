@@ -343,7 +343,8 @@ coff_mcore_rtype_to_howto (bfd * abfd ATTRIBUTE_UNUSED,
 static bool
 in_reloc_p (bfd * abfd ATTRIBUTE_UNUSED, reloc_howto_type * howto)
 {
-  return ! howto->pc_relative && howto->type != IMAGE_REL_MCORE_RVA;
+  return ! howto->pc_relative && howto->type != IMAGE_REL_MCORE_RVA
+	 && howto->type != IMAGE_REL_MCORE_ABSOLUTE;
 }
 
 /* The reloc processing routine for the optimized COFF linker.  */
