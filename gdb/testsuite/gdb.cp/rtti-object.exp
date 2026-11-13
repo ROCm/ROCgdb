@@ -1,0 +1,92 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test finding the dynamic type of a polymorphic object through a
+# pointer to a subobject ("set print object on", typeid): a second base
+# class, a virtual base class, a class in a namespace, and a virtual
+# base while a constructor runs.
+
+require allow_cplus_tests
+
+standard_testfile .cc
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug c++}]} {
+    return
+}
+
+if {![runto_main]} {
+    return
+}
+
+# Y's constructor runs on the Y subobject of Z.  V is not where Y's own
+# layout puts it, and the dynamic type of the V subobject is Y.  The
+# MSVC ABI finds the start of Y through a vtordisp.
+gdb_breakpoint "marker_ctor"
+gdb_continue_to_breakpoint "marker_ctor"
+gdb_test_no_output "set print object on"
+
+# The gnu-v3 ABI does not handle construction vtables ("construction
+# vtable for Y-in-Z"), so only check this under the MSVC ABI.
+set cp_abi ""
+gdb_test_multiple "show cp-abi" "" {
+    -re -wrap "\\(currently \"(\[^\"\]*)\"\\)\\." {
+	set cp_abi $expect_out(1,string)
+	pass $gdb_test_name
+    }
+    -re -wrap "" {
+	pass $gdb_test_name
+    }
+}
+
+if {$cp_abi == "msvc"} {
+    with_test_prefix "in constructor" {
+	set yp_addr [get_hexadecimal_valueof "yp" "unknown"]
+	gdb_test "print yp" " = \\(Y \\*\\) $yp_addr"
+	# With "print object on", GDB adjusts the pointer to the start of
+	# the dynamic type, here back to YP.
+	gdb_test "print (struct V *) yp" " = \\(Y \\*\\) $yp_addr"
+	gdb_test "print &typeid(*(struct V *) yp) == &typeid(struct Y)" \
+	    " = true"
+	gdb_test "print dynamic_cast<struct Y *> ((struct V *) yp) == yp" \
+	    " = true"
+    }
+}
+
+gdb_breakpoint [gdb_get_line_number "break here"]
+gdb_continue_to_breakpoint "break here"
+
+# The second base B of M is at a non-zero offset in M.
+gdb_test "print bp" " = \\(M \\*\\) $hex <\[^>\]*m\[^>\]*>"
+gdb_test "print *bp" " = \\(M\\) {<A> = {.*a = 1}, <B> = {.*b = 2}, m = 3}"
+
+# X has no vfptr outside its virtual base V under the MSVC ABI.
+gdb_test "print xvp" " = \\(X \\*\\) $hex <\[^>\]*x\[^>\]*>"
+gdb_test "print *xvp" " = \\(X\\) {<V> = {.*v = 4}, .*x = 5}"
+
+gdb_test "print nap" " = \\(ns::N \\*\\) $hex <\[^>\]*n\[^>\]*>"
+
+# Z's V subobject, after construction.
+gdb_test "print *zvp" " = \\(Z\\) {<P> = {.*}, <Y> = {.*y = 6}, z = 10}"
+
+# typeid of an object finds the type_info of its dynamic type.
+gdb_test "print &typeid(*bp) == &typeid(m)" " = true"
+gdb_test "print &typeid(*bp) == &ti_m" " = true"
+gdb_test "print &typeid(*xvp) == &ti_x" " = true"
+gdb_test "print &typeid(*nap) == &ti_n" " = true"
+gdb_test "print &typeid(*zvp) == &typeid(z)" " = true"
+
+# typeid of types without a vtable, found by symbol.
+gdb_test "print &typeid(iarr) == &ti_iarr" " = true"
+gdb_test "print &typeid(cap) == &ti_cap" " = true"

@@ -1234,7 +1234,365 @@ amd64_windows_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
   return pc;
 }
 
-/* Check Win64 DLL jmp trampolines and find jump destination.  */
+/* Return true if NAME may be an MSVC this-adjusting thunk (adjustor or
+   vtordisp): some "@@" in it is followed by a thunk access code.  The
+   jump target confirms it, see amd64_windows_msvc_thunk_target_p.  */
+
+static bool
+amd64_windows_msvc_thunk_name_p (const char *name)
+{
+  /* FIXME: Once GDB has an MSVC demangler, recognise thunks by the
+     demangled "[thunk]:" form instead of the raw mangling codes.  */
+  if (name[0] != '?')
+    return false;
+
+  for (const char *at = strstr (name, "@@"); at != nullptr;
+       at = strstr (at + 1, "@@"))
+    {
+      const char *code = at + 2;
+      if (*code == 'W' || *code == 'O' || *code == 'G'
+	  || (code[0] == '$'
+	      && (code[1] == '4' || code[1] == '2' || code[1] == '0')))
+	return true;
+    }
+
+  return false;
+}
+
+/* Skip one MSVC-mangled number at P: an optional '?', then a digit or
+   hex letters A-P ending in '@'.  Return the character after it, or
+   nullptr if P is not a number.  */
+
+static const char *
+amd64_windows_msvc_skip_number (const char *p)
+{
+  if (*p == '?')
+    p++;
+  if (*p >= '0' && *p <= '9')
+    return p + 1;
+  const char *start = p;
+  while (*p >= 'A' && *p <= 'P')
+    p++;
+  if (p == start || *p != '@')
+    return nullptr;
+  return p + 1;
+}
+
+/* Return true if TARGET is the function the MSVC thunk THUNK adjusts
+   "this" for.  THUNK is "<name>@@<code><numbers><signature>" and
+   TARGET "<name>@@<kind><signature>", where the thunk's access code
+   matches the virtual function's kind: W, $4 and U public; O, $2 and M
+   protected; G, $0 and E private.  */
+
+static bool
+amd64_windows_msvc_thunk_target_p (const char *thunk, const char *target)
+{
+  /* FIXME: Once GDB has an MSVC demangler, compare the demangled
+     names instead.  */
+  if (thunk[0] != '?')
+    return false;
+
+  size_t len = 0;
+  while (thunk[len] != '\0' && thunk[len] == target[len])
+    len++;
+
+  if (len < 3 || thunk[len - 2] != '@' || thunk[len - 1] != '@')
+    return false;
+
+  const char *code = thunk + len;
+  const char *rest;
+  char kind;
+  if (*code == 'W' || *code == 'O' || *code == 'G')
+    {
+      kind = *code == 'W' ? 'U' : *code == 'O' ? 'M' : 'E';
+      rest = amd64_windows_msvc_skip_number (code + 1);
+    }
+  else if (code[0] == '$'
+	   && (code[1] == '4' || code[1] == '2' || code[1] == '0'))
+    {
+      kind = code[1] == '4' ? 'U' : code[1] == '2' ? 'M' : 'E';
+      rest = amd64_windows_msvc_skip_number (code + 2);
+      if (rest != nullptr)
+	rest = amd64_windows_msvc_skip_number (rest);
+    }
+  else
+    return false;
+
+  return (rest != nullptr
+	  && target[len] == kind
+	  && strcmp (rest, target + len + 1) == 0);
+}
+
+/* If NAME is an MSVC vcall thunk, "??_9<class>@@$B<offset>AA", return
+   the byte offset of the vtable slot it calls through, else -1.  */
+
+static LONGEST
+amd64_windows_msvc_vcall_offset (const char *name)
+{
+  /* FIXME: Once GDB has an MSVC demangler, recognise vcall thunks by
+     the demangled form instead of the raw mangling.  */
+  if (name[0] != '?' || name[1] != '?' || name[2] != '_' || name[3] != '9')
+    return -1;
+
+  for (const char *at = strstr (name, "@@$B"); at != nullptr;
+       at = strstr (at + 1, "@@$B"))
+    {
+      const char *p = at + 4;
+      LONGEST off;
+      if (*p >= '0' && *p <= '9')
+	{
+	  off = *p - '0' + 1;
+	  p++;
+	}
+      else if (*p >= 'A' && *p <= 'P')
+	{
+	  off = 0;
+	  const char *start = p;
+	  for (; *p >= 'A' && *p <= 'P' && p - start < 8; p++)
+	    off = (off << 4) | (*p - 'A');
+	  if (*p != '@')
+	    continue;
+	  p++;
+	}
+      else
+	continue;
+
+      if (p[0] == 'A' && p[1] == 'A' && p[2] == '\0')
+	return off;
+    }
+
+  return -1;
+}
+
+/* An instruction an MSVC this-adjusting thunk may run before its
+   final jump: opcode bytes, then IMM_LEN immediate or displacement
+   bytes.  */
+
+struct amd64_windows_thunk_insn
+{
+  gdb_byte op[4];
+  int op_len;
+  int imm_len;
+};
+
+static const amd64_windows_thunk_insn amd64_windows_thunk_insns[] =
+{
+  { { 0x50 }, 1, 0 },			/* push %rax */
+  { { 0x58 }, 1, 0 },			/* pop %rax */
+  { { 0x48, 0x89, 0x0c, 0x24 }, 4, 0 },	/* mov %rcx,(%rsp) */
+  { { 0x48, 0x8b, 0x0c, 0x24 }, 4, 0 },	/* mov (%rsp),%rcx */
+  { { 0x48, 0x8b, 0x04, 0x24 }, 4, 0 },	/* mov (%rsp),%rax */
+  { { 0x48, 0x83, 0xc1 }, 3, 1 },	/* add $imm8,%rcx */
+  { { 0x48, 0x81, 0xc1 }, 3, 4 },	/* add $imm32,%rcx */
+  { { 0x48, 0x83, 0xe9 }, 3, 1 },	/* sub $imm8,%rcx */
+  { { 0x48, 0x81, 0xe9 }, 3, 4 },	/* sub $imm32,%rcx */
+  { { 0x8b, 0x41 }, 2, 1 },		/* mov disp8(%rcx),%eax */
+  { { 0x8b, 0x48 }, 2, 1 },		/* mov disp8(%rax),%ecx */
+  { { 0x48, 0x63, 0x41 }, 3, 1 },	/* movslq disp8(%rcx),%rax */
+  { { 0xf7, 0xd8 }, 2, 0 },		/* neg %eax */
+  { { 0xf7, 0xd9 }, 2, 0 },		/* neg %ecx */
+  { { 0x48, 0x98 }, 2, 0 },		/* cltq */
+  { { 0x48, 0x63, 0xc9 }, 3, 0 },	/* movslq %ecx,%rcx */
+  { { 0x48, 0x01, 0xc1 }, 3, 0 },	/* add %rax,%rcx */
+  { { 0x48, 0x2b, 0xc8 }, 3, 0 },	/* sub %rax,%rcx */
+  { { 0x48, 0x8d, 0x4c, 0x08 }, 4, 1 },	/* lea disp8(%rax,%rcx),%rcx */
+  { { 0x48, 0x8d, 0x8c, 0x08 }, 4, 4 },	/* lea disp32(%rax,%rcx),%rcx */
+};
+
+/* If PC is the start of an MSVC adjustor or vtordisp thunk, return
+   the function it jumps to, else 0.  The thunk is decoded rather than
+   resolved by name: optimized code may inline the target into the
+   thunk, in which case there is no jump and nothing to skip.  */
+
+static CORE_ADDR
+amd64_windows_skip_msvc_thunk (struct gdbarch *gdbarch, CORE_ADDR pc)
+{
+  bound_minimal_symbol thunk = lookup_minimal_symbol_by_pc (pc);
+  if (thunk.minsym == nullptr || thunk.value_address () != pc)
+    return 0;
+
+  const char *thunk_name = thunk.minsym->linkage_name ();
+  if (!amd64_windows_msvc_thunk_name_p (thunk_name))
+    return 0;
+
+  gdb_byte buf[48];
+  if (target_read_code (pc, buf, sizeof (buf)) != 0)
+    return 0;
+
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  size_t off = 0;
+  while (off + 5 <= sizeof (buf))
+    {
+      if (buf[off] == 0xe9)
+	{
+	  /* jmp rel32 to the function the thunk adjusts "this" for.  */
+	  LONGEST rel = extract_signed_integer (&buf[off + 1], 4, byte_order);
+	  CORE_ADDR target = pc + off + 5 + rel;
+	  bound_minimal_symbol fn = lookup_minimal_symbol_by_pc (target);
+	  if (fn.minsym == nullptr
+	      || fn.value_address () != target
+	      || !amd64_windows_msvc_thunk_target_p (thunk_name,
+						     fn.minsym->linkage_name ()))
+	    return 0;
+	  return target;
+	}
+
+      const amd64_windows_thunk_insn *insn = nullptr;
+      for (const amd64_windows_thunk_insn &candidate
+	     : amd64_windows_thunk_insns)
+	if (memcmp (&buf[off], candidate.op, candidate.op_len) == 0)
+	  {
+	    insn = &candidate;
+	    break;
+	  }
+      if (insn == nullptr)
+	return 0;
+      off += insn->op_len + insn->imm_len;
+    }
+
+  return 0;
+}
+
+/* An instruction of an MSVC vcall thunk: opcode bytes, then DISP_LEN
+   bytes of displacement.  */
+
+struct amd64_windows_vcall_insn
+{
+  gdb_byte op[4];
+  int op_len;
+  int disp_len;
+};
+
+/* Optional spill of "this" that clang emits at -O0.  */
+
+static const amd64_windows_vcall_insn amd64_windows_vcall_spill[] =
+{
+  { { 0x50 }, 1, 0 },			/* push %rax */
+  { { 0x48, 0x89, 0x0c, 0x24 }, 4, 0 },	/* mov %rcx,(%rsp) */
+  { { 0x48, 0x8b, 0x0c, 0x24 }, 4, 0 },	/* mov (%rsp),%rcx */
+};
+
+/* Load of the slot into %rax (clang), followed by "jmp *%rax".  */
+
+static const amd64_windows_vcall_insn amd64_windows_vcall_load[] =
+{
+  { { 0x48, 0x8b, 0x00 }, 3, 0 },	/* mov (%rax),%rax */
+  { { 0x48, 0x8b, 0x40 }, 3, 1 },	/* mov disp8(%rax),%rax */
+  { { 0x48, 0x8b, 0x80 }, 3, 4 },	/* mov disp32(%rax),%rax */
+};
+
+/* Jump through the slot (cl.exe).  */
+
+static const amd64_windows_vcall_insn amd64_windows_vcall_jump[] =
+{
+  { { 0xff, 0x20 }, 2, 0 },		/* jmp *(%rax) */
+  { { 0xff, 0x60 }, 2, 1 },		/* jmp *disp8(%rax) */
+  { { 0xff, 0xa0 }, 2, 4 },		/* jmp *disp32(%rax) */
+};
+
+/* If the instruction at BUF[*OFF] (LEN bytes available) is one of
+   INSNS, advance *OFF past it, store its sign-extended displacement in
+   *DISP if DISP is not null, and return true.  */
+
+template<size_t N>
+static bool
+amd64_windows_match_vcall_insn (const gdb_byte *buf, size_t len,
+				size_t *off,
+				const amd64_windows_vcall_insn (&insns)[N],
+				LONGEST *disp)
+{
+  for (const amd64_windows_vcall_insn &insn : insns)
+    {
+      size_t size = insn.op_len + insn.disp_len;
+      if (*off + size > len
+	  || memcmp (&buf[*off], insn.op, insn.op_len) != 0)
+	continue;
+      if (disp != nullptr)
+	*disp = (insn.disp_len == 0 ? 0
+		 : extract_signed_integer (&buf[*off + insn.op_len],
+					   insn.disp_len, BFD_ENDIAN_LITTLE));
+      *off += size;
+      return true;
+    }
+  return false;
+}
+
+/* If PC is the start of an MSVC vcall thunk and FRAME is stopped
+   there, return the virtual function the thunk would call, else 0.
+   The thunk loads the vtable pointer from "this" (%rcx) and jumps
+   through the slot its name encodes; the slot may hold an adjustor
+   thunk, which is skipped as well.  */
+
+static CORE_ADDR
+amd64_windows_skip_msvc_vcall_thunk (const frame_info_ptr &frame,
+				     CORE_ADDR pc)
+{
+  /* %rcx holds "this" only on entry to the thunk.  */
+  if (pc != get_frame_pc (frame))
+    return 0;
+
+  bound_minimal_symbol thunk = lookup_minimal_symbol_by_pc (pc);
+  if (thunk.minsym == nullptr || thunk.value_address () != pc)
+    return 0;
+
+  const char *name = thunk.minsym->linkage_name ();
+  LONGEST slot = amd64_windows_msvc_vcall_offset (name);
+  if (slot < 0)
+    return 0;
+
+  gdb_byte buf[32];
+  if (target_read_code (pc, buf, sizeof (buf)) != 0)
+    return 0;
+
+  size_t off = 0;
+  while (amd64_windows_match_vcall_insn (buf, sizeof (buf), &off,
+					 amd64_windows_vcall_spill, nullptr))
+    ;
+
+  /* mov (%rcx),%rax */
+  static const gdb_byte load_vptr[] = { 0x48, 0x8b, 0x01 };
+  if (off + sizeof (load_vptr) > sizeof (buf)
+      || memcmp (&buf[off], load_vptr, sizeof (load_vptr)) != 0)
+    return 0;
+  off += sizeof (load_vptr);
+
+  LONGEST disp;
+  if (amd64_windows_match_vcall_insn (buf, sizeof (buf), &off,
+				      amd64_windows_vcall_load, &disp))
+    {
+      static const gdb_byte pop_r10[] = { 0x41, 0x5a };
+      static const gdb_byte jmp_rax[] = { 0x48, 0xff, 0xe0 };
+      if (off + sizeof (pop_r10) <= sizeof (buf)
+	  && memcmp (&buf[off], pop_r10, sizeof (pop_r10)) == 0)
+	off += sizeof (pop_r10);
+      if (off + sizeof (jmp_rax) > sizeof (buf)
+	  || memcmp (&buf[off], jmp_rax, sizeof (jmp_rax)) != 0)
+	return 0;
+    }
+  else if (!amd64_windows_match_vcall_insn (buf, sizeof (buf), &off,
+					    amd64_windows_vcall_jump, &disp))
+    return 0;
+
+  /* The decoded slot must be the one the name encodes.  */
+  if (disp != slot)
+    return 0;
+
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  CORE_ADDR self = get_frame_register_unsigned (frame, AMD64_RCX_REGNUM);
+  ULONGEST vptr, target;
+  if (!safe_read_memory_unsigned_integer (self, 8, byte_order, &vptr)
+      || !safe_read_memory_unsigned_integer (vptr + slot, 8, byte_order,
+					     &target)
+      || target == 0)
+    return 0;
+
+  CORE_ADDR adjusted = amd64_windows_skip_msvc_thunk (gdbarch, target);
+  return adjusted != 0 ? adjusted : target;
+}
+
+/* Check Win64 DLL jmp trampolines and MSVC C++ thunks, and find the
+   jump destination.  */
 
 static CORE_ADDR
 amd64_windows_skip_trampoline_code (const frame_info_ptr &frame, CORE_ADDR pc)
@@ -1242,6 +1600,16 @@ amd64_windows_skip_trampoline_code (const frame_info_ptr &frame, CORE_ADDR pc)
   CORE_ADDR destination = 0;
   struct gdbarch *gdbarch = get_frame_arch (frame);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
+  if (pc != 0)
+    {
+      destination = amd64_windows_skip_msvc_thunk (gdbarch, pc);
+      if (destination != 0)
+	return destination;
+      destination = amd64_windows_skip_msvc_vcall_thunk (frame, pc);
+      if (destination != 0)
+	return destination;
+    }
 
   /* Check for jmp *<offset>(%rip) (jump near, absolute indirect (/4)).  */
   if (pc && read_memory_unsigned_integer (pc, 2, byte_order) == 0x25ff)
