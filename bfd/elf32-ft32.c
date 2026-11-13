@@ -1237,7 +1237,7 @@ ft32_elf_relax_section (bfd *abfd,
  error_return:
   free (free_relocs);
 
-  return true;
+  return false;
 }
 
 #define ELF_ARCH		bfd_arch_ft32
