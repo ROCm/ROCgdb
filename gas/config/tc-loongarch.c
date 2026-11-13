@@ -817,10 +817,13 @@ loongarch_args_parser_can_match_arg_helper (char esc_ch1, char esc_ch2,
 	  && (ip->reloc_info[ip->reloc_num].type == tls_reloc_type))
 	{
 	  ip->reloc_num += reloc_num;
-	  ip->reloc_info[ip->reloc_num].type = BFD_RELOC_LARCH_RELAX;
-	  ip->reloc_info[ip->reloc_num].value = const_0;
-	  ip->reloc_num++;
-	  ip->linker_relax = true;
+	  if (LARCH_opts.relax)
+	    {
+	      ip->reloc_info[ip->reloc_num].type = BFD_RELOC_LARCH_RELAX;
+	      ip->reloc_info[ip->reloc_num].value = const_0;
+	      ip->reloc_num++;
+	      ip->linker_relax = true;
+	    }
 	}
       else
 	ip->match_now = 0;
