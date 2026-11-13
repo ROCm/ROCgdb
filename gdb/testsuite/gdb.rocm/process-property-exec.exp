@@ -19,7 +19,7 @@
 #
 #   set amdgpu precise-memory
 #   set amdgpu precise-alu-exceptions
-#   set lds-exception
+#   set amdgpu lds-exception
 #
 # settings are inherited by an inferior created following an exec.
 
@@ -33,6 +33,16 @@ if {[build_executable "failed to prepare $testfile" $testfile $srcfile {debug}]}
     return
 }
 
+# "lds-exception" is generated from the dbgapi property list, which GDB
+# only has when it is built against an amd-dbgapi that provides
+# amd_dbgapi_process_set_property.
+set properties {precise-memory precise-alu-exceptions}
+if {[hip_supports_lds_exception]} {
+    lappend properties lds-exception
+} else {
+    unsupported "amdgpu lds-exception"
+}
+
 proc do_test { follow-exec-mode } {
     clean_restart
     gdb_load $::binfile
@@ -43,15 +53,13 @@ proc do_test { follow-exec-mode } {
 	}
 
 	# Check that the properties are off (default).
-	foreach property {precise-memory precise-alu-exceptions \
-			  lds-exception} {
+	foreach property $::properties {
 	    gdb_test "show amdgpu $property" " is off.*" \
 		"show amdgpu $property before set"
 	}
 
 	# Set the properties on for the inferior before exec.
-	foreach property {precise-memory precise-alu-exceptions \
-			  lds-exception} {
+	foreach property $::properties {
 	    gdb_test "set amdgpu $property on"
 	    gdb_test "show amdgpu $property" " is on.*" \
 		"show amdgpu $property after set"
@@ -61,8 +69,7 @@ proc do_test { follow-exec-mode } {
 	gdb_test_no_output "set follow-exec-mode ${follow-exec-mode}"
 	gdb_test "break second"
 	gdb_test "continue" "Breakpoint 1(\.$::decimal)?, main .*"
-	foreach property {precise-memory precise-alu-exceptions \
-			  lds-exception} {
+	foreach property $::properties {
 	    gdb_test "show amdgpu $property" " is on.*" \
 		"show amdgpu $property after exec"
 	}

@@ -23,6 +23,11 @@ load_lib rocm.exp
 
 require allow_hip_tests
 
+# The "amdgpu lds-exception" command is generated from the dbgapi
+# property list, which GDB only has when it is built against an
+# amd-dbgapi that provides amd_dbgapi_process_set_property.
+require hip_supports_lds_exception
+
 standard_testfile .cpp
 
 if {[prepare_for_testing "failed to prepare ${testfile}" \
@@ -58,18 +63,11 @@ if {![runto_main]} {
     return
  }
 
-# Check if lds-exception can be enabled.
-# The first regex is for cases where the feature could not be changed.
-# The second regex is for dbgapi versions that don't support property
-# setting and hence, setting the LDS exception at the interface level.
-# This one must go away when we bump the dbgapi version requirement.
+# Check if lds-exception can be enabled.  The regex covers the case
+# where the device does not support the feature.
 set warning 0
 gdb_test_multiple "set amdgpu lds-exception on" "" {
     -re -wrap "warning: .* could not be changed\\." {
-	set warning 1
-	pass $gdb_test_name
-    }
-    -re -wrap "warning: dbgapi does not support lds exception setting" {
 	set warning 1
 	pass $gdb_test_name
     }

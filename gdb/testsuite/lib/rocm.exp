@@ -367,6 +367,24 @@ gdb_caching_proc allow_hip_tests {} {
     return 1
 }
 
+# Return true if GDB provides the "amdgpu lds-exception" command.
+#
+# GDB generates its "set/show amdgpu" commands from the dbgapi property
+# list, which requires an amd-dbgapi providing
+# amd_dbgapi_process_set_property.  Built against an older library, GDB
+# falls back to hard-coded precise-memory and precise-alu-exceptions
+# commands, and lds-exception does not exist at all.  Ask GDB itself
+# rather than inferring it from the library version, since the command
+# depends on what GDB was built against, not on what it loads.
+
+gdb_caching_proc hip_supports_lds_exception {} {
+    set output [lindex [remote_exec host $::GDB \
+			    "$::INTERNAL_GDBFLAGS -batch\
+			     -ex \"show amdgpu lds-exception\""] 1]
+
+    return [expr {![regexp {Undefined} $output]}]
+}
+
 # Return true if GPU core dump tests are allowed.
 
 gdb_caching_proc allow_rocm_core_tests {} {

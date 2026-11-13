@@ -19,7 +19,7 @@
 #
 #   set amdgpu precise-memory
 #   set amdgpu precise-alu-exceptions
-#   set lds-exception
+#   set amdgpu lds-exception
 #
 # settings are inherited by a forked child.
 
@@ -34,21 +34,29 @@ if {[prepare_for_testing "failed to prepare $testfile" $testfile $srcfile {debug
     return
 }
 
+# "lds-exception" is generated from the dbgapi property list, which GDB
+# only has when it is built against an amd-dbgapi that provides
+# amd_dbgapi_process_set_property.
+set properties {precise-memory precise-alu-exceptions}
+if {[hip_supports_lds_exception]} {
+    lappend properties lds-exception
+} else {
+    unsupported "amdgpu lds-exception"
+}
+
 with_rocm_gpu_lock {
     if {![runto_main]} {
 	return
     }
 
     # Check that the properties are off (default).
-    foreach property {precise-memory precise-alu-exceptions \
-		      lds-exception} {
+    foreach property $properties {
 	gdb_test "show amdgpu $property" " is off.*" \
 	    "show amdgpu $property before set"
     }
 
     # Set the properties on in the parent, before fork.
-    foreach property {precise-memory precise-alu-exceptions \
-		      lds-exception} {
+    foreach property $properties {
 	gdb_test "set amdgpu $property on"
 	gdb_test "show amdgpu $property" " is on.*" \
 	    "show amdgpu $property after set"
@@ -59,8 +67,7 @@ with_rocm_gpu_lock {
     gdb_test_no_output "set follow-fork-mode child"
     gdb_test "break child"
     gdb_test "continue" "Thread 2.1 .* hit Breakpoint .*"
-    foreach property {precise-memory precise-alu-exceptions \
-		      lds-exception} {
+    foreach property $properties {
 	gdb_test "show amdgpu $property" " is on.*" \
 	    "show amdgpu $property after fork"
     }
