@@ -3616,11 +3616,20 @@ loongarch_elf_relocate_section (struct bfd_link_info *info,
 	      h = elfNN_loongarch_get_local_sym_hash (htab, input_bfd, rel,
 						      false);
 	      if (h == NULL)
-		abort ();
-
-	      /* Set STT_GNU_IFUNC symbol value.  */
-	      h->root.u.def.value = sym->st_value;
-	      h->root.u.def.section = sec;
+		{
+		  /* Only a non-alloc section, which the relocation scan
+		     skips, refers to the symbol.  Relocate it as against
+		     STT_FUNC, as for a global STT_GNU_IFUNC symbol
+		     without a PLT entry.  */
+		  if ((input_section->flags & SEC_ALLOC) != 0)
+		    abort ();
+		}
+	      else
+		{
+		  /* Set STT_GNU_IFUNC symbol value.  */
+		  h->root.u.def.value = sym->st_value;
+		  h->root.u.def.section = sec;
+		}
 	    }
 	  defined_local = true;
 	  resolved_local = true;
