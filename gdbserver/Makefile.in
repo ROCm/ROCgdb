@@ -118,6 +118,11 @@ INCSUPPORT = \
 	-I$(srcdir)/.. \
 	-I..
 
+# See gdb/Makefile.in.
+GNULIB_LIBIBERTY_CFLAGS = \
+	$(INCGNU) \
+	-I$(INCLUDE_DIR)
+
 # All the includes used for CFLAGS and for lint.
 # -I. for config files.
 # -I${srcdir} for our headers.
@@ -132,9 +137,8 @@ INCLUDE_CFLAGS = \
 	-I${srcdir} \
 	-I$(srcdir)/../gdb/regformats \
 	-I$(srcdir)/.. \
-	-I$(INCLUDE_DIR) \
+	$(GNULIB_LIBIBERTY_CFLAGS) \
 	-I$(srcdir)/../gdb \
-	$(INCGNU) \
 	$(INCSUPPORT) \
 	$(INTL_CFLAGS)
 

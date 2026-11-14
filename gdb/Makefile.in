@@ -157,6 +157,59 @@ CC_LD = $(LIBTOOL) $(SILENT_FLAG) --mode=link $(CXX) $(CXX_DIALECT)
 INCLUDE_DIR = $(srcdir)/../include
 INCLUDE_CFLAGS = -I$(INCLUDE_DIR)
 
+# GDB uses GNU libiberty and Gnulib.  Both are part portability, part utility
+# libraries.  Both are maintained externally, and we have in-repo copies.
+#
+# Libiberty is a "decommissioned GNU package".  OTOH, libiberty is maintained
+# as part of GCC, and so at least the parts that GCC relies on are maintained.
+# For functionality provided by both Gnulib and libiberty, we prefer the
+# Gnulib one because it's actively maintained as a whole.
+#
+# While for Gnulib we have a means to selectively import only the part that we
+# want (gnulib/update-gnulib.sh), libiberty is imported as a whole.
+# Consequently we can end up with conflicting files, making inclusion
+# order the determining factor for which one we use.  So reflecting the
+# preference mentioned above, we include Gnulib before libiberty.
+#
+# As a running example, consider fnmatch.
+#
+# On a macOS system:
+# - libiberty provides:
+#   - include/fnmatch.h
+#   - build/libiberty/fnmatch.o containing a definition for fnmatch
+# - Gnulib provides:
+#   - build/gnulib/import/fnmatch.h, mapping fnmatch to rpl_fnmatch
+#   - build/gnulib/import/fnmatch.o containing a definition for rpl_fnmatch
+# Depending on which fnmatch.h gets picked, GDB gets either the libiberty or
+# the Gnulib version.  Note that in this case at least, linking order doesn't
+# matter.  Also note that even when GDB uses Gnulib's fnmatch, other
+# components may still use libiberty's.
+#
+# For contrast, let's also consider fnmatch on a Linux system with glibc:
+# - libiberty provides:
+#   - include/fnmatch.h
+#   - build/libiberty/fnmatch.o containing no definitions
+# - Gnulib provides nothing fnmatch related
+# In this case, the fnmatch.h from libiberty is used, but at link time glibc's
+# version is used, which is not ideal.
+#
+# So while enforcing inclusion order works, IWBN to have a better solution.
+#
+# Some alternatives avoiding libiberty's fnmatch are:
+# - selective importing of libiberty, like we have for Gnulib.
+# - updating the external libiberty (maintained in GCC) to drop fnmatch.  The
+#   first step for this would be for GCC to stop using libiberty's fnmatch,
+#   which was once proposed as part of an effort to start using Gnulib in
+#   GCC [1], but this effort stalled.
+#   [1] https://gcc.gnu.org/wiki/replacelibibertywithgnulib
+# Both of these would have to take into consideration other in-repo components
+# using libiberty.
+#
+# We could also update the external libiberty to include a more modern copy of
+# fnmatch.  But the question is whether it's a good use of effort to maintain a
+# decommissioned library if a better alternative is already available.
+GNULIB_LIBIBERTY_CFLAGS = $(INCGNU) $(INCLUDE_CFLAGS)
+
 # Where is the "-liberty" library?  Typically in ../libiberty.
 LIBIBERTY = ../libiberty/libiberty.a
 
@@ -636,13 +689,12 @@ INTERNAL_CFLAGS = \
 	$(GDB_CFLAGS) \
 	$(OPCODES_CFLAGS) \
 	$(BFD_CFLAGS) \
-	$(INCLUDE_CFLAGS) \
+	$(GNULIB_LIBIBERTY_CFLAGS) \
 	$(READLINE_CFLAGS) \
 	$(ZLIBINC) \
 	$(ZSTD_CFLAGS) \
 	$(LIBDECNUMBER_CFLAGS) \
 	$(INTL_CFLAGS) \
-	$(INCGNU) \
 	$(INCSUPPORT) \
 	$(LIBBACKTRACE_INC) \
 	$(ENABLE_CFLAGS) \
