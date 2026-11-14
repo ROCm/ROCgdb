@@ -28,8 +28,8 @@ SUBDIRS =
 AM_CPPFLAGS = \
 	-I$(srcdir)/../include \
 	-I$(srcdir)/../gdb \
-	-I../gnulib/import \
 	-I$(srcdir)/../gnulib/import \
+	-I../gnulib/import \
 	-I.. \
 	-I$(srcdir)/.. \
 	$(INCINTL) \
