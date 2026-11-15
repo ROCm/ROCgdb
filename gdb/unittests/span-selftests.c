@@ -48,33 +48,29 @@ is_convertible ()
 
 /* Check for implicit conversion to immutable and mutable views.  */
 
-static constexpr bool
-check_convertible ()
+namespace convertible
 {
-  using T = gdb_byte;
-  using gdb::span;
+using T = gdb_byte;
+using gdb::span;
 
-  return (true
-	  /* immutable span */
-	  &&  is_convertible<const T (&) [1],	span<const T>> ()
-	  &&  is_convertible<T (&) [1], 	span<const T>> ()
-	  &&  is_convertible<const T, 		span<const T>> ()
-	  &&  is_convertible<T, 		span<const T>> ()
+/* immutable span */
+static_assert ( is_convertible<const T (&) [1],	span<const T>> ());
+static_assert ( is_convertible<T (&) [1], 	span<const T>> ());
+static_assert ( is_convertible<const T,		span<const T>> ());
+static_assert ( is_convertible<T,		span<const T>> ());
 
-	  /* mutable span */
-	  &&  is_convertible<T (&) [1], 	span<T>> ()
-	  && !is_convertible<const T (&) [1],	span<T>> ()
-	  &&  is_convertible<T, 		span<T>> ()
-	  && !is_convertible<const T,		span<T>> ()
+/* mutable span */
+static_assert ( is_convertible<T (&) [1],	span<T>> ());
+static_assert (!is_convertible<const T (&) [1],	span<T>> ());
+static_assert ( is_convertible<T,		span<T>> ());
+static_assert (!is_convertible<const T,		span<T>> ());
 
-	  /* While float is implicitly convertible to gdb_byte, we
-	     don't want implicit float->span<gdb_byte>
-	     conversion.  */
-	  && !is_convertible<float, 		span<const T>> ()
-	  && !is_convertible<float, 		span<T>> ());
-}
+/* While float is implicitly convertible to gdb_byte, we don't want
+   implicit float->span<gdb_byte> conversion.  */
+static_assert (!is_convertible<float,		span<const T>> ());
+static_assert (!is_convertible<float,		span<T>> ());
 
-static_assert (check_convertible (), "");
+} /* namespace convertible */
 
 namespace no_slicing
 {
@@ -82,35 +78,28 @@ struct A { int i; };
 struct B : A { int j; };
 struct C : A { int l; };
 
+using gdb::span;
+
 /* Check that there's no array->view conversion for arrays of derived types or
    subclasses.  */
-static constexpr bool
-check ()
-{
-  using gdb::span;
 
-  return (true
+static_assert ( is_convertible <A (&)[1], span<A>> ());
+static_assert (!is_convertible <B (&)[1], span<A>> ());
+static_assert (!is_convertible <C (&)[1], span<A>> ());
 
-	  /* array->view  */
+static_assert (!is_convertible <A (&)[1], span<B>> ());
+static_assert ( is_convertible <B (&)[1], span<B>> ());
+static_assert (!is_convertible <C (&)[1], span<B>> ());
 
-	  &&  is_convertible <A (&)[1], span<A>> ()
-	  && !is_convertible <B (&)[1], span<A>> ()
-	  && !is_convertible <C (&)[1], span<A>> ()
+/* Same, for elem->view.  */
 
-	  && !is_convertible <A (&)[1], span<B>> ()
-	  &&  is_convertible <B (&)[1], span<B>> ()
-	  && !is_convertible <C (&)[1], span<B>> ()
+static_assert ( is_convertible <A, span<A>> ());
+static_assert (!is_convertible <B, span<A>> ());
+static_assert (!is_convertible <C, span<A>> ());
 
-	  /* elem->view  */
-
-	  &&  is_convertible <A, span<A>> ()
-	  && !is_convertible <B, span<A>> ()
-	  && !is_convertible <C, span<A>> ()
-
-	  && !is_convertible <A, span<B>> ()
-	  &&  is_convertible <B, span<B>> ()
-	  && !is_convertible <C, span<B>> ());
-}
+static_assert (!is_convertible <A, span<B>> ());
+static_assert ( is_convertible <B, span<B>> ());
+static_assert (!is_convertible <C, span<B>> ());
 
 /* Check that there's no container->view conversion for containers of derived
    types or subclasses.  */
@@ -119,15 +108,15 @@ template<template<typename ...> class Container>
 static constexpr bool
 check_ctor_from_container ()
 {
-  using gdb::span;
+  static_assert ( is_convertible <Container<A>, span<A>> ());
+  static_assert (!is_convertible <Container<B>, span<A>> ());
+  static_assert (!is_convertible <Container<C>, span<A>> ());
 
-  return (    is_convertible <Container<A>, span<A>> ()
-	  && !is_convertible <Container<B>, span<A>> ()
-	  && !is_convertible <Container<C>, span<A>> ()
+  static_assert (!is_convertible <Container<A>, span<B>> ());
+  static_assert ( is_convertible <Container<B>, span<B>> ());
+  static_assert (!is_convertible <Container<C>, span<B>> ());
 
-	  && !is_convertible <Container<A>, span<B>> ()
-	  &&  is_convertible <Container<B>, span<B>> ()
-	  && !is_convertible <Container<C>, span<B>> ());
+  return true;
 }
 
 } /* namespace no_slicing */
@@ -136,46 +125,39 @@ check_ctor_from_container ()
    check_ctor_from_container.  */
 template<typename T> using StdArray1 = std::array<T, 1>;
 
-static_assert (no_slicing::check (), "");
-static_assert (no_slicing::check_ctor_from_container<std::vector> (), "");
-static_assert (no_slicing::check_ctor_from_container<StdArray1> (), "");
-static_assert (no_slicing::check_ctor_from_container<gdb::span> (), "");
+static_assert (no_slicing::check_ctor_from_container<std::vector> ());
+static_assert (no_slicing::check_ctor_from_container<StdArray1> ());
+static_assert (no_slicing::check_ctor_from_container<gdb::span> ());
 
 /* Check that span implicitly converts from std::vector.  */
 
-static constexpr bool
-check_convertible_from_std_vector ()
+namespace convertible_from_std_vector
 {
-  using gdb::span;
-  using T = gdb_byte;
+using gdb::span;
+using T = gdb_byte;
 
-  /* Note there's no such thing as std::vector<const T>.  */
+/* Note there's no such thing as std::vector<const T>.  */
 
-  return (true
-	  &&  is_convertible <std::vector<T>, span<T>> ()
-	  &&  is_convertible <std::vector<T>, span<const T>> ());
-}
+static_assert (is_convertible <std::vector<T>, span<T>> ());
+static_assert (is_convertible <std::vector<T>, span<const T>> ());
 
-static_assert (check_convertible_from_std_vector (), "");
+} /* namespace convertible_from_std_vector */
 
 /* Check that span implicitly converts from std::array.  */
 
-static constexpr bool
-check_convertible_from_std_array ()
+namespace convertible_from_std_array
 {
-  using gdb::span;
-  using T = gdb_byte;
+using gdb::span;
+using T = gdb_byte;
 
-  /* Note: a non-const T view can't refer to a const T array.  */
+/* Note: a non-const T view can't refer to a const T array.  */
 
-  return (true
-	  &&  is_convertible <std::array<T, 1>,		span<T>> ()
-	  &&  is_convertible <std::array<T, 1>,		span<const T>> ()
-	  && !is_convertible <std::array<const T, 1>,	span<T>> ()
-	  &&  is_convertible <std::array<const T, 1>,	span<const T>> ());
-}
+static_assert ( is_convertible <std::array<T, 1>,	span<T>> ());
+static_assert ( is_convertible <std::array<T, 1>,	span<const T>> ());
+static_assert (!is_convertible <std::array<const T, 1>,	span<T>> ());
+static_assert ( is_convertible <std::array<const T, 1>,	span<const T>> ());
 
-static_assert (check_convertible_from_std_array (), "");
+} /* namespace convertible_from_std_array */
 
 /* Check that VIEW views C (a container like std::vector/std::array)
    correctly.  */
