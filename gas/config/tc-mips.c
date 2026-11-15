@@ -589,6 +589,7 @@ static int mips_32bitmode = 0;
 #define hilo_nondiv_interlocks				\
   (hilo_interlocks					\
    || mips_opts.arch == CPU_R3900			\
+   || mips_opts.arch == CPU_TX49			\
    )
 
 /* Whether the processor uses hardware interlocks to protect reads
@@ -20376,6 +20377,7 @@ static const struct mips_cpu_info mips_cpu_info_table[] =
   { "r4600",          0, 0,			ISA_MIPS3,    CPU_R4600 },
   { "orion",          0, 0,			ISA_MIPS3,    CPU_R4600 },
   { "r4650",          0, 0,			ISA_MIPS3,    CPU_R4650 },
+  { "tx49",           0, 0,			ISA_MIPS3,    CPU_TX49 },
   { "r5900",          0, 0,			ISA_MIPS3,    CPU_R5900 },
   /* ST Microelectronics Loongson 2E and 2F cores.  */
   { "loongson2e",     0, 0,			ISA_MIPS3,    CPU_LOONGSON_2E },

@@ -7067,6 +7067,9 @@ _bfd_elf_mips_mach (flagword flags)
     case EF_MIPS_MACH_4650:
       return bfd_mach_mips4650;
 
+    case EF_MIPS_MACH_TX49:
+      return bfd_mach_mips_tx49;
+
     case EF_MIPS_MACH_5400:
       return bfd_mach_mips5400;
 
@@ -12472,6 +12475,10 @@ mips_set_isa_flags (bfd *abfd)
       val = EF_MIPS_ARCH_3 | EF_MIPS_MACH_4650;
       break;
 
+    case bfd_mach_mips_tx49:
+      val = EF_MIPS_ARCH_3 | EF_MIPS_MACH_TX49;
+      break;
+
     case bfd_mach_mips5400:
       val = EF_MIPS_ARCH_4 | EF_MIPS_MACH_5400;
       break;
@@ -14711,6 +14718,7 @@ static const struct mips_mach_extension mips_mach_extensions[] =
   { bfd_mach_mips_loongson_2e, bfd_mach_mips4000 },
   { bfd_mach_mips_loongson_2f, bfd_mach_mips4000 },
   { bfd_mach_mips8000, bfd_mach_mips4000 },
+  { bfd_mach_mips_tx49, bfd_mach_mips4000 },
   { bfd_mach_mips4650, bfd_mach_mips4000 },
   { bfd_mach_mips4600, bfd_mach_mips4000 },
   { bfd_mach_mips4400, bfd_mach_mips4000 },
@@ -14789,6 +14797,7 @@ bfd_mips_isa_ext_mach (unsigned int isa_ext)
     case AFL_EXT_4111:	      return bfd_mach_mips4111;
     case AFL_EXT_4120:	      return bfd_mach_mips4120;
     case AFL_EXT_4650:	      return bfd_mach_mips4650;
+    case AFL_EXT_TX49:	      return bfd_mach_mips_tx49;
     case AFL_EXT_5400:	      return bfd_mach_mips5400;
     case AFL_EXT_5500:	      return bfd_mach_mips5500;
     case AFL_EXT_5900:	      return bfd_mach_mips5900;
@@ -14820,6 +14829,7 @@ bfd_mips_isa_ext (bfd *abfd)
     case bfd_mach_mips4111:	    return AFL_EXT_4111;
     case bfd_mach_mips4120:	    return AFL_EXT_4120;
     case bfd_mach_mips4650:	    return AFL_EXT_4650;
+    case bfd_mach_mips_tx49:	    return AFL_EXT_TX49;
     case bfd_mach_mips5400:	    return AFL_EXT_5400;
     case bfd_mach_mips5500:	    return AFL_EXT_5500;
     case bfd_mach_mips5900:	    return AFL_EXT_5900;

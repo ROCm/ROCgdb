@@ -742,12 +742,20 @@ if { [istarget mips*-*-vxworks*] } {
 
     run_dump_test_arches "div"		[mips_arch_list_matching mips1 \
 						!mips32r6]
+    run_dump_test "mips1@div"		[list [list name (tx49)] \
+					      [list as "-march=tx49"]]
     run_dump_test_arches "div-trap"	[mips_arch_list_matching mips1 \
 						!mips32r6]
+    run_dump_test "mips2@div-trap"	[list [list name (tx49)] \
+					      [list as "-march=tx49"]]
     run_dump_test_arches "div64"	[mips_arch_list_matching mips3 !r5900 \
 						!mips64r6]
+    run_dump_test "mips3@div64"		[list [list name (tx49)] \
+					      [list as "-march=tx49"]]
     run_dump_test_arches "div64-trap"	[mips_arch_list_matching mips3 !r5900 \
 						!mips64r6]
+    run_dump_test "mips3@div64-trap"	[list [list name (tx49)] \
+					      [list as "-march=tx49"]]
 
     if { !$addr32 && $has_newabi } {
 	run_dump_test_arches "dli"	[mips_arch_list_matching mips3]
@@ -797,6 +805,8 @@ if { [istarget mips*-*-vxworks*] } {
 
     run_dump_test_arches "hilo"		[mips_arch_list_matching mips1 \
 						!mips32r6]
+    run_dump_test "hilo"		[list [list name (tx49)] \
+					      [list as "-march=tx49"]]
 
     run_dump_test_arches "jal-svr4pic${imips}" \
 					[mips_arch_list_matching mips1]
@@ -899,6 +909,8 @@ if { [istarget mips*-*-vxworks*] } {
 
     run_dump_test "madd"		[list [list name (r3900)] \
 					      [list as "-march=r3900"]]
+    run_dump_test "madd"		[list [list name (tx49)] \
+					      [list as "-march=tx49"]]
 
     run_dump_test_arches "mips4"	[mips_arch_list_matching mips4]
     run_dump_test_arches "mips4-fp" "-32" \
@@ -917,12 +929,20 @@ if { [istarget mips*-*-vxworks*] } {
 					[mips_arch_list_matching fpisa5 gpr64]
     run_dump_test_arches "mul"		[mips_arch_list_matching mips1 \
 						!mips32r6]
+    run_dump_test "r3900@mul"		[list [list name (tx49)] \
+					      [list as "-march=tx49"]]
     run_dump_test_arches "mul-trap"	[mips_arch_list_matching mips1 \
 						!mips32r6]
+    run_dump_test "r10000@mul-trap"	[list [list name (tx49)] \
+					      [list as "-march=tx49"]]
     run_dump_test_arches "mul64"	[mips_arch_list_matching mips3 !r5900 \
 						!mips64r6]
+    run_dump_test "mul64"		[list [list name (tx49)] \
+					      [list as "-march=tx49"]]
     run_dump_test_arches "mul64-trap"	[mips_arch_list_matching mips3 !r5900 \
 						!mips64r6]
+    run_dump_test "mul64-trap"		[list [list name (tx49)] \
+					      [list as "-march=tx49"]]
 
     run_dump_test_arches "rol"		[mips_arch_list_matching mips1 !ror]
     run_dump_test_arches "rol-hw" 	[mips_arch_list_matching ror]
@@ -1081,6 +1101,7 @@ if { [istarget mips*-*-vxworks*] } {
     run_dump_test "vr4120"
     run_dump_test "vr4120-2"
     run_dump_test "vr4130"
+    run_dump_test "tx49"
     run_dump_test "vr5400"
     run_list_test "vr5400-ill" "-march=vr5400"
     run_dump_test "vr5500"
@@ -1207,6 +1228,7 @@ if { [istarget mips*-*-vxworks*] } {
     # Verify that machine markings are handled properly.
     run_dump_test "elf_mach_allegrex"
     run_dump_test "elf_mach_5900"
+    run_dump_test "elf_mach_tx49"
     run_dump_test "elf_mach_interaptiv-mr2"
     run_dump_test "elf_mach_p6600"
     run_dump_test "elf_mach_i6400"

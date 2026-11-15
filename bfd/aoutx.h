@@ -795,6 +795,7 @@ NAME (aout, machine_type) (enum bfd_architecture arch,
 	case bfd_mach_mips4400:
 	case bfd_mach_mips4600:
 	case bfd_mach_mips4650:
+	case bfd_mach_mips_tx49:
 	case bfd_mach_mips8000:
 	case bfd_mach_mips9000:
 	case bfd_mach_mips10000:

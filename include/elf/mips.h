@@ -304,6 +304,7 @@ END_RELOC_NUMBERS (R_MIPS_maxext)
 #define EF_MIPS_MACH_4100	0x00830000
 #define EF_MIPS_MACH_ALLEGREX	0x00840000
 #define EF_MIPS_MACH_4650	0x00850000
+#define EF_MIPS_MACH_TX49	0x00860000
 #define EF_MIPS_MACH_4120	0x00870000
 #define EF_MIPS_MACH_4111	0x00880000
 #define EF_MIPS_MACH_SB1         0x008a0000
@@ -329,6 +330,7 @@ END_RELOC_NUMBERS (R_MIPS_maxext)
 #define E_MIPS_MACH_4100      EF_MIPS_MACH_4100 
 #define E_MIPS_MACH_ALLEGREX  EF_MIPS_MACH_ALLEGREX 
 #define E_MIPS_MACH_4650      EF_MIPS_MACH_4650 
+#define E_MIPS_MACH_TX49      EF_MIPS_MACH_TX49
 #define E_MIPS_MACH_4120      EF_MIPS_MACH_4120 
 #define E_MIPS_MACH_4111      EF_MIPS_MACH_4111 
 #define E_MIPS_MACH_SB1       EF_MIPS_MACH_SB1 
@@ -1323,6 +1325,7 @@ extern void bfd_mips_elf_swap_abiflags_v0_out
 #define AFL_EXT_OCTEON3      19  /* Cavium Networks Octeon3.  */
 #define AFL_EXT_INTERAPTIV_MR2 20  /* Imagination interAptiv MR2.  */
 #define AFL_EXT_ALLEGREX     21  /* Sony PSP Allegrex.  */
+#define AFL_EXT_TX49         22  /* Toshiba TX49 instruction.  */
 
 /* Masks for the flags1 word of an ABI flags structure.  */
 #define AFL_FLAGS1_ODDSPREG   1	 /* Uses odd single-precision registers.  */

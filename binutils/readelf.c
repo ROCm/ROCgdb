@@ -4690,6 +4690,9 @@ decode_MIPS_machine_flags (char *out, unsigned int e_flags)
     case EF_MIPS_MACH_4650:
       out = stpcpy (out, ", 4650");
       break;
+    case EF_MIPS_MACH_TX49:
+      out = stpcpy (out, ", tx49");
+      break;
     case EF_MIPS_MACH_5400:
       out = stpcpy (out, ", 5400");
       break;
@@ -20128,6 +20131,9 @@ print_mips_isa_ext (unsigned int isa_ext)
       break;
     case AFL_EXT_ALLEGREX:
       fputs ("Sony PSP Allegrex", stdout);
+      break;
+    case AFL_EXT_TX49:
+      fputs ("Toshiba TX49", stdout);
       break;
     default:
       fprintf (stdout, "%s (%d)", _("Unknown"), isa_ext);

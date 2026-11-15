@@ -3965,6 +3965,7 @@ class Target_mips : public Sized_target<size, big_endian>
     mach_mips4400             = 4400,
     mach_mips4600             = 4600,
     mach_mips4650             = 4650,
+    mach_mips_tx49            = 4900,
     mach_mips5000             = 5000,
     mach_mips5400             = 5400,
     mach_mips5500             = 5500,
@@ -4191,6 +4192,7 @@ class Target_mips : public Sized_target<size, big_endian>
     this->add_extension(mach_mips_loongson_2e, mach_mips4000);
     this->add_extension(mach_mips_loongson_2f, mach_mips4000);
     this->add_extension(mach_mips8000, mach_mips4000);
+    this->add_extension(mach_mips_tx49, mach_mips4000);
     this->add_extension(mach_mips4650, mach_mips4000);
     this->add_extension(mach_mips4600, mach_mips4000);
     this->add_extension(mach_mips4400, mach_mips4000);
@@ -8887,6 +8889,9 @@ Target_mips<size, big_endian>::elf_mips_mach(elfcpp::Elf_Word flags)
     case elfcpp::EF_MIPS_MACH_4650:
       return mach_mips4650;
 
+    case elfcpp::EF_MIPS_MACH_TX49:
+      return mach_mips_tx49;
+
     case elfcpp::EF_MIPS_MACH_5400:
       return mach_mips5400;
 
@@ -9003,6 +9008,9 @@ Target_mips<size, big_endian>::mips_isa_ext_mach(unsigned int isa_ext)
     case elfcpp::AFL_EXT_4650:
       return mach_mips4650;
 
+    case elfcpp::AFL_EXT_TX49:
+      return mach_mips_tx49;
+
     case elfcpp::AFL_EXT_5400:
       return mach_mips5400;
 
@@ -9075,6 +9083,9 @@ Target_mips<size, big_endian>::mips_isa_ext(unsigned int mips_mach)
 
     case mach_mips4650:
       return elfcpp::AFL_EXT_4650;
+
+    case mach_mips_tx49:
+      return elfcpp::AFL_EXT_TX49;
 
     case mach_mips5400:
       return elfcpp::AFL_EXT_5400;
@@ -12594,6 +12605,8 @@ Target_mips<size, big_endian>::elf_mips_mach_name(elfcpp::Elf_Word e_flags)
       return "mips:4120";
     case elfcpp::EF_MIPS_MACH_4650:
       return "mips:4650";
+    case elfcpp::EF_MIPS_MACH_TX49:
+      return "mips:tx49";
     case elfcpp::EF_MIPS_MACH_5400:
       return "mips:5400";
     case elfcpp::EF_MIPS_MACH_5500:

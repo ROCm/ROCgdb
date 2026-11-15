@@ -1014,6 +1014,8 @@ static const unsigned int mips_isa_table[] = {
 #define INSN_INTERAPTIV_MR2	0x00800000
 /* Sony PSP Allegrex instruction.  */
 #define INSN_ALLEGREX		0x01000000
+/* Toshiba TX49 instruction.  */
+#define INSN_TX49		0x02000000
 
 /* DSP ASE */
 #define ASE_DSP			0x00000001
@@ -1102,6 +1104,7 @@ static const unsigned int mips_isa_table[] = {
 #define CPU_R4400	4400
 #define CPU_R4600	4600
 #define CPU_R4650	4650
+#define CPU_TX49	4900
 #define CPU_R5000	5000
 #define CPU_VR5400	5400
 #define CPU_VR5500	5500
@@ -1211,6 +1214,9 @@ cpu_is_member (int cpu, unsigned int mask)
 
     case CPU_ALLEGREX:
       return (mask & INSN_ALLEGREX) != 0;
+
+    case CPU_TX49:
+      return (mask & INSN_TX49) != 0;
 
     default:
       return false;

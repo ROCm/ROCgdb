@@ -159,6 +159,7 @@ DESCRIPTION
 .#define bfd_mach_mips4400		4400
 .#define bfd_mach_mips4600		4600
 .#define bfd_mach_mips4650		4650
+.#define bfd_mach_mips_tx49		4900 {* Toshiba TX49 *}
 .#define bfd_mach_mips5000		5000
 .#define bfd_mach_mips5400		5400
 .#define bfd_mach_mips5500		5500

@@ -315,6 +315,7 @@ decode_mips_operand (const char *p)
 #define L1	INSN_4010
 #define V1	(INSN_4100 | INSN_4111 | INSN_4120)
 #define T3      INSN_3900
+#define T4	INSN_TX49
 /* Emotion Engine MIPS r5900. */
 #define EE      INSN_5900
 #define M1	INSN_10000
@@ -334,14 +335,9 @@ decode_mips_operand (const char *p)
 #define IVIRT	ASE_VIRT
 #define IVIRT64	ASE_VIRT64
 
-#define G1      (T3             \
-                 |EE            \
-                 )
-
-#define G2      (T3             \
-                 )
-
-#define G3      EE
+#define G1	(T3 | T4 | EE)
+#define G2	(T3 | T4)
+#define G3	(T4 | EE)
 
 /* CPU without 64 bit FPU support (single float only). */
 #define SF      (ALX            \
@@ -1129,9 +1125,11 @@ const struct mips_opcode mips_builtin_opcodes[] =
 {"dmulou",		"d,v,t",	0,    (int) M_DMULOU,	INSN_MACRO,		0,		I3,		0,	M32|I69 },
 {"dmulou",		"d,v,I",	0,    (int) M_DMULOU_I,	INSN_MACRO,		0,		I3,		0,	M32|I69 },
 {"dmult",		"s,t",		0x0000001c, 0xfc00ffff, RD_1|RD_2|WR_HILO,      0,		I3,		0,	M32|I69 },
+{"dmult",		"d,s,t",	0x0000001c, 0xfc0007ff, WR_1|RD_2|RD_3|WR_HILO,	0,		T4,		0,	0 },
 {"dmulu",		"d,s,t",	0x0000009d, 0xfc0007ff, WR_1|RD_2|RD_3,      	0,		I69,		0,	0 },
 {"dmuhu",		"d,s,t",	0x000000dd, 0xfc0007ff, WR_1|RD_2|RD_3,      	0,		I69,		0,	0 },
 {"dmultu",		"s,t",		0x0000001d, 0xfc00ffff, RD_1|RD_2|WR_HILO,      0,		I3,		0,	M32|I69 },
+{"dmultu",		"d,s,t",	0x0000001d, 0xfc0007ff, WR_1|RD_2|RD_3|WR_HILO,	0,		T4,		0,	0 },
 {"dneg",		"d,w",		0x0000002e, 0xffe007ff,	WR_1|RD_2,		0,		I3,		0,	0 }, /* dsub 0 */
 {"dnegu",		"d,w",		0x0000002f, 0xffe007ff,	WR_1|RD_2,		0,		I3,		0,	0 }, /* dsubu 0*/
 {"dpop",		"d,v",		0x7000002d, 0xfc1f07ff, WR_1|RD_2,		0,		IOCT,		0,	0 },
