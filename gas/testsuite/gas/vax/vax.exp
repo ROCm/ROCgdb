@@ -53,4 +53,5 @@ run_dump_test broken_word
 
 if { [istarget vax-*-*elf*] || [istarget vax-*-linux-*] } then {
     run_dump_test elf-rel
+    run_dump_test elf-got-func
 }
