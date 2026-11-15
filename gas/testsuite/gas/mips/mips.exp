@@ -893,6 +893,10 @@ if { [istarget mips*-*-vxworks*] } {
     run_dump_test "lifloat"
     run_dump_test "lif-svr4pic"
     run_dump_test "lif-xgot"
+
+    run_dump_test "madd"		[list [list name (r3900)] \
+					      [list as "-march=r3900"]]
+
     run_dump_test_arches "mips4"	[mips_arch_list_matching mips4]
     run_dump_test_arches "mips4-fp" "-32" \
 					[mips_arch_list_matching fpisa4]
