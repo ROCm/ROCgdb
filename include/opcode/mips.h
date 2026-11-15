@@ -827,8 +827,8 @@ mips_opcode_32bit_p (const struct mips_opcode *mo)
 #define FP_S			    0x01000000
 /* Instruction uses double precision floating point.  */
 #define FP_D			    0x02000000
-/* Instruction is part of the tx39's integer multiply family.    */
-#define INSN_MULT                   0x04000000
+/* Instruction is integer division.  */
+#define INSN_DIV		    0x04000000
 /* Reads general purpose register 24.  */
 #define INSN_READ_GPR_24            0x08000000
 /* Writes to general purpose register 24.  */

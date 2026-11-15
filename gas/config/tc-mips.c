@@ -584,9 +584,9 @@ static int mips_32bitmode = 0;
    || mips_opts.micromips                             \
    )
 
-/* True if MFLO and MFHI can be immediately followed by multiplication
-   instructions.  This applies to instructions marked INSN_MULT.  */
-#define hilo_mul_interlocks				\
+/* True if MFLO and MFHI can be immediately followed by non-division
+   instructions.  This applies to instructions not marked INSN_DIV.  */
+#define hilo_nondiv_interlocks				\
   (hilo_interlocks					\
    || mips_opts.arch == CPU_R3900			\
    )
@@ -6709,17 +6709,15 @@ insns_between (const struct mips_cl_insn *insn1,
   unsigned long pinfo1, pinfo2;
   unsigned int mask;
 
-  /* If INFO2 is null, pessimistically assume that all flags except for
-     INSN_MULT are set for the second instruction.  We need to exclude
-     this flag because, exceptionally, it marks instructions that do not
-     have a pipeline hazard avoidance requirement.  */
+  /* If INFO2 is null, pessimistically assume that all flags are set for
+     the second instruction.  */
   pinfo1 = insn1->insn_mo->pinfo;
-  pinfo2 = insn2 ? insn2->insn_mo->pinfo : ~(unsigned long) INSN_MULT;
+  pinfo2 = insn2 ? insn2->insn_mo->pinfo : ~0U;
 
   /* For some legacy ISA targets, write-after-read dependencies on the HI
      and LO registers must be separated by at least two instructions.  */
   if (!(hilo_interlocks
-	|| (hilo_mul_interlocks && (pinfo2 & INSN_MULT))))
+	|| (hilo_nondiv_interlocks && !(pinfo2 & INSN_DIV))))
     {
       if ((pinfo1 & INSN_READ_LO) && (pinfo2 & INSN_WRITE_LO))
 	return 2;
