@@ -14012,7 +14012,7 @@ _bfd_elf_write_secondary_reloc_section (bfd *abfd, asection *sec)
 	  last_sym = NULL;
 	  last_sym_idx = 0;
 	  dst_rela = hdr->contents;
-	  src_irel = sec->sec_info;
+	  src_irel = relsec->sec_info;
 	  if (src_irel == NULL)
 	    {
 	      _bfd_error_handler
