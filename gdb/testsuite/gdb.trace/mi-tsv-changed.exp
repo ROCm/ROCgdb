@@ -117,13 +117,17 @@ proc test_create_delete_modify_tsv { } {
 	    "continue to begin breakpoint"
 	mi_gdb_test "-trace-start" {.*\^done} "trace start"
 	mi_send_resuming_command "exec-continue" "continuing to end"
-	mi_gdb_test "-trace-stop" {.*} "trace stop"
+	mi_expect_stop "breakpoint-hit" "end" ""\
+	    ".*" ".*" {"" "disp=\"keep\""} \
+	    "continue to end breakpoint"
+	mi_gdb_test "-trace-stop" "\\^done,stop-reason=\"request\",.*" \
+	    "trace stop"
 	# Force GDB to get the current value of trace state variable.
-	mi_gdb_test "-trace-list-variables" ".*" "list trace variables"
+	mi_gdb_test "-trace-list-variables" "\\^done,trace-variables=.*" \
+	    "list trace variables"
 	mi_gdb_test "tvariable \$tvar3 = 2" \
 	    ".*=tsv-modified,name=\"tvar3\",initial=\"2\",current=\"6\".*\\^done" \
 	    "tvariable \$tvar3 modified to 2"
-
     }
 }
 
