@@ -192,12 +192,22 @@ apply_patches ()
 apply_patches "patches/0001-use-windows-stat"
 apply_patches "patches/0002-no-solaris-_gl_attribute_dealloc"
 
-# Regenerate all necessary files...
-aclocal &&
+if ! empty_dir=$(mktemp -d); then
+    echo "Error: Failed to create empty dir.  Aborting."
+    exit 1
+fi
+
+# Regenerate all necessary files.  Run aclocal while ignoring 3rd-party .m4
+# files.
+ACLOCAL_PATH="" aclocal --system-acdir="$empty_dir" &&
 autoconf &&
 autoheader &&
 automake
-if [ $? -ne 0 ]; then
+st=$?
+
+rmdir "$empty_dir"
+
+if [ $st -ne 0 ]; then
    echo "Error: Failed to regenerate Makefiles and configure scripts."
    exit 1
 fi
