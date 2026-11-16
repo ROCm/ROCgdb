@@ -3412,7 +3412,7 @@ decode_v_run_arg (const char *ptr, size_t len)
 
   /* Buffer to decode the argument into.  The '+ 1' is for the null
      terminator we will add.  */
-  char *arg = (char *) xmalloc (len + 1);
+  gdb::unique_xmalloc_ptr<char> arg ((char *) xmalloc (len + 1));
 
   /* Decode the argument from the packet and add a null terminator.  We do
      this within a try block as invalid characters within the PTR buffer
@@ -3420,15 +3420,24 @@ decode_v_run_arg (const char *ptr, size_t len)
      returning nullptr in order to clean up some memory allocations.  */
   try
     {
-      hex2bin (ptr, (gdb_byte *) arg, len);
-      arg[len] = '\0';
+      size_t res = hex2bin (ptr, (gdb_byte *) arg.get (), len);
+
+      /* hex2bin can return early if it encounters a null character,
+	 but this will not happen in this case as LEN is based on a
+	 scan of the PTR buffer and will be capped at any null
+	 character within.  As such, as we already check for an even
+	 number of bytes above, we expect hex2bin to parse exactly LEN
+	 bytes.  */
+      gdb_assert (res == len);
+
+      arg.get ()[len] = '\0';
     }
   catch (const gdb_exception_error &exception)
     {
       return nullptr;
     }
 
-  return gdb::unique_xmalloc_ptr<char> (arg);
+  return arg;
 }
 
 /* Run a new program.  */
