@@ -124,14 +124,14 @@ public:
     return m_argv[arg];
   }
 
-  /* Return the arguments array as an array view.  */
+  /* Return the arguments array as a span.  */
 
-  gdb::span<char *> as_array_view ()
+  gdb::span<char *> as_span ()
   {
     return gdb::span<char *> (this->get (), this->count ());
   }
 
-  gdb::span<const char * const> as_array_view () const
+  gdb::span<const char * const> as_span () const
   {
     return gdb::span<const char * const> (this->get (), this->count ());
   }

@@ -1275,7 +1275,7 @@ maintenance_selftest (const char *args, int from_tty)
   gdb::option::process_options
     (&args, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_ERROR, grp);
   const gdb_argv argv (args);
-  selftests::run_tests (argv.as_array_view (), opts.verbose);
+  selftests::run_tests (argv.as_span (), opts.verbose);
 #else
   gdb_printf (_("\
 Selftests have been disabled for this build.\n"));
