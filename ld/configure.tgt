@@ -125,7 +125,7 @@ aarch64-*-haiku*)	targ_emul=aarch64haiku
 aarch64-*-nto*)		targ_emul=aarch64nto
 			targ_extra_emuls="aarch64elf aarch64elf32 aarch64elf32b aarch64elfb armelf armelfb"
 			;;
-aarch64-*-pe* | aarch64-*-mingw*)
+aarch64-*-pe* | aarch64-*-mingw* | aarch64-*-cygwin*)
 			targ_emul=aarch64pe
 			targ_extra_emuls="arm64pe"
 			targ_extra_ofiles="deffilep.o pep-dll.o pe-dll.o pdb.o"
@@ -1055,7 +1055,7 @@ spu-*-elf*)
   NATIVE_LIB_DIRS='/lib'
   ;;
 
-i[03-9x]86-*-cygwin* | x86_64-*-cygwin*)
+i[03-9x]86-*-cygwin* | x86_64-*-cygwin* | aarch64-*-cygwin*)
   NATIVE_LIB_DIRS='/usr/lib /usr/lib/w32api'
   ;;
 

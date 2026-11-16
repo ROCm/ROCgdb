@@ -139,7 +139,8 @@ case ${generic_target} in
   aarch64*-*-nto*)			fmt=elf;;
   aarch64*-*-openbsd*)			fmt=elf;;
   aarch64*-*-phoenix*)			fmt=elf;;
-  aarch64*-*-pe* | aarch64*-*-mingw*)	fmt=coff em=pepaarch64 ;;
+  aarch64*-*-pe* | aarch64*-*-mingw* | aarch64*-*-cygwin*)
+					fmt=coff em=pepaarch64 ;;
   alpha-*-*vms*)			fmt=evax ;;
   alpha-*-osf*)				fmt=ecoff ;;
   alpha-*-linux*ecoff*)			fmt=ecoff ;;
