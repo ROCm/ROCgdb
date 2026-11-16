@@ -15,3 +15,4 @@ Disassembly of section \.text:
 .*:	d5180640 	msr	id_aa64isar2_el1, x0  // note: writing to a read-only register
 .*:	d5180660 	msr	id_aa64isar3_el1, x0  // note: writing to a read-only register
 .*:	d5339c80 	mrs	x0, spmzr_el0  // note: reading from a write-only register
+.*:	d5190060 	msr	ccontidr_el1, x0  // note: writing to a read-only register

@@ -5,3 +5,4 @@
 .*:7: Warning: specified register cannot be written to at operand 1 -- `msr id_aa64isar2_el1,x0'
 .*:8: Warning: specified register cannot be written to at operand 1 -- `msr id_aa64isar3_el1,x0'
 .*: Warning: specified register cannot be read from at operand 2 -- `mrs x0,spmzr_el0'
+.*: Warning: specified register cannot be written to at operand 1 -- `msr ccontidr_el1,x0'
