@@ -5027,7 +5027,10 @@ _bfd_elf_x86_copy_special_section_fields
 {
   /* Return false for Solaris binary to properly set the sh_info and
      sh_link fields of Solaris specific sections.  */
-  return elf_elfheader (ibfd)->e_ident[EI_OSABI] != ELFOSABI_SOLARIS;
+  if (elf_elfheader (ibfd)->e_ident[EI_OSABI] == ELFOSABI_SOLARIS)
+    return false;
+
+  return _bfd_elf_copy_special_section_fields (ibfd, obfd, isection, osection);
 }
 
 void
