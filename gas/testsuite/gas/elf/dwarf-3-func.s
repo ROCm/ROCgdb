@@ -37,4 +37,12 @@ lfunc2:
 	.nop
 	.type lfunc2, %function
 	.size lfunc2, .-lfunc2
+
+	.ifndef LOCAL
+wfunc:
+	.nop
+	.weak wfunc
+	.type wfunc, %function
+	.size wfunc, .-wfunc
+	.endif
 	.endif

@@ -2753,7 +2753,7 @@ out_debug_abbrev (segT abbrev_seg,
 	  continue;
 #endif
 
-	  if (S_IS_EXTERNAL (symp))
+	  if (S_IS_EXTERNAL (symp) || S_IS_WEAK (symp))
 	    have_efunc = true;
 	  else
 	    have_lfunc = true;
@@ -2978,7 +2978,7 @@ out_debug_info (segT info_seg, segT abbrev_seg, segT line_seg, segT str_seg,
 
 	  /* DW_AT_external.  */
 	  if (func_form == DW_FORM_flag)
-	    out_byte (S_IS_EXTERNAL (symp));
+	    out_byte (S_IS_EXTERNAL (symp) || S_IS_WEAK (symp));
 
 	  /* PR 29517: Let consumers know that we do not have
 	     return type information for this function.  */

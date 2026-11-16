@@ -37,6 +37,12 @@ Contents of the .debug_info section:
  +<[0-9a-f]+> +DW_AT_type +: \(ref_udata\) <0x[0-9a-f]+>
  +<[0-9a-f]+> +DW_AT_low_pc +: \(addr\) (0x)?35
  +<[0-9a-f]+> +DW_AT_high_pc +: \(addr\) (0x)?38
+ <1><[0-9a-f]+>: Abbrev Number: 2 \(DW_TAG_subprogram\)
+ +<[0-9a-f]+> +DW_AT_name +: \(strp\) \(offset: (0x)?[0-9a-f]+\): wfunc
+ +<[0-9a-f]+> +DW_AT_external +: \(flag\) 1
+ +<[0-9a-f]+> +DW_AT_type +: \(ref_udata\) <0x[0-9a-f]+>
+ +<[0-9a-f]+> +DW_AT_low_pc +: \(addr\) (0x)?38
+ +<[0-9a-f]+> +DW_AT_high_pc +: \(addr\) (0x)?39
  <1><[0-9a-f]+>: Abbrev Number: 3 \(DW_TAG_unspecified_type\)
  <1><[0-9a-f]+>: Abbrev Number: 0
 
