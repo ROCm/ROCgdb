@@ -1053,6 +1053,17 @@ using gdbarch_fetch_hiperr_info_ftype = std::optional<hiperr_info> (frame_info_p
 std::optional<hiperr_info> gdbarch_fetch_hiperr_info (struct gdbarch *gdbarch, frame_info_ptr frame);
 void set_gdbarch_fetch_hiperr_info (struct gdbarch *gdbarch, gdbarch_fetch_hiperr_info_ftype *fetch_hiperr_info);
 
+/* Return the exception-object argument of the C++ runtime throw entry
+   point (MSVC _CxxThrowException) for FRAME, which must be stopped at
+   the first instruction of that function.  A zero result means a rethrow
+   ("throw;"). */
+
+bool gdbarch_cxx_throw_exception_object_p (struct gdbarch *gdbarch);
+
+using gdbarch_cxx_throw_exception_object_ftype = CORE_ADDR (frame_info_ptr frame);
+CORE_ADDR gdbarch_cxx_throw_exception_object (struct gdbarch *gdbarch, frame_info_ptr frame);
+void set_gdbarch_cxx_throw_exception_object (struct gdbarch *gdbarch, gdbarch_cxx_throw_exception_object_ftype *cxx_throw_exception_object);
+
 /* Iterate over all supported register notes in a core file.  For each
    supported register note section, the iterator must call CB and pass
    CB_DATA unchanged.  If REGCACHE is not NULL, the iterator can limit

@@ -1785,6 +1785,21 @@ run, return the info.  Otherwise, return a std::nullopt.
     predicate=True,
 )
 
+Function(
+    comment="""
+Return the exception-object argument of the C++ runtime throw entry
+point (MSVC _CxxThrowException) for FRAME, which must be stopped at
+the first instruction of that function.  A zero result means a rethrow
+("throw;").
+""",
+    type="CORE_ADDR",
+    name="cxx_throw_exception_object",
+    params=[
+        ("frame_info_ptr", "frame"),
+    ],
+    predicate=True,
+)
+
 Method(
     comment="""
 Iterate over all supported register notes in a core file.  For each

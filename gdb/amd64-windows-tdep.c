@@ -1282,6 +1282,20 @@ amd64_windows_fetch_hiperr_info (frame_info_ptr frame)
   return amd64_fetch_hiperr_info (frame, struct_addr);
 }
 
+/* Return the exception-object argument of the MSVC C++ runtime throw
+   entry point _CxxThrowException.  In the Microsoft x64 calling
+   convention RCX holds the first integer argument (pExceptionObject);
+   a rethrow ("throw;") calls the entry point with it zero.  FRAME must
+   be stopped at the first instruction of _CxxThrowException: argument
+   registers are only guaranteed to hold their values there, not after
+   the prologue.  */
+
+static CORE_ADDR
+amd64_windows_cxx_throw_exception_object (frame_info_ptr frame)
+{
+  return get_frame_register_unsigned (frame, AMD64_RCX_REGNUM);
+}
+
 /* Common parts for gdbarch initialization for Windows and Cygwin on AMD64.  */
 
 static void
@@ -1327,6 +1341,14 @@ amd64_windows_init_abi_common (gdbarch_info info, struct gdbarch *gdbarch)
   /* Extract hiperr info for 'catch hiperr'.  */
   set_gdbarch_fetch_hiperr_info
     (gdbarch, amd64_windows_fetch_hiperr_info);
+
+  /* Exception-object argument of the MSVC C++ runtime's throw entry
+     point, used to tell a throw from a rethrow in exception
+     catchpoints.  Registered in the common init so that it applies to
+     both the Windows-GNU and Windows-MSVC OSABIs: a MinGW process can
+     load MSVC DLLs, and vice versa.  */
+  set_gdbarch_cxx_throw_exception_object
+    (gdbarch, amd64_windows_cxx_throw_exception_object);
 }
 
 /* gdbarch initialization for Windows on AMD64.  */
