@@ -1,0 +1,443 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test MSVC (and GNU/Itanium, i.e. MinGW g++) C++ exception catchpoints
+# on Windows: catch throw / catch rethrow / catch catch stop
+# counts and caller lines, pending-arm behaviour, and next-over-throw
+# step-over landing lines.
+#
+# Two kinds of inferior are covered:
+#   - clang --target=x86_64-pc-windows-msvc (MSVC C++ runtime,
+#     _CxxThrowException), in both static-CRT (default) and DLL-CRT
+#     (/MD, _CxxThrowException from vcruntime140.dll) flavours;
+#   - MinGW g++ (GNU C++ runtime, __cxa_throw, __cxa_rethrow,
+#     __cxa_begin_catch).
+#
+# The gdb under test defaults to osabi Windows-MSVC for every PE image
+# (including MinGW ones), so no `set osabi` is used anywhere: we test the
+# default behaviour.  The runtime in use is detected at run time by looking
+# for __cxa_throw (see detect_runtime); its absence identifies the MSVC
+# runtime.  Note _CxxThrowException is exported by ucrtbase/msvcrt even in
+# MinGW processes, so its presence must NOT be used to detect MSVC code.
+#
+# Features not implemented yet for the MSVC runtime (catch catch, and
+# next over a throw caught by a caller) are marked with setup_xfail, so
+# that they turn into XPASS once they work.
+
+require allow_cplus_tests
+
+# Only run on Windows targets.
+if { ![istarget "*-*-mingw*"] && ![istarget "*-*-windows*"] } {
+    unsupported "msvc-exception.exp requires a Windows target"
+    return
+}
+
+standard_testfile msvc-exception.cc
+
+set ws "\[\\r\\n\\t \]+"
+set nl "\[\\r\\n\]+"
+
+# ---------------------------------------------------------------------------
+# Source line markers used by the tests.  The .cc file must not change
+# except for the s2-catch-clause marker: the tests below rely on the exact
+# throw sequence it performs.
+# ---------------------------------------------------------------------------
+set throw_site_line        [gdb_get_line_number "throw-site" $srcfile]
+set rethrow_site_line      [gdb_get_line_number "rethrow-site" $srcfile]
+set local_catch_throw_line [gdb_get_line_number "throw std::runtime_error (\"local\")" $srcfile]
+set rethrower_throw_line   [gdb_get_line_number "throw std::runtime_error (\"rethrow\")" $srcfile]
+# The first bare "throw;" in the file is rethrower's; the second
+# is the nested rethrow-site.  Both are rethrow sites.
+set rethrower_rethrow_line [gdb_get_line_number "throw;" $srcfile]
+set step_target_s1_line    [gdb_get_line_number "step-target-s1" $srcfile]
+set after_s1_line          [gdb_get_line_number "after-s1" $srcfile]
+set rethrower_call_line    [gdb_get_line_number "rethrower ();" $srcfile]
+set after_s2_line          [gdb_get_line_number "after-s2" $srcfile]
+# main's catch handler body (testval = 2;); the catch clause itself is
+# tagged with an s2-catch-clause marker in the .cc.
+set s2_catch_body_line     [gdb_get_line_number "testval = 2;" $srcfile]
+set s2_catch_clause_line   [gdb_get_line_number "s2-catch-clause" $srcfile]
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+# Start a fresh gdb on the test binary and run to main.  Returns 1 on
+# success; on failure records an untested and returns 0 so the caller can
+# skip the remainder of the current crt variant.
+proc start_to_main { } {
+    clean_restart $::testfile
+    if { ![runto_main] } {
+	untested "run to main failed"
+	return 0
+    }
+    return 1
+}
+
+# Detect which C++ runtime the loaded inferior uses: GNU (Itanium ABI,
+# libstdc++) or MSVC.  Record the decision in the log.  `print &__cxa_throw`
+# resolves via the symbol table (a minsym in the MinGW case), so it works
+# even though the .exe has no debug info for the runtime DLLs.
+proc detect_runtime { } {
+    global gdb_prompt
+    global gnu_rt
+
+    set gnu_rt 0
+    gdb_test_multiple "print &__cxa_throw" "detect runtime (probe __cxa_throw)" {
+	-re "= .*<__cxa_throw.*\\r\\n$gdb_prompt $" {
+	    pass "detect runtime: GNU libstdc++"
+	    set gnu_rt 1
+	}
+	-re "No symbol.*__cxa_throw.*\\r\\n$gdb_prompt $" {
+	    pass "detect runtime: MSVC _CxxThrowException"
+	    set gnu_rt 0
+	}
+	-re "\\r\\n$gdb_prompt $" {
+	    # Unexpected probe output; gnu_rt keeps its initialized value.
+	    fail "detect runtime: unexpected probe output"
+	}
+    }
+    if { $gnu_rt } {
+	verbose -log "msvc-exception: inferior uses the GNU C++ runtime (__cxa_throw present)"
+    } else {
+	verbose -log "msvc-exception: inferior uses the MSVC C++ runtime (no __cxa_throw)"
+    }
+}
+
+# Count the stops of a `catch <kind>` catchpoint while continuing until the
+# inferior exits.  KIND is one of "thrown", "rethrown", "caught".  Returns
+# the list of caller source lines of the stops ("" entries when a stop
+# could not be attributed).
+#
+# At each stop, frame 0 is the runtime's throw/rethrow/catch entry
+# (_CxxThrowException or __cxa_throw/__cxa_begin_catch) and frame 1 is the
+# user frame in msvc-exception.cc, so we query `frame 1` for the line.  The
+# nested gdb_test_multiple consumes the frame output up to the prompt so
+# the outer continue loop stays in sync.
+#
+# The loop is bounded by CAP as a safety net; the expected counts are at
+# most 6, so on a working gdb it always ends on the inferior exit arm, not
+# on the cap.
+proc count_catch_stops { kind } {
+    global gdb_prompt inferior_exited_re
+
+    set n 0
+    set lines {}
+    set cap 20
+
+    gdb_test_multiple "continue" "count catch $kind stops" {
+	-re "Catchpoint ${::decimal}(\\.${::decimal})? \\(exception $kind\\).*\\r\\n$gdb_prompt $" {
+	    # Catchpoint fired: record the caller line from frame 1.
+	    set got_line 0
+	    gdb_test_multiple "frame 1" "count catch $kind stops: caller line" {
+		-re "msvc-exception\\.cc:(${::decimal})\\r\\n" {
+		    lappend lines $expect_out(1,string)
+		    set got_line 1
+		    exp_continue
+		}
+		-re "$gdb_prompt $" {
+		    if { !$got_line } {
+			fail "count catch $kind stops: caller line unavailable"
+		    }
+		}
+	    }
+	    if { !$got_line } {
+		lappend lines "unknown"
+	    }
+	    incr n
+	    if { $n >= $cap } {
+		fail "count catch $kind stops: cap $cap reached"
+		return $lines
+	    }
+	    send_gdb "continue\n"
+	    exp_continue
+	}
+	-re "$inferior_exited_re normally\]\\r\\n$gdb_prompt $" {
+	    pass "count catch $kind stops"
+	}
+    }
+    verbose -log "count catch $kind stops: got $n stops, caller lines: $lines"
+    return $lines
+}
+
+# Assert that COUNT_LINES, the caller lines collected for a catchpoint's
+# stops, equals EXPECTED_LINES (a multiset of msvc-exception.cc lines).
+# Only meaningful when the stop count matches; otherwise emit a single
+# untested so a count failure does not cascade into a second failure.
+proc check_caller_lines { what count_lines expected_lines } {
+    if { [llength $count_lines] != [llength $expected_lines] } {
+	untested "$what: caller lines skipped, stop count mismatch"
+	return
+    }
+    if { [lsearch -exact $count_lines "unknown"] != -1 } {
+	fail "$what: a stop could not be attributed to a source line"
+	return
+    }
+    set expected [lsort -integer $expected_lines]
+    set actual [lsort -integer $count_lines]
+    gdb_assert {$actual == $expected} "$what: caller lines"
+}
+
+# ---------------------------------------------------------------------------
+# Main body
+# ---------------------------------------------------------------------------
+
+# Decide the CRT variants to build.  MinGW g++ produces the GNU runtime;
+# clang --target=*-pc-windows-msvc produces the MSVC runtime in both a
+# static-CRT (clang-msvc-dwarf board default) and a DLL-CRT (/MD) flavour.
+if { [test_compiler_info "gcc-*"] } {
+    set crt_variants {gnu}
+} else {
+    set crt_variants {static md}
+}
+
+foreach_with_prefix crt $crt_variants {
+    # The /MD (DLL CRT) build is the historical target of this test: the
+    # live _CxxThrowException then lives in vcruntime140.dll (ucrtbase.dll
+    # also exports one that is never called).  The static-CRT build is the
+    # board default and exercises the same code paths.
+    set opts {debug c++ additional_flags=-fexceptions}
+    if { $crt == "md" } {
+	lappend opts \
+	    additional_flags=-D_DLL \
+	    additional_flags=-Xclang \
+	    additional_flags=--dependent-lib=msvcrt \
+	    additional_flags=-Xclang \
+	    additional_flags=--dependent-lib=vcruntime \
+	    additional_flags=-Xclang \
+	    additional_flags=--dependent-lib=ucrt \
+	    additional_flags=-nostdlib
+    }
+
+    # build_executable reports a failed build as untested itself.
+    if { [build_executable "failed to build" $testfile $srcfile $opts] != 0 } {
+	continue
+    }
+    if { ![start_to_main] } {
+	continue
+    }
+
+    # Run runtime detection and double-check it against the variant choice.
+    detect_runtime
+    if { $crt == "gnu" } {
+	if { !$gnu_rt } {
+	    fail "runtime detection: gnu variant but no GNU runtime"
+	}
+    } else {
+	if { $gnu_rt } {
+	    fail "runtime detection: $crt variant but GNU runtime found"
+	}
+    }
+
+    # ----------------------------------------------------------------
+    # catch throw: exactly 4 stops, caller lines at the 4 throw sites.
+    # ----------------------------------------------------------------
+    if { ![start_to_main] } {
+	continue
+    }
+
+    gdb_test "catch throw" "Catchpoint ${::decimal} \\(throw\\)" \
+	"catch throw before run"
+    set throw_lines [count_catch_stops "thrown"]
+
+    gdb_assert {[llength $throw_lines] == 4} "catch throw: exactly 4 stops"
+    check_caller_lines "catch throw" $throw_lines \
+	[list $throw_site_line $throw_site_line \
+	      $local_catch_throw_line $rethrower_throw_line]
+
+    # ----------------------------------------------------------------
+    # catch rethrow: exactly 2 stops, only at the two rethrow sites.
+    # ----------------------------------------------------------------
+    if { ![start_to_main] } {
+	continue
+    }
+
+    gdb_test "catch rethrow" "Catchpoint ${::decimal} \\(rethrow\\)" \
+	"catch rethrow before run"
+    set rethrow_lines [count_catch_stops "rethrown"]
+
+    gdb_assert {[llength $rethrow_lines] == 2} "catch rethrow: exactly 2 stops"
+    check_caller_lines "catch rethrow" $rethrow_lines \
+	[list $rethrow_site_line $rethrower_rethrow_line]
+
+    # ----------------------------------------------------------------
+    # catch catch: exactly 6 stops (handler entries executed).
+    # (Not implemented for the MSVC runtime yet: XFAIL.)
+    # ----------------------------------------------------------------
+    if { ![start_to_main] } {
+	continue
+    }
+
+    gdb_test "catch catch" "Catchpoint ${::decimal} \\(catch\\)" \
+	"catch catch before run"
+    set catch_lines [count_catch_stops "caught"]
+
+    if { $gnu_rt } {
+	gdb_assert {[llength $catch_lines] == 6} "catch catch: exactly 6 stops"
+    } else {
+	# MSVC: catch catch is not implemented yet and never stops.
+	setup_xfail "*-*-*"
+	gdb_assert {[llength $catch_lines] == 6} "catch catch: exactly 6 stops"
+    }
+
+    # ----------------------------------------------------------------
+    # Pending arm: `catch throw` BEFORE `run`, with no process, must arm
+    # and stop at the first throw.
+    # ----------------------------------------------------------------
+    clean_restart $testfile
+    gdb_test "catch throw" "Catchpoint ${::decimal} \\(throw\\)" \
+	"pending catch throw before run"
+    gdb_test "info breakpoints" \
+	"${::decimal}${ws}catchpoint${ws}keep${ws}y${ws}.*exception throw" \
+	"pending catch throw: listed in info breakpoints"
+
+    set pend_stop 0
+    gdb_run_cmd
+    gdb_test_multiple "" "pending catch throw: stops at first throw" {
+	-re "Catchpoint ${::decimal}(\\.${::decimal})? \\(exception thrown\\).*$gdb_prompt $" {
+	    pass "pending catch throw: stops at first throw"
+	    set pend_stop 1
+	}
+	-re "$inferior_exited_re normally\]\\r\\n$gdb_prompt $" {
+	    fail "pending catch throw: ran to exit, catchpoint never armed"
+	}
+	-re "$gdb_prompt $" {
+	    fail "pending catch throw: stopped elsewhere unexpectedly"
+	}
+    }
+    if { !$pend_stop } {
+	# Keep the section clean: one fail is already on record.
+	untested "pending catch throw: caller line skipped, no catchpoint stop"
+	untested "pending catch throw: testval still -1 skipped, no catchpoint stop"
+    } else {
+	# The first throw of the program comes from foo called at main's
+	# basic-throw; frame 0 is the runtime entry (_CxxThrowException /
+	# __cxa_throw), frame 1 is foo's throw at throw-site, for both
+	# runtimes.
+	set pend_got 0
+	set pend_line "unknown"
+	gdb_test_multiple "frame 1" "pending catch throw: caller line" {
+	    -re "msvc-exception\\.cc:(${::decimal})\\r\\n" {
+		set pend_line $expect_out(1,string)
+		set pend_got 1
+		exp_continue
+	    }
+	    -re "$gdb_prompt $" {
+		if { $pend_got } {
+		    pass "pending catch throw: caller line"
+		} else {
+		    fail "pending catch throw: caller line"
+		}
+	    }
+	}
+	gdb_test "print testval == -1" " = true" \
+	    "pending catch throw: testval still -1 before any handler"
+	gdb_assert {[string equal "$pend_line" "$throw_site_line"]} \
+	    "pending catch throw: first stop at throw-site"
+    }
+
+    # ----------------------------------------------------------------
+    # s1: next over local_catch (which throws internally) must land on
+    # the after-s1 line with testval == 1.
+    # ----------------------------------------------------------------
+    if { ![start_to_main] } {
+	continue
+    }
+
+    gdb_breakpoint "$srcfile:$step_target_s1_line"
+    gdb_test "continue" \
+	"Breakpoint ${::decimal}, main \\(.*\\) at .*${srcfile}:${step_target_s1_line}${nl}${step_target_s1_line}${ws}.*local_catch.*" \
+	"continue to step-target-s1"
+    gdb_test "print testval == -1" " = true" "s1: testval == -1 before next"
+    gdb_test "next" "${after_s1_line}${ws}.*after-s1.*" \
+	"s1: next over local_catch lands on after-s1"
+    gdb_test "print testval == 1" " = true" "s1: testval == 1 after next"
+
+    # ----------------------------------------------------------------
+    # s2: next over the try block containing rethrower() must stop in
+    # main, inside the catch handler (catch clause / handler body) or at
+    # after-s2, with the process alive.  On the MSVC runtime `next` runs
+    # the program to exit until that is implemented: XFAIL.
+    # ----------------------------------------------------------------
+    if { ![start_to_main] } {
+	continue
+    }
+
+    # Break directly at the `rethrower ();` call line.
+    gdb_breakpoint "$srcfile:$rethrower_call_line"
+    gdb_test "continue" \
+	"Breakpoint ${::decimal}, main \\(.*\\) at .*${srcfile}:${rethrower_call_line}${nl}${rethrower_call_line}${ws}.*rethrower.*" \
+	"continue to step-target-s2, rethrower call line"
+    gdb_test "print testval == 1" " = true" "s2: testval == 1 before next"
+
+    if { !$gnu_rt } {
+	setup_xfail "*-*-*"
+    }
+    set at_after_s2 0
+    set s2_exited 0
+    gdb_test_multiple "next" "s2: next over try-rethrower block stops in main" {
+	-re "(${s2_catch_clause_line}|${s2_catch_body_line}|${after_s2_line})${ws}.*\\r\\n$gdb_prompt $" {
+	    pass "s2: next stopped in main at catch handler / after-s2"
+	    if { $expect_out(1,string) == $after_s2_line } {
+		set at_after_s2 1
+	    }
+	}
+	-re "$inferior_exited_re normally\]\\r\\n$gdb_prompt $" {
+	    # Only legal on the MSVC runtime, where this is an XFAIL.
+	    fail "s2: next ran the inferior to exit"
+	    set s2_exited 1
+	}
+	-re "$gdb_prompt $" {
+	    # Some other line; keep stepping (bounded) below.
+	}
+    }
+
+    if { $s2_exited } {
+	# The inferior ran to exit; nothing more to check for this variant.
+	continue
+    }
+
+    # If we did not land on after-s2 yet, step again (bounded).
+    set steps 0
+    while { !$at_after_s2 && $steps < 4 } {
+	incr steps
+	gdb_test_multiple "next" "s2: continuing next to after-s2 (step $steps)" {
+	    -re "${after_s2_line}${ws}.*after-s2.*\\r\\n$gdb_prompt $" {
+		pass "s2: reached after-s2 (step $steps)"
+		set at_after_s2 1
+	    }
+	    -re "$inferior_exited_re normally\]\\r\\n$gdb_prompt $" {
+		# Only legal on the MSVC runtime, where the first next was
+		# already recorded as XFAIL; don't cascade.
+		fail "s2: running to exit while stepping to after-s2"
+		set s2_exited 1
+	    }
+	    -re "$gdb_prompt $" {
+		# Keep stepping.
+	    }
+	}
+    }
+    if { $s2_exited } {
+	continue
+    }
+    if { !$at_after_s2 } {
+	fail "s2: did not reach after-s2 in 4 steps"
+	continue
+    }
+    gdb_test "print testval == 2" " = true" \
+	"s2: testval == 2 after next over try-rethrower"
+    gdb_test "info program" "Using the running image.*" \
+	"s2: inferior alive after next over try-rethrower"
+}
