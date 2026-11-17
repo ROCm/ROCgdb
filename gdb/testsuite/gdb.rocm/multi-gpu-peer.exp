@@ -95,8 +95,12 @@ proc inspect_cross_gpu {} {
     # wave is the one in wait_kernel.
     set compute_tid -1
     set alloc_tid -1
+    # The lookahead makes the match end at the end of the line, so that
+    # group 3 holds the whole line even with check-read1.
+    set wave_re "\r\n(\\*?)\[ \t\]+($::decimal)\[ \t\]+AMDGPU Wave"
+    append wave_re " (\[^\r\n\]*)(?=\r\n)"
     gdb_test_multiple "info threads" "" -lbl {
-	-re "\r\n(\\*?)\[ \t\]+($::decimal)\[ \t\]+AMDGPU Wave (\[^\r\n\]*)" {
+	-re $wave_re {
 	    if {$expect_out(1,string) eq "*"} {
 		set compute_tid $expect_out(2,string)
 	    } elseif {[string match "*wait_kernel*" $expect_out(3,string)]} {
