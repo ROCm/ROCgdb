@@ -31,6 +31,7 @@
 #include "cp-support.h"
 #include "location.h"
 #include "cli/cli-decode.h"
+#include "objfiles.h"
 
 /* Each spot where we may place an exception-related catchpoint has
    two names: the SDT probe point and the function name.  This
@@ -55,6 +56,27 @@ static const struct exception_names exception_functions[] =
   { "-probe-stap libstdcxx:throw", "__cxa_throw" },
   { "-probe-stap libstdcxx:rethrow", "__cxa_rethrow" },
   { "-probe-stap libstdcxx:catch", "__cxa_begin_catch" }
+};
+
+/* Extra entry points used by the MSVC C++ runtime on Windows, in
+   addition to the GNU names above.  No SDT probes; symbol-only lookup.
+   Indexed by exception_event_kind.  These are always searched, along
+   with the GNU names: a Windows process can mix runtimes (a MinGW- or
+   MSVC-built executable loading a DLL built by the other toolchain),
+   and an MSVC-target GDB reports the Windows-MSVC OSABI for every PE
+   file, including MinGW programs.
+
+   EX_EVENT_THROW / EX_EVENT_RETHROW: _CxxThrowException is called by the
+   compiler for every C++ throw.  Rethrow uses the same entry point with a
+   NULL first argument (pExceptionObject == NULL).
+
+   EX_EVENT_CATCH: no single entry point maps to "the moment control enters
+   a catch handler" the way __cxa_begin_catch does on Linux.  Left nullptr.  */
+static const struct exception_names msvc_exception_functions[] =
+{
+  { nullptr, "_CxxThrowException" },
+  { nullptr, "_CxxThrowException" },
+  { nullptr, nullptr },
 };
 
 /* The type of an exception catchpoint.  Unlike most catchpoints, this
@@ -149,6 +171,19 @@ fetch_probe_arguments (struct value **arg0, struct value **arg1)
 
 
 
+/* Return true if PC is at (or inside) a minimal symbol named
+   _CxxThrowException, the MSVC C++ runtime's throw entry point.  */
+
+static bool
+is_msvc_throw_location (CORE_ADDR pc)
+{
+  bound_minimal_symbol msym = lookup_minimal_symbol_by_pc (pc);
+
+  return (msym.minsym != nullptr
+	  && msym.minsym->linkage_name () != nullptr
+	  && strcmp (msym.minsym->linkage_name (), "_CxxThrowException") == 0);
+}
+
 /* Implement the 'check_status' method.  */
 
 void
@@ -160,8 +195,56 @@ exception_catchpoint::check_status (struct bpstat *bs)
   if (!bs->stop)
     return;
 
+  /* For MSVC inferiors, throw and rethrow both call _CxxThrowException,
+     which a rethrow ("throw;") enters with a NULL exception-object
+     argument.  The OSABI does not identify the runtime (an MSVC-target
+     GDB reports the Windows-MSVC OSABI for every PE file, including
+     MinGW programs), so this decision is made per stop location.  Note
+     that this runs before any frame is selected; get_current_frame,
+     like bpstat_check_breakpoint_conditions, is what's valid here.  */
+  if (is_msvc_throw_location (bs->bp_location_at->address))
+    {
+      frame_info_ptr frame = get_current_frame ();
+      struct gdbarch *arch = get_frame_arch (frame);
+
+      if (gdbarch_cxx_throw_exception_object_p (arch))
+	{
+	  try
+	    {
+	      CORE_ADDR obj
+		= gdbarch_cxx_throw_exception_object (arch, frame);
+	      bool rethrow = obj == 0;
+
+	      if ((kind == EX_EVENT_THROW && rethrow)
+		  || (kind == EX_EVENT_RETHROW && !rethrow))
+		{
+		  bs->stop = false;
+		  return;
+		}
+	    }
+	  catch (const gdb_exception_error &e)
+	    {
+	      /* Keep stopping on any error reading the argument.  */
+	      exception_print (gdb_stderr, e);
+	    }
+	}
+    }
+
   if (this->pattern == NULL)
     return;
+
+  /* For MSVC inferiors, type-filtered catch throw is not yet implemented
+     (it requires decoding the MSVC type name).  Stop on every throw
+     and warn the user so the missing filtering is not silent.  The MSVC
+     entry point, rather than the OSABI, identifies such a stop: an
+     MSVC-target GDB reports the Windows-MSVC OSABI for every PE file,
+     including MinGW programs, and a process can mix runtimes.  */
+  if (is_msvc_throw_location (bs->bp_location_at->address))
+    {
+      warning (_("Type-filtered catch throw is not supported for MSVC "
+		 "C++ exceptions; stopping on all throws."));
+      return;  /* bs->stop remains true: stop on every throw.  */
+    }
 
   const char *name = nullptr;
   gdb::unique_xmalloc_ptr<char> canon;
@@ -221,6 +304,53 @@ exception_catchpoint::re_set (program_space *pspace)
 	     pending, so let it through.  */
 	  if (ex.error != NOT_FOUND_ERROR)
 	    throw;
+	}
+    }
+
+  /* In addition to the GNU names above, look for the MSVC C++ runtime
+     entry points.  A Windows process can mix runtimes (a MinGW-built
+     executable loading an MSVC-built DLL, or vice versa), and an
+     MSVC-target GDB reports the Windows-MSVC OSABI for every PE file,
+     including MinGW programs, so these are always searched alongside
+     the GNU names.  With a static CRT the symbol lives in the
+     executable itself; with the DLL CRT it is exported by
+     VCRUNTIME140.DLL (and also by UCRTBASE.DLL and MSVCRT.DLL, which
+     clang- and MSVC-generated code does not call); every copy in the
+     program gets a location here.  Symbol-only, no SDT probes.  */
+  const struct exception_names *msvc = &msvc_exception_functions[kind];
+
+  if (msvc->function != nullptr)
+    {
+      /* Unlike decode_location_spec, use the *entry* address of each
+	 copy of the function rather than a location after the
+	 prologue: _CxxThrowException's argument registers are only
+	 valid at its first instruction, and check_status reads them to
+	 tell a throw from a rethrow.  Iterate over every objfile
+	 because lookup_minimal_symbol_text returns only the first
+	 match, while /MD links both UCRTBASE.DLL and VCRUNTIME140.DLL
+	 (of which only the latter's copy is ever called).  */
+      for (objfile &objf : filter_pspace->objfiles ())
+	{
+	  /* Skip separate debug files.  */
+	  if (objf.separate_debug_objfile_backlink != nullptr)
+	    continue;
+
+	  bound_minimal_symbol msym
+	    = lookup_minimal_symbol_text (filter_pspace, msvc->function,
+					  &objf);
+	  if (msym.minsym == nullptr)
+	    continue;
+
+	  struct symtab_and_line sal;
+	  sal.pc = msym.value_address ();
+	  sal.pc = gdbarch_convert_from_func_ptr_addr
+	    (objf.arch (), sal.pc, current_inferior ()->top_target ());
+	  sal.pspace = filter_pspace;
+	  sal.section = msym.obj_section ();
+	  sal.explicit_pc = true;
+	  sal.msymbol = msym.minsym;
+
+	  sals.push_back (sal);
 	}
     }
 
@@ -359,6 +489,18 @@ handle_gnu_v3_exceptions (int tempflag, std::string &&except_rx,
   std::unique_ptr<exception_catchpoint> cp
     (new exception_catchpoint (gdbarch, tempflag, cond_string,
 			       ex_event, std::move (except_rx)));
+
+  /* On Windows there is no MSVC entry point for "catch catch" (see
+     msvc_exception_functions).  If the process is live and no GNU
+     entry point was found either, tell the user once, now, rather
+     than at every re_set.  Before the program runs no location is
+     expected yet, so stay quiet.  */
+  if (ex_event == EX_EVENT_CATCH
+      && gdbarch_cxx_throw_exception_object_p (gdbarch)
+      && target_has_execution ()
+      && !cp->has_locations ())
+    warning (_("catch catch is not supported for MSVC C++ exceptions; "
+	       "the catchpoint will not trigger."));
 
   install_breakpoint (0, std::move (cp), 1);
 }

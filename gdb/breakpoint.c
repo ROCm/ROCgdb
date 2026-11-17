@@ -4355,6 +4355,40 @@ create_exception_master_breakpoint_hook (objfile *objfile)
   return true;
 }
 
+/* Install a master breakpoint on the MSVC C++ runtime's throw entry
+   point, _CxxThrowException, for OBJFILE.  This is the Windows
+   counterpart of the _Unwind_DebugHook mechanism: it fires on every C++
+   throw and lets GDB keep control of the inferior during step-over
+   operations.  Return true if a breakpoint was installed.
+
+   There is no OSABI check: an MSVC-target GDB reports the Windows-MSVC
+   OSABI for every PE file, MinGW programs included, and a process can
+   mix runtimes.  The presence of the symbol in OBJFILE is what matters.
+   With the DLL CRT, several modules export the name (UCRTBASE.DLL,
+   VCRUNTIME140.DLL), so every objfile gets its own breakpoint.
+
+   The location is the entry address of the function, with no prologue
+   skipped, as the argument registers are only valid there.  */
+
+static bool
+create_exception_master_breakpoint_msvc (objfile *objfile)
+{
+  const char *const func_name = "_CxxThrowException";
+
+  bound_minimal_symbol throw_sym
+    = lookup_minimal_symbol_text (objfile->pspace (), func_name, objfile);
+  if (throw_sym.minsym == NULL)
+    return false;
+
+  struct breakpoint *b
+    = create_internal_breakpoint (objfile->arch (), throw_sym,
+				  bp_exception_master);
+  b->locspec = new_explicit_location_spec_function (func_name);
+  b->enable_state = bp_disabled;
+
+  return true;
+}
+
 /* Install a master breakpoint on the unwinder's debug hook.  */
 
 static void
@@ -4364,6 +4398,11 @@ create_exception_master_breakpoint (void)
     {
       /* Skip separate debug object.  */
       if (obj.separate_debug_objfile_backlink)
+	continue;
+
+      /* MSVC C++ runtime: use _CxxThrowException as the step-over-throw
+	 safety net.  */
+      if (create_exception_master_breakpoint_msvc (&obj))
 	continue;
 
       /* Try a probe kind breakpoint.  */
