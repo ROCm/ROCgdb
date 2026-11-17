@@ -23,19 +23,31 @@
 
 load_lib rocm.exp
 
-# Clear a gdb_caching_proc's cached result for NAME, both in-memory
-# and, when GDB_PARALLEL is in effect, on disk.  Used both before and
-# after stubbing out whatever NAME depends on, so a fake result never
-# leaks into a later block in this file or, more importantly, into
-# another .exp file that runs later in the same testsuite session and
-# reads back this same on-disk cache entry.
+# Clear a gdb_caching_proc's in-memory cached result for NAME.  Used
+# both before and after stubbing out whatever NAME depends on, so a fake
+# result never leaks into a later block in this file, or into another
+# .exp file that runs later in the same process.  This does not touch
+# the on-disk cache that is used when GDB_PARALLEL is in effect, see
+# with_no_shared_cache.
 proc clear_caching_proc_cache {name} {
     global gdb_data_cache
     set cache_name [file join [target_info name] $name]
     array unset gdb_data_cache "${cache_name},*"
-    if { [info exists ::GDB_PARALLEL] } {
-	set cache_filename [make_gdb_parallel_path cache $cache_name]
-	file delete -force $cache_filename
+}
+
+# Run BODY without the on-disk gdb_caching_proc cache.  With
+# GDB_PARALLEL, that cache is a set of files shared by all the .exp files
+# that run at the same time, and a gdb_caching_proc reads it and writes
+# its result to it.  When BODY stubs out what a gdb_caching_proc depends
+# on, the result is fake, and writing it to the shared files would let the
+# .exp files that run at the same time read it back as the real result,
+# and report their tests as unsupported (for example "gfx0001
+# architecture not supported").  Without GDB_PARALLEL, the results are
+# only cached in memory, so they stay in this process.
+proc with_no_shared_cache {body} {
+    save_vars { ::GDB_PARALLEL } {
+	unset -nocomplain ::GDB_PARALLEL
+	transparent_uplevel $body
     }
 }
 
@@ -45,7 +57,8 @@ proc clear_caching_proc_cache {name} {
 # the global rocm_test_remote_exec_calls, then restore the original
 # proc.  Clears any cached rocm_bfd_amdgcn_archs result both before
 # BODY runs (so it exercises the stub fresh) and after (so the fake
-# result doesn't leak into later blocks or files).
+# result doesn't leak into later blocks or files).  BODY runs without
+# the shared on-disk cache, see with_no_shared_cache.
 proc with_stub_remote_exec {output body {status 0}} {
     global rocm_test_remote_exec_calls
     set rocm_test_remote_exec_calls 0
@@ -70,7 +83,7 @@ proc with_stub_remote_exec {output body {status 0}} {
 	return [list $::rocm_test_stub_status $::rocm_test_stub_output]
     }
 
-    set code [catch {uplevel 1 $body} result]
+    set code [catch {with_no_shared_cache {uplevel 1 $body}} result]
 
     rename remote_exec {}
     rename __saved_remote_exec remote_exec
@@ -107,12 +120,13 @@ proc with_stub_generic_target_for {arch generic body} {
 
 # Run BODY with find_amdgpu_devices stubbed to return DEVICES, then
 # restore the original proc.  Mirrors the identically-named helper in
-# hcc-amdgpu-targets.exp.
+# hcc-amdgpu-targets.exp.  BODY runs without the shared on-disk cache,
+# see with_no_shared_cache.
 proc with_stub_devices {devices body} {
     rename find_amdgpu_devices __saved_find_amdgpu_devices
     # tclint-disable-next-line command-args
     proc find_amdgpu_devices {} [list return $devices]
-    set code [catch {uplevel 1 $body} result]
+    set code [catch {with_no_shared_cache {uplevel 1 $body}} result]
     rename find_amdgpu_devices {}
     rename __saved_find_amdgpu_devices find_amdgpu_devices
     return -code $code $result
@@ -288,7 +302,8 @@ with_stub_devices {gfx0001 gfx0002 gfx0001} {
 }
 
 # allow_hip_tests is also used, for real, by every other gdb.rocm/*.exp
-# file in this run.  Clear its cached result here so the fake verdict
-# from the stubbed blocks above never leaks into those real test
-# files by way of the shared on-disk gdb_caching_proc cache.
+# file in this run.  The stubbed blocks above do not use the shared
+# on-disk cache, so the fake verdict can not reach those files that way.
+# Clear its in-memory cached result, so that the fake verdict does not
+# reach the .exp files that run later in this same process either.
 clear_caching_proc_cache allow_hip_tests
