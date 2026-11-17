@@ -252,6 +252,31 @@ proc rocm_stack_requires_xnack {} {
     return [rocm_stack_has_device_asan]
 }
 
+# Return the factor to give to with_timeout_factor for a step that
+# normally gets FACTOR * TIMEOUT seconds, in a ROCm stack
+# instrumented with the sanitizers whose runtimes are RUNTIMES.
+#
+# ThreadSanitizer makes some steps much slower.  A step that takes about
+# 10 minutes with it needs more than FACTOR times the default timeout,
+# which is 60 seconds.  If RUNTIMES has a ThreadSanitizer runtime, return
+# a factor large enough for the step to get at least TSAN_SECONDS, if that
+# is more than FACTOR.  When TIMEOUT is already long enough, for example
+# because a longer timeout was asked for, return FACTOR.  For the other
+# sanitizers, or if TIMEOUT is not positive (no timeout), return FACTOR.
+
+proc rocm_timeout_factor_for { factor timeout tsan_seconds runtimes } {
+    if { $timeout <= 0 } {
+	return $factor
+    }
+    foreach runtime $runtimes {
+	if { [string match libclang_rt.tsan* [file tail $runtime]] } {
+	    set needed [expr {int(ceil(double($tsan_seconds) / $timeout))}]
+	    return [expr {max($factor, $needed)}]
+	}
+    }
+    return $factor
+}
+
 # Return the NAME VALUE pairs of the environment variables that programs
 # need to use a ROCm stack instrumented with the sanitizers whose
 # runtimes are RUNTIMES.  The list is empty if RUNTIMES is empty, so
@@ -1221,8 +1246,12 @@ proc rocm_core_find {binfile {deletefiles {}} {arg ""} {output_file "/dev/null"}
 
 proc rocm_generate_gcore_file { corefile_path } {
     # On some configurations, creating the core dump can take a significant
-    # amount of time.  Make sure to use an appropriate timeout value.
-    with_timeout_factor 5 {
+    # amount of time.  Make sure to use an appropriate timeout value.  With
+    # a ROCm stack instrumented with ThreadSanitizer, it takes about 640
+    # seconds on gfx942, so allow at least 900.
+    set factor [rocm_timeout_factor_for 5 [get_largest_timeout] 900 \
+		    [rocm_sanitizer_runtimes]]
+    with_timeout_factor $factor {
 	gdb_test_multiple "generate-core-file $corefile_path" "generate core" {
 	    -re -wrap "Cannot create an AMDGPU core dump.*" {
 		unsupported $gdb_test_name

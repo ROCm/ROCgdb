@@ -159,6 +159,28 @@ proc_with_prefix test_environment_for {} {
     }
 }
 
+# Test the timeout factor of the steps that are slow with ThreadSanitizer.
+
+proc_with_prefix test_timeout_factor {} {
+    set asan /a/libclang_rt.asan.so
+    set tsan /t/libclang_rt.tsan.so
+
+    gdb_assert {[rocm_timeout_factor_for 5 60 900 {}] == 5} \
+	"no sanitizer keeps the factor"
+    gdb_assert {[rocm_timeout_factor_for 5 60 900 [list $asan]] == 5} \
+	"ASan keeps the factor"
+    gdb_assert {[rocm_timeout_factor_for 5 60 900 [list $tsan]] == 15} \
+	"TSan with the default timeout gets 900 seconds"
+    gdb_assert {[rocm_timeout_factor_for 5 60 900 [list $asan $tsan]] == 15} \
+	"TSan is found among several runtimes"
+    gdb_assert {[rocm_timeout_factor_for 5 150 900 [list $tsan]] == 6} \
+	"TSan with a timeout of 150 seconds"
+    gdb_assert {[rocm_timeout_factor_for 5 130 900 [list $tsan]] == 7} \
+	"the factor is rounded up"
+    gdb_assert {[rocm_timeout_factor_for 5 600 900 [list $tsan]] == 5} \
+	"a timeout that is long enough keeps the factor"
+}
+
 # Test running a body with environment variables.
 
 proc_with_prefix test_with_env_vars {} {
@@ -266,5 +288,6 @@ test_parse_runtimes
 test_parse_runtimes_not_found
 test_parse_device_asan
 test_environment_for
+test_timeout_factor
 test_with_env_vars
 test_find_hip_library
