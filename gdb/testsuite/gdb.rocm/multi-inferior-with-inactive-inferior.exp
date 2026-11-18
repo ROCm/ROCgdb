@@ -1,0 +1,80 @@
+# Copyright 2024-2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This test exercises a fix for a hang that would happen when debugging a ROCm
+# inferior while another inferior only has the native target loaded and is not
+# running.
+#
+# For more coverage, we throw in another stopped inferior with the amd-dbgapi
+# target pushed in the mix.
+#
+# And since the order of inferior matter (they are polled in sequence by
+# infrun), try all possible permutations of these 3 inferiors.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+require allow_hipcc_tests
+require hip_devices_support_debug_multi_process
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+# FIRST_INF_NUM is the number of the inferior that will be stopped, with the
+# amd-dbgapi target pushed.
+#
+# SECOND_INF_NUM is the number of the inferior used for the test, which we
+# expect to hit the breakpoint.
+
+proc do_test { first_inf_num second_inf_num } {
+    clean_restart
+
+    with_rocm_gpu_lock {
+	gdb_test "target native" "Done.  Use the \"run\" command to start a process."  "connect inferior 1 to native target"
+	gdb_test add-inferior "Added inferior 2 on connection 1 \\(native\\)" "add inferior 2"
+	gdb_test add-inferior "Added inferior 3 on connection 1 \\(native\\)" "add inferior 3"
+
+	gdb_breakpoint kern allow-pending
+
+	gdb_test "inferior $first_inf_num" "Switching to inferior ${first_inf_num}.*" "switch to first inferior"
+	gdb_test "file ${::binfile}" "Reading symbols from .*" "load executable in first inferior"
+	gdb_test "run" "Thread ${first_inf_num}\\..* hit Breakpoint 1, with lane 0, kern \\(\\) at .*" "run first inferior"
+
+	#
+	if { $first_inf_num < $second_inf_num } {
+	    set second_bploc "\\.2"
+	} else {
+	    set second_bploc "\\.1"
+	}
+
+	gdb_test "inferior $second_inf_num" "Switching to inferior ${second_inf_num}.*" "switch to second inferior"
+	gdb_test "file ${::binfile}" "Reading symbols from .*" "load executable in second inferior"
+	gdb_test "run" "Thread ${second_inf_num}\\..* hit Breakpoint 1${second_bploc}, with lane 0, kern \\(\\) at .*" "run second inferior"
+
+	gdb_test "continue" "Thread ${second_inf_num}\\..* hit Breakpoint 1${second_bploc}, with lane 0, kern \\(\\) at .*" "continue second inferior"
+    }
+}
+
+foreach_with_prefix first_inf {1 2 3} {
+    foreach_with_prefix second_inf {1 2 3} {
+	if { $first_inf == $second_inf } {
+	    continue
+	}
+
+	do_test $first_inf $second_inf
+    }
+}
