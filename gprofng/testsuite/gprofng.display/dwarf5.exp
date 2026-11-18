@@ -1,0 +1,86 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+#
+# This file is part of the GNU Binutils.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
+# MA 02110-1301, USA.
+#
+
+# This script tests that "gprofng display text" can attribute samples to
+# source lines for DWARF 5 debug info.  Clang emits the indexed forms
+# (DW_FORM_strx*, DW_FORM_addrx*) which are resolved through
+# .debug_str_offsets and .debug_addr; GCC does not.
+
+global srcdir CC
+set gprofng $::env(GPROFNG)
+set tdir "tmpdir/dwarf5"
+
+run_native_host_cmd "mkdir -p $tdir"
+run_native_host_cmd "cp $srcdir/lib/dwarf5test.c $tdir/t.c"
+
+# Build t.c with COMPILER and -gdwarf-5, profile it, and check that the
+# hot function has a line number and that its source file can be found.
+proc check_dwarf5 { name compiler } {
+  global gprofng tdir
+
+  set output [run_native_host_cmd "cd $tdir && \
+    $compiler -g -O0 -gdwarf-5 t.c -o $name.exe"]
+  if { [lindex $output 0] != 0 } then {
+    send_log "$compiler -gdwarf-5 failed: [lindex $output 1]\n"
+    unsupported "dwarf5 $name"
+    return
+  }
+
+  set output [run_native_host_cmd "cd $tdir && \
+    rm -rf $name.er && \
+    $gprofng collect app -p on -a off -O $name.er ./$name.exe"]
+  if { [lindex $output 0] != 0 } then {
+    send_log "Experiment is not created for $name: [lindex $output 1]\n"
+    fail "dwarf5 $name"
+    return
+  }
+
+  set output [run_native_host_cmd "$gprofng display text -lines $tdir/$name.er"]
+  set out [lindex $output 1]
+  if { ![regexp {hot_function, line [0-9]+ in "t\.c"} $out] } then {
+    send_log "No line number for hot_function in $name:\n$out\n"
+    fail "dwarf5 $name lines"
+    return
+  }
+  pass "dwarf5 $name lines"
+
+  set output [run_native_host_cmd \
+    "$gprofng display text -source hot_function $tdir/$name.er"]
+  set out [lindex $output 1]
+  if { [string first "Error:" $out] >= 0
+       || ![regexp {Source file: .*t\.c} $out]
+       || [string first "hot_function" $out] < 0 } then {
+    send_log "Source of hot_function not found for $name:\n$out\n"
+    fail "dwarf5 $name source"
+    return
+  }
+  pass "dwarf5 $name source"
+}
+
+# GCC is the control: DW_FORM_addr/line_strp, worked before.
+check_dwarf5 "gcc" $CC
+
+# Clang is the case that needs .debug_str_offsets and .debug_addr.
+set output [run_native_host_cmd "command -v clang"]
+if { [lindex $output 0] == 0 } then {
+  check_dwarf5 "clang" "clang"
+} else {
+  unsupported "dwarf5 clang"
+}
