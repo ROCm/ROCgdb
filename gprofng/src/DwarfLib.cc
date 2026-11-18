@@ -1549,6 +1549,7 @@ DwrCU::DwrCU (Dwarf *_dwarf)
   base_address = 0;
   str_offsets_base = NO_BASE;
   addr_base = NO_BASE;
+  rnglists_base = NO_BASE;
   symbols = NULL;
   symbols_sorted_by_name = NULL;
   cu_offset = dwarf->debug_infoSec->offset;
@@ -1897,6 +1898,9 @@ DwrCU::set_die (Dwarf_Die die)
 	case DW_AT_addr_base:
 	  addr_base = atf->u.offset;
 	  break;
+	case DW_AT_rnglists_base:
+	  rnglists_base = atf->u.offset;
+	  break;
 	}
       switch (at_form)
 	{
@@ -1910,6 +1914,7 @@ DwrCU::set_die (Dwarf_Die die)
 	case DW_FORM_addrx2:
 	case DW_FORM_addrx3:
 	case DW_FORM_addrx4:
+	case DW_FORM_rnglistx:
 	  if (npend < (int) (sizeof (pend) / sizeof (pend[0])))
 	    {
 	      pend[npend].k = k;
@@ -1932,6 +1937,13 @@ DwrCU::set_die (Dwarf_Die die)
 	case DW_FORM_strx3:
 	case DW_FORM_strx4:
 	  atf->u.str = get_indexed_string (atf->u.offset);  // u.offset is the index
+	  break;
+	case DW_FORM_rnglistx:
+	  // The index selects an entry of the offsets table; the range
+	  // list lives at rnglists_base + offsets[index].  If it cannot
+	  // be resolved leave u.offset unchanged so that get_ranges ()
+	  // fails gracefully with a diagnostic.
+	  atf->u.offset = get_rnglist_offset (atf->u.offset);
 	  break;
 	default:  // DW_FORM_addrx*
 	  atf->u.offset = get_indexed_addr (atf->u.offset);
@@ -2079,6 +2091,24 @@ DwrCU::get_ranges ()
 	  int ind = rng_list->ranges->bisearch (0, -1, &offset, cmp_ExtRange);
 	  if (ind == -1)
 	    {
+	      // A list whose first entry is DW_RLE_base_address /
+	      // DW_RLE_base_addressx has no ExtRange at the list start
+	      // offset, so the exact search fails: use a lower-bound
+	      // search for the first entry whose offset is >= the list
+	      // start.  The entries are in increasing offset order.
+	      long lo = 0, hi = VecSize (rng_list->ranges), mid;
+	      for (mid = (lo + hi) / 2; lo < hi; mid = (lo + hi) / 2)
+		{
+		  ExtRange *er = rng_list->ranges->get (mid);
+		  if (er->offset < offset)
+		    lo = mid + 1;
+		  else
+		    hi = mid;
+		}
+	      ind = lo;
+	    }
+	  if (ind == (long) VecSize (rng_list->ranges))
+	    {
 	      Dprintf (1, "Cannot find rnglist. DW_AT_ranges=0x%llx\n",
 		       (long long) offset);
 	      return NULL;
@@ -2087,6 +2117,32 @@ DwrCU::get_ranges ()
 	  for (long i = ind, sz = VecSize (rng_list->ranges); i < sz; i++)
 	    {
 	      ExtRange *r = rng_list->ranges->get (i);
+	      if (r->type != 0)
+		{
+		  // Operands are indexes into .debug_addr, resolved
+		  // against the CU's DW_AT_addr_base; an index that
+		  // cannot be resolved yields 0 and the entry is
+		  // skipped.  base_address is NOT added for these.
+		  uint64_t low, high;
+		  if (r->type == DW_RLE_offset_pair)
+		    {
+		      uint64_t base = get_indexed_addr (r->base_idx);
+		      if (base == 0)
+			continue;
+		      low = base + r->low;
+		      high = base + r->high;
+		    }
+		  else
+		    {
+		      low = get_indexed_addr (r->low);
+		      if (low == 0)
+			continue;
+		      high = (r->type == DW_RLE_startx_length)
+			? low + r->high : get_indexed_addr (r->high);
+		    }
+		  ranges->append (new Range (low, high));
+		  continue;
+		}
 	      if (r->high == 0)
 		break;
 	      ranges->append (new Range (r->low + base_address,
@@ -2286,6 +2342,30 @@ DwrCU::get_indexed_addr (uint64_t index)
     return 0;
   sec->offset = pos;
   return (address_size == 4) ? sec->Get_32 () : sec->Get_64 ();
+}
+
+// DW_FORM_rnglistx: index into the offsets table of the matching
+// .debug_rnglists contribution.  Returns the section offset of the range
+// list, or the raw index (so that get_ranges () reports it as
+// unresolvable) when DW_AT_rnglists_base is missing or the index is out
+// of range.
+uint64_t
+DwrCU::get_rnglist_offset (uint64_t index)
+{
+  if (rnglists_base == NO_BASE)
+    return index;
+  Vector <Dwr_rng_entry *> *rng_entrys = dwarf->get_debug_rnglists ();
+  for (long i = 0; i < VecSize (rng_entrys); i++)
+    {
+      Dwr_rng_entry *rng = rng_entrys->get (i);
+      if (rng->table_offset == rnglists_base)
+	{
+	  if (index >= (uint64_t) VecSize (rng->entry_offsets))
+	    return index;
+	  return rnglists_base + rng->entry_offsets->get (index);
+	}
+    }
+  return index;
 }
 
 uint64_t
@@ -2599,11 +2679,14 @@ DwrInlinedSubr::dump ()
 Dwr_rng_entry::Dwr_rng_entry ()
 {
   ranges = new Vector <ExtRange *>();
+  entry_offsets = new Vector <uint64_t>();
+  table_offset = 0;
 }
 
 Dwr_rng_entry::~Dwr_rng_entry ()
 {
   delete ranges;
+  delete entry_offsets;
 }
 
 void

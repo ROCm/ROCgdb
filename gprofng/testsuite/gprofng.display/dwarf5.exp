@@ -32,11 +32,11 @@ run_native_host_cmd "cp $srcdir/lib/dwarf5test.c $tdir/t.c"
 
 # Build t.c with COMPILER and -gdwarf-5, profile it, and check that the
 # hot function has a line number and that its source file can be found.
-proc check_dwarf5 { name compiler } {
+proc check_dwarf5 { name compiler {flags ""} } {
   global gprofng tdir
 
   set output [run_native_host_cmd "cd $tdir && \
-    $compiler -g -O0 -gdwarf-5 t.c -o $name.exe"]
+    $compiler -g -O0 -gdwarf-5 $flags t.c -o $name.exe"]
   if { [lindex $output 0] != 0 } then {
     send_log "$compiler -gdwarf-5 failed: [lindex $output 1]\n"
     unsupported "dwarf5 $name"
@@ -76,11 +76,16 @@ proc check_dwarf5 { name compiler } {
 
 # GCC is the control: DW_FORM_addr/line_strp, worked before.
 check_dwarf5 "gcc" $CC
+check_dwarf5 "gcc-ffs" $CC "-ffunction-sections"
 
 # Clang is the case that needs .debug_str_offsets and .debug_addr.
+# With -ffunction-sections it also emits DW_FORM_rnglistx and a
+# .debug_rnglists offsets table.
 set output [run_native_host_cmd "command -v clang"]
 if { [lindex $output 0] == 0 } then {
   check_dwarf5 "clang" "clang"
+  check_dwarf5 "clang-ffs" "clang" "-ffunction-sections"
 } else {
   unsupported "dwarf5 clang"
+  unsupported "dwarf5 clang-ffs"
 }

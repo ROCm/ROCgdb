@@ -262,11 +262,21 @@ public:
     offset = _off;
     low = _low;
     high = _high;
+    type = 0;
+    base_idx = 0;
   };
 
   uint64_t offset;
   uint64_t low;
   uint64_t high;
+  // 0 = plain range (low/high are absolute, resolved with the CU base
+  // address); otherwise the real DW_RLE_* kind of an entry resolved in
+  // DwrCU::get_ranges (): DW_RLE_startx_endx / DW_RLE_startx_length
+  // operands are indexes into .debug_addr (resolved via the CU's
+  // DW_AT_addr_base), and an offset_pair that follows a
+  // DW_RLE_base_addressx is relative to get_indexed_addr (base_idx).
+  int type;
+  uint64_t base_idx;
 };
 
 class Dwr_rng_entry
@@ -281,6 +291,12 @@ public:
   Dwarf_Small address_size;
   Dwarf_Small segment_selector_size;
   int offset_entry_count;
+  // Section offset of the first entry of the offsets table, i.e. where
+  // DW_AT_rnglists_base points; entry_offsets holds the table contents.
+  // A DW_FORM_rnglistx index i selects the list at table_offset +
+  // entry_offsets[i].
+  uint64_t table_offset;
+  Vector <uint64_t> *entry_offsets;
   uint64_t length;
   uint64_t offset;
   bool fmt64;
@@ -367,6 +383,8 @@ private:
   uint64_t base_address;        // low_pc in compile_unit
   uint64_t str_offsets_base;    // DW_AT_str_offsets_base (.debug_str_offsets)
   uint64_t addr_base;           // DW_AT_addr_base (.debug_addr)
+  uint64_t rnglists_base;       // DW_AT_rnglists_base (.debug_rnglists)
+  uint64_t get_rnglist_offset (uint64_t index);
 };
 
 #endif /* _DWARFLIB_H_ */

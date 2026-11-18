@@ -1108,6 +1108,8 @@ Dwarf::get_debug_rnglists ()
   while (debug_rnglistsSec->offset < debug_rnglistsSec->sizeSec)
     {
       uint64_t base_address = 0;
+      bool base_is_index = false;
+      uint64_t base_idx = 0;
       uint64_t length = debug_rnglistsSec->ReadLength ();
       Dwr_rng_entry *rng = new Dwr_rng_entry ();
       debug_rnglists->append (rng);
@@ -1118,6 +1120,18 @@ Dwarf::get_debug_rnglists ()
       rng->address_size = debug_rnglistsSec->Get_8 ();
       rng->segment_selector_size = debug_rnglistsSec->Get_8 ();
       rng->offset_entry_count = debug_rnglistsSec->Get_32 ();
+      // Clang emits an offsets table right after the header when it uses
+      // DW_FORM_rnglistx.  Record where it starts (that is what
+      // DW_AT_rnglists_base points at) and skip over it before parsing the
+      // range lists; indexes into the table select the list at
+      // table_offset + entry_offsets[i].
+      rng->table_offset = debug_rnglistsSec->offset;
+      unsigned off_sz = rng->fmt64 ? 8 : 4;
+      for (int i = 0;
+	   i < rng->offset_entry_count
+	     && debug_rnglistsSec->offset + off_sz <= debug_rnglistsSec->size;
+	   i++)
+	rng->entry_offsets->append (debug_rnglistsSec->GetLong ());
       while (debug_rnglistsSec->offset < debug_rnglistsSec->size)
 	{
 	  uint64_t off = debug_rnglistsSec->offset;
@@ -1132,6 +1146,7 @@ Dwarf::get_debug_rnglists ()
 	      break;
 	    case DW_RLE_base_address:
 	      base_address = debug_rnglistsSec->GetADDR ();
+	      base_is_index = false;
 	      low_pc = base_address;
 	      high_pc = 0;
 	      continue;
@@ -1140,6 +1155,15 @@ Dwarf::get_debug_rnglists ()
 	      high_pc = low_pc + debug_rnglistsSec->GetULEB128 ();
 	      break;
 	    case DW_RLE_offset_pair:
+	      // An offset_pair following a DW_RLE_base_addressx is relative
+	      // to the indexed base; it is resolved in DwrCU::get_ranges ()
+	      // against the CU's DW_AT_addr_base.
+	      if (base_is_index)
+		{
+		  low_pc = debug_rnglistsSec->GetULEB128 ();
+		  high_pc = debug_rnglistsSec->GetULEB128 ();
+		  break;
+		}
 	      low_pc = base_address + debug_rnglistsSec->GetULEB128 ();
 	      high_pc = base_address + debug_rnglistsSec->GetULEB128 ();
 	      break;
@@ -1148,22 +1172,17 @@ Dwarf::get_debug_rnglists ()
 	      high_pc = debug_rnglistsSec->GetADDR ();
 	      break;
 	    case DW_RLE_base_addressx:
-	      base_address = debug_rnglistsSec->GetULEB128 ();
-	      low_pc = base_address;
-	      high_pc = 0;
+	      base_is_index = true;
+	      base_idx = debug_rnglistsSec->GetULEB128 ();
 	      continue;
-
-	      // TODO x-variants need .debug_addr support used for split-dwarf
 	    case DW_RLE_startx_endx:
-	      low_pc = debug_rnglistsSec->GetRef ();
-	      high_pc = debug_rnglistsSec->GetRef ();
-	      Dprintf (1, "DW_RLE_startx_endx is not implemented\n");
-	      continue;
+	      low_pc = debug_rnglistsSec->GetULEB128 ();
+	      high_pc = debug_rnglistsSec->GetULEB128 ();
+	      break;
 	    case DW_RLE_startx_length:
-	      low_pc = debug_rnglistsSec->GetRef ();
-	      high_pc = low_pc + debug_rnglistsSec->GetULEB128 ();
-	      Dprintf (1, "DW_RLE_startx_length is not implemented\n");
-	      continue;
+	      low_pc = debug_rnglistsSec->GetULEB128 ();
+	      high_pc = debug_rnglistsSec->GetULEB128 ();
+	      break;
 	    default:
 	      Dprintf (1, "Unknown tag DW_RLE: %d, offset=0x%llx\n", re,
 		       (long long) off);
@@ -1173,7 +1192,19 @@ Dwarf::get_debug_rnglists ()
 	  Dprintf (DUMP_DWARFLIB, "0x%08llx %d-%-20s [0x%08llx - 0x%08llx)\n",
 		   (long long) off, re, Dwr_rng_entry::rng_entry2str (re),
 		   (long long) low_pc, (long long) high_pc);
-	  rng->ranges->append (new ExtRange (off, low_pc, high_pc));
+	  ExtRange *er = new ExtRange (off, low_pc, high_pc);
+	  if (re == DW_RLE_startx_endx || re == DW_RLE_startx_length
+	      || (re == DW_RLE_offset_pair && base_is_index))
+	    {
+	      // Operands are indexes into .debug_addr, resolved for each
+	      // CU against its DW_AT_addr_base in DwrCU::get_ranges ().
+	      // An offset_pair after a base_addressx carries the base
+	      // index so the base address can be added later.
+	      er->type = re;
+	      if (re == DW_RLE_offset_pair)
+		er->base_idx = base_idx;
+	    }
+	  rng->ranges->append (er);
 	}
       debug_rnglistsSec->size = debug_rnglistsSec->sizeSec;
       debug_rnglistsSec->offset = length;
