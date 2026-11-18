@@ -29,9 +29,12 @@ set tdir "tmpdir/dwarf5"
 
 run_native_host_cmd "mkdir -p $tdir"
 run_native_host_cmd "cp $srcdir/lib/dwarf5test.c $tdir/t.c"
+run_native_host_cmd "cp $srcdir/lib/dwarf5decl.h $tdir/dwarf5decl.h"
 
 # Build t.c with COMPILER and -gdwarf-5, profile it, and check that the
 # hot function has a line number and that its source file can be found.
+# hot_function inlines a function from dwarf5decl.h; Clang describes
+# hot_function itself with DW_AT_decl_file 0 (the primary file in DWARF 5).
 proc check_dwarf5 { name compiler {flags ""} } {
   global gprofng tdir
 

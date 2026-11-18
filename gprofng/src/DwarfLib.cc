@@ -2200,16 +2200,30 @@ DwrCU::set_source (Function *func)
   int lineno = (int) Dwarf_data (DW_AT_decl_line);
   func->setLineFirst (lineno);
 
-  int fileno = (int) Dwarf_data (DW_AT_decl_file);
-  func->setDefSrc (get_source (fileno));
+  func->setDefSrc (get_decl_source ());
 }
 
 SourceFile *
 DwrCU::get_source (int fileno)
 {
-  if (fileno > 0 && fileno < VecSize (srcFiles))
+  // File numbers start at 1 in the line number programs before DWARF 5, and
+  // 0 means "no file".  In DWARF 5 they start at 0 and entry 0 is the
+  // primary source file; Clang uses DW_AT_decl_file 0 for entities declared
+  // in it.
+  int first = (dwrLineReg && dwrLineReg->get_version () >= 5) ? 0 : 1;
+  if (fileno >= first && fileno < VecSize (srcFiles))
     return srcFiles->get (fileno);
   return NULL;
+}
+
+// The source file named by DW_AT_decl_file of the current DIE, or NULL if
+// the DIE has none (so that callers can look at the declaration instead).
+SourceFile *
+DwrCU::get_decl_source ()
+{
+  if (dwrTag.get_attr (DW_AT_decl_file) == NULL)
+    return NULL;
+  return get_source ((int) Dwarf_data (DW_AT_decl_file));
 }
 
 void
@@ -2218,7 +2232,7 @@ DwrCU::inherit_prop (int64_t offset, source_t *src)
   if (src->lineno == 0)
     src->lineno = (int) Dwarf_data (DW_AT_decl_line);
   if (src->sf == NULL)
-    src->sf = get_source ((int) Dwarf_data (DW_AT_decl_file));
+    src->sf = get_decl_source ();
 
   int64_t old_offset = dwrTag.offset;
   if (set_die (offset) == DW_DLV_OK)
@@ -2226,7 +2240,7 @@ DwrCU::inherit_prop (int64_t offset, source_t *src)
       if (src->lineno == 0)
 	src->lineno = (int) Dwarf_data (DW_AT_decl_line);
       if (src->sf == NULL)
-	src->sf = get_source ((int) Dwarf_data (DW_AT_decl_file));
+	src->sf = get_decl_source ();
 
       Dwr_Attr *dwrAttr = dwrTag.get_attr (DW_AT_specification);
       if (dwrAttr)
@@ -2283,7 +2297,7 @@ DwrCU::find_declaration (int64_t offset, source_t *src)
       if (src->lineno == 0)
 	src->lineno = (int) Dwarf_data (DW_AT_decl_line);
       if (src->sf == NULL)
-	src->sf = get_source ((int) Dwarf_data (DW_AT_decl_file));
+	src->sf = get_decl_source ();
 
       sym = Symbol::get_symbol (symbols_sorted_by_name, get_linkage_name ());
       if (sym && sym->func == NULL)

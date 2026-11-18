@@ -135,6 +135,7 @@ public:
   char *getPath (int fn);
   Vector<DwrLine *> *get_lines ();
   void dump ();
+  Dwarf_Half get_version () { return version; }
 
   Vector<DwrFileName *> *file_names;
 
@@ -344,6 +345,7 @@ private:
   void update_source (Symbol *sym, source_t *prop);
   Symbol *find_declaration (int64_t offset, source_t *prop);
   SourceFile *get_source (int fileno);
+  SourceFile *get_decl_source ();
   Vector<Symbol *> *get_symbols (Vector<Symbol *> *syms = NULL);
   Vector <Range *> *get_ranges();
   void set_source (Function *func);

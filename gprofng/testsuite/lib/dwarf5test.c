@@ -1,7 +1,9 @@
-/* Test program for dwarf5.exp: one hot function that runs for about a second,
-   so that the profile has samples attributed to a known source line.  */
+/* Test program for dwarf5.exp: the hot function is declared in this file and
+   inlines code from dwarf5decl.h.  Clang describes such a function with
+   DW_AT_decl_file 0, the primary source file of the DWARF 5 file table.  */
 #include <stdio.h>
 #include <time.h>
+#include "dwarf5decl.h"
 
 typedef long long hrtime_t;
 
@@ -27,7 +29,7 @@ __attribute__ ((noinline)) void
 hot_function (void)
 {
   for (int j = 0; j < 1000000; j++)
-    x = x + 1;
+    x = step (x);
 }
 
 int
