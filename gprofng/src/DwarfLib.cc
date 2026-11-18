@@ -32,6 +32,7 @@
 #include "Symbol.h"
 
 #define NO_STMT_LIST ((uint64_t) -1)
+#define NO_BASE ((uint64_t) -1)
 #define CASE_S(x)   case x: s = (char *) #x; break
 
 static char *
@@ -745,6 +746,7 @@ Dwr_Tag::dump ()
 	case DW_FORM_line_strp:
 	case DW_FORM_GNU_strp_alt:
 	case DW_FORM_strp_sup:
+	case DW_FORM_strx:
 	case DW_FORM_strx1:
 	case DW_FORM_strx2:
 	case DW_FORM_strx3:
@@ -1545,6 +1547,8 @@ DwrCU::DwrCU (Dwarf *_dwarf)
   rng_list = NULL;
   rng_list_inited = false;
   base_address = 0;
+  str_offsets_base = NO_BASE;
+  addr_base = NO_BASE;
   symbols = NULL;
   symbols_sorted_by_name = NULL;
   cu_offset = dwarf->debug_infoSec->offset;
@@ -1718,6 +1722,11 @@ DwrCU::set_die (Dwarf_Die die)
   dwrTag.hasChild = abbTbl->hasChild;
   dwrTag.firstAttribute = abbTbl->firstAtForm;
   dwrTag.lastAttribute = abbTbl->lastAtForm;
+  // Indexed forms (DW_FORM_strx*, DW_FORM_addrx*) hold an index that can only be
+  // resolved once DW_AT_str_offsets_base / DW_AT_addr_base are known. Clang emits
+  // them AFTER the attributes that use them, so resolve after the whole DIE is read.
+  struct { int k; int form; } pend[64];
+  int npend = 0;
   for (int k = abbTbl->firstAtForm; k < abbTbl->lastAtForm; k++)
     {
       Dwr_Attr *atf = abbrevAtForm->get (k);
@@ -1828,23 +1837,18 @@ DwrCU::set_die (Dwarf_Die die)
 	  break;
 	case DW_FORM_strx:
 	  atf->u.offset = debug_infoSec->GetULEB128 ();
-	  atf->u.str = get_string (dwarf->debug_strSec, atf->u.offset);
 	  break;
 	case DW_FORM_strx1:
 	  atf->u.offset = debug_infoSec->Get_8 ();
-	  atf->u.str = get_string (dwarf->debug_strSec, atf->u.offset);
 	  break;
 	case DW_FORM_strx2:
 	  atf->u.offset = debug_infoSec->Get_16 ();
-	  atf->u.str = get_string (dwarf->debug_strSec, atf->u.offset);
 	  break;
 	case DW_FORM_strx3:
 	  atf->u.offset = debug_infoSec->Get_24 ();
-	  atf->u.str = get_string (dwarf->debug_strSec, atf->u.offset);
 	  break;
 	case DW_FORM_strx4:
 	  atf->u.offset = debug_infoSec->Get_32 ();
-	  atf->u.str = get_string (dwarf->debug_strSec, atf->u.offset);
 	  break;
 	case DW_FORM_addrx1:
 	  atf->u.offset = debug_infoSec->Get_8 ();
@@ -1883,6 +1887,54 @@ DwrCU::set_die (Dwarf_Die die)
 	  }
 	  atf->u.str = NULL;
 	  atf->len = 0;
+	  break;
+	}
+      switch (atf->at_name)
+	{
+	case DW_AT_str_offsets_base:
+	  str_offsets_base = atf->u.offset;
+	  break;
+	case DW_AT_addr_base:
+	  addr_base = atf->u.offset;
+	  break;
+	}
+      switch (at_form)
+	{
+	case DW_FORM_strx:
+	case DW_FORM_strx1:
+	case DW_FORM_strx2:
+	case DW_FORM_strx3:
+	case DW_FORM_strx4:
+	case DW_FORM_addrx:
+	case DW_FORM_addrx1:
+	case DW_FORM_addrx2:
+	case DW_FORM_addrx3:
+	case DW_FORM_addrx4:
+	  if (npend < (int) (sizeof (pend) / sizeof (pend[0])))
+	    {
+	      pend[npend].k = k;
+	      pend[npend].form = at_form;
+	      npend++;
+	    }
+	  else
+	    atf->u.offset = 0;  // too many indexed attributes: leave unresolved
+	  break;
+	}
+    }
+  for (int i = 0; i < npend; i++)
+    {
+      Dwr_Attr *atf = abbrevAtForm->get (pend[i].k);
+      switch (pend[i].form)
+	{
+	case DW_FORM_strx:
+	case DW_FORM_strx1:
+	case DW_FORM_strx2:
+	case DW_FORM_strx3:
+	case DW_FORM_strx4:
+	  atf->u.str = get_indexed_string (atf->u.offset);  // u.offset is the index
+	  break;
+	default:  // DW_FORM_addrx*
+	  atf->u.offset = get_indexed_addr (atf->u.offset);
 	  break;
 	}
     }
@@ -2204,6 +2256,38 @@ DwrCU::Dwarf_string (Dwarf_Half attr)
   return dwrAttr ? dwrAttr->u.str : NULL;
 }
 
+// DW_FORM_strx*: index into .debug_str_offsets (relative to DW_AT_str_offsets_base),
+// whose entry is an offset into .debug_str. Returns NULL if it cannot be resolved.
+char *
+DwrCU::get_indexed_string (uint64_t index)
+{
+  DwrSec *sec = dwarf->debug_str_offsetsSec;
+  if (sec == NULL || str_offsets_base == NO_BASE)
+    return NULL;
+  unsigned sz = debug_infoSec->fmt64 ? 8 : 4;
+  uint64_t pos = str_offsets_base + index * sz;
+  if (index > sec->sizeSec || pos + sz > sec->sizeSec)
+    return NULL;
+  sec->offset = pos;
+  uint64_t off = (sz == 8) ? sec->Get_64 () : sec->Get_32 ();
+  return get_string (dwarf->debug_strSec, off);
+}
+
+// DW_FORM_addrx*: index into .debug_addr (relative to DW_AT_addr_base).
+// Returns 0 if it cannot be resolved.
+uint64_t
+DwrCU::get_indexed_addr (uint64_t index)
+{
+  DwrSec *sec = dwarf->debug_addrSec;
+  if (sec == NULL || addr_base == NO_BASE || (address_size != 4 && address_size != 8))
+    return 0;
+  uint64_t pos = addr_base + index * address_size;
+  if (index > sec->sizeSec || pos + address_size > sec->sizeSec)
+    return 0;
+  sec->offset = pos;
+  return (address_size == 4) ? sec->Get_32 () : sec->Get_64 ();
+}
+
 uint64_t
 DwrCU::get_high_pc (uint64_t low_pc)
 {
@@ -2212,6 +2296,11 @@ DwrCU::get_high_pc (uint64_t low_pc)
     switch (dwrAttr->at_form)
       {
       case DW_FORM_addr:
+      case DW_FORM_addrx:
+      case DW_FORM_addrx1:
+      case DW_FORM_addrx2:
+      case DW_FORM_addrx3:
+      case DW_FORM_addrx4:
 	return dwrAttr->u.offset;
       default:
 	return dwrAttr->u.offset + low_pc;
@@ -2227,7 +2316,12 @@ DwrCU::Dwarf_addr (Dwarf_Half attr)
     switch (dwrAttr->at_form)
       {
       case DW_FORM_addr:
-	return dwrAttr->u.offset;
+      case DW_FORM_addrx:
+      case DW_FORM_addrx1:
+      case DW_FORM_addrx2:
+      case DW_FORM_addrx3:
+      case DW_FORM_addrx4:
+	return dwrAttr->u.offset;  // addrx*: already resolved by set_die
       }
   return 0;
 }

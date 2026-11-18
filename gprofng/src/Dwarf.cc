@@ -371,6 +371,8 @@ Dwarf::Dwarf (Stabs *_stabs)
   debug_alt_strSec = NULL;
   debug_lineSec = NULL;
   debug_line_strSec = NULL;
+  debug_str_offsetsSec = NULL;
+  debug_addrSec = NULL;
   debug_rangesSec = NULL;
   elf = stabs->openElf (true);
   if (elf == NULL)
@@ -384,6 +386,8 @@ Dwarf::Dwarf (Stabs *_stabs)
   debug_lineSec = dwrGetSec (NTXT (".debug_line"));
   debug_rangesSec = dwrGetSec (NTXT (".debug_ranges"));
   debug_line_strSec = dwrGetSec (".debug_line_str");
+  debug_str_offsetsSec = dwrGetSec (".debug_str_offsets");
+  debug_addrSec = dwrGetSec (".debug_addr");
   debug_rnglists = NULL;
   if (elf->gnu_debugalt_file)
     debug_alt_strSec = elf->gnu_debugalt_file->get_dwr_section (".debug_str");

@@ -343,6 +343,8 @@ private:
   int64_t Dwarf_ref (Dwarf_Half attr);
   DwrSec *Dwarf_block (Dwarf_Half attr);
   Dwarf_Addr Dwarf_addr (Dwarf_Half attr);
+  char *get_indexed_string (uint64_t index);
+  uint64_t get_indexed_addr (uint64_t index);
   Dwarf_Addr Dwarf_location (Dwarf_Attribute attr);
   Sp_lang_code Dwarf_lang ();
 
@@ -363,6 +365,8 @@ private:
   Dwr_rng_entry *rng_list;        // entry in the .debug_rnglists section
   bool rng_list_inited;
   uint64_t base_address;        // low_pc in compile_unit
+  uint64_t str_offsets_base;    // DW_AT_str_offsets_base (.debug_str_offsets)
+  uint64_t addr_base;           // DW_AT_addr_base (.debug_addr)
 };
 
 #endif /* _DWARFLIB_H_ */

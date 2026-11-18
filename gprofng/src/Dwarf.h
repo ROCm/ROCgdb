@@ -81,6 +81,8 @@ public:
   DwrSec *debug_alt_strSec;
   DwrSec *debug_lineSec;
   DwrSec *debug_line_strSec;
+  DwrSec *debug_str_offsetsSec;
+  DwrSec *debug_addrSec;
   DwrSec *debug_rangesSec;
   Elf *elf;
   Stabs *stabs;
