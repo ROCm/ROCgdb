@@ -1536,7 +1536,10 @@ eval_op_rust_array (struct type *expect_type, struct expression *exp,
     error (_("Array with negative number of elements"));
 
   if (noside == EVAL_NORMAL && copies > 0)
-    return value_array (0, std::vector<value *> (copies, elt));
+    {
+      std::vector<value *> elements (copies, elt);
+      return value_array (0, elements);
+    }
   else
     {
       struct type *arraytype

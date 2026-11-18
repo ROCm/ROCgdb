@@ -138,6 +138,12 @@ public:
     : m_array (array), m_size (Size)
   {}
 
+  template<typename U,
+	   typename = Requires<DecayedConvertible<U>>>
+  constexpr span (const span<U> &other) noexcept
+    : m_array (other.data ()), m_size (other.size ())
+  {}
+
   /* Create a span from a contiguous container.  E.g.,
      std::vector and std::array.  */
   template<typename Container,
@@ -150,7 +156,13 @@ public:
 	   typename
 	     = Requires<std::is_convertible
 			<decltype (std::declval<Container> ().size ()),
-			 size_type>>>
+			 size_type>>,
+	   /* A span can only be constructed from an lvalue container;
+	      however a span with const element type can be
+	      constructed from an rvalue container.  */
+	   typename
+	     = Requires<Or<std::is_lvalue_reference<Container>,
+			   std::is_const<T>>>>
   constexpr span (Container &&c) noexcept
     : m_array (c.data ()), m_size (c.size ())
   {}

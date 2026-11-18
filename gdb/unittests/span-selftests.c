@@ -108,13 +108,13 @@ template<template<typename ...> class Container>
 static constexpr bool
 check_ctor_from_container ()
 {
-  static_assert ( is_convertible <Container<A>, span<A>> ());
-  static_assert (!is_convertible <Container<B>, span<A>> ());
-  static_assert (!is_convertible <Container<C>, span<A>> ());
+  static_assert ( is_convertible <Container<A> &, span<A>> ());
+  static_assert (!is_convertible <Container<B> &, span<A>> ());
+  static_assert (!is_convertible <Container<C> &, span<A>> ());
 
-  static_assert (!is_convertible <Container<A>, span<B>> ());
-  static_assert ( is_convertible <Container<B>, span<B>> ());
-  static_assert (!is_convertible <Container<C>, span<B>> ());
+  static_assert (!is_convertible <Container<A> &, span<B>> ());
+  static_assert ( is_convertible <Container<B> &, span<B>> ());
+  static_assert (!is_convertible <Container<C> &, span<B>> ());
 
   return true;
 }
@@ -138,8 +138,13 @@ using T = gdb_byte;
 
 /* Note there's no such thing as std::vector<const T>.  */
 
-static_assert (is_convertible <std::vector<T>, span<T>> ());
+static_assert (is_convertible <std::vector<T> &, span<T>> ());
+static_assert (is_convertible <std::vector<T> &, span<const T>> ());
 static_assert (is_convertible <std::vector<T>, span<const T>> ());
+
+/* It's not ok to convert from an rvalue vector.  */
+
+static_assert (!is_convertible <std::vector<T>, span<T>> ());
 
 } /* namespace convertible_from_std_vector */
 
@@ -152,8 +157,8 @@ using T = gdb_byte;
 
 /* Note: a non-const T view can't refer to a const T array.  */
 
-static_assert ( is_convertible <std::array<T, 1>,	span<T>> ());
-static_assert ( is_convertible <std::array<T, 1>,	span<const T>> ());
+static_assert ( is_convertible <std::array<T, 1> &,	span<T>> ());
+static_assert ( is_convertible <std::array<T, 1> &,	span<const T>> ());
 static_assert (!is_convertible <std::array<const T, 1>,	span<T>> ());
 static_assert ( is_convertible <std::array<const T, 1>,	span<const T>> ());
 
@@ -422,12 +427,8 @@ run_tests ()
 
     view = vec;
     SELF_CHECK (check_container_view (view, vec));
-    view = std::move (vec);
-    SELF_CHECK (check_container_view (view, vec));
 
     view = array;
-    SELF_CHECK (check_container_view (view, array));
-    view = std::move (array);
     SELF_CHECK (check_container_view (view, array));
 
     gdb_byte elem = 0;
