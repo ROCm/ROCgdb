@@ -169,23 +169,6 @@ struct parser_state *pstate;
 
 struct ada_parse_state *ada_parser;
 
-/* Copy S2 to S1, removing all underscores, and downcasing all
-   letters.  Stops at END.  */
-
-static void
-canonicalize_numeral (char *s1, const char *s2, const char *end)
-{
-  for (; s2 != end; s2 += 1)
-    {
-      if (*s2 != '_')
-	{
-	  *s1 = c_tolower(*s2);
-	  s1 += 1;
-	}
-    }
-  s1[0] = '\000';
-}
-
 /* See ada-exp-parser.h.  */
 
 int
@@ -478,7 +461,14 @@ ada_parse_state::lex_number ()
 
   char *numbuf = (char *) obstack_alloc (&temp_space,
 					 pstate->lexptr - num_start);
-  canonicalize_numeral (numbuf, num_start, pstate->lexptr);
+  /* Canonicalize the number, copying it into NUMBUF.  */
+  char *out_iter = numbuf;
+  for (const char *iter = num_start; iter != pstate->lexptr; ++iter)
+    {
+      if (*iter != '_')
+	*out_iter++ = c_tolower (*iter);
+    }
+  *out_iter = '\0';
 
   if (subexps[HEX_NUMBER].rm_so != -1)
     return process_int ("16#", numbuf + 2, nullptr);
@@ -495,11 +485,10 @@ ada_parse_state::lex_number ()
       char *e_ptr = nullptr;
       if (subexps[EXPONENT].rm_so != -1)
 	{
-	  /* We can't use the 'rm_so' here because
-	     canonicalize_numeral might have removed some underscores.
-	     But we know the 'e' appears after the '#' so we can
-	     search for it and not get one of the (possibly hex)
-	     numerals.  */
+	  /* We can't use the 'rm_so' here because canonicalization
+	     might have removed some underscores.  But we know the 'e'
+	     appears after the '#' so we can search for it and not get
+	     one of the (possibly hex) numerals.  */
 	  e_ptr = strrchr (numbuf, 'e');
 	  gdb_assert (e_ptr != nullptr);
 	  *e_ptr = '\0';
