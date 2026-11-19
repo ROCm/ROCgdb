@@ -476,8 +476,8 @@ ada_parse_state::lex_number ()
 
   pstate->lexptr += subexps[0].rm_eo;
 
-#define NUMERAL_WIDTH 256
-  char numbuf[NUMERAL_WIDTH];
+  char *numbuf = (char *) obstack_alloc (&temp_space,
+					 pstate->lexptr - num_start);
   if (subexps[HEX_NUMBER].rm_so != -1)
     {
       canonicalize_numeral (numbuf, num_start + 2, pstate->lexptr);
