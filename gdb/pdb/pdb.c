@@ -3327,6 +3327,18 @@ test_tpi::procedure (uint32_t ret, uint32_t arglist, uint16_t count)
 
 /* See pdb-internal.h.  */
 
+uint32_t
+test_tpi::pointer (uint32_t target)
+{
+  /* A 64-bit near pointer of 8 bytes.  */
+  gdb::byte_vector body;
+  append_le (body, target, 4);
+  append_le (body, CV_PTRTYPE_64 | (8 << LF_POINTER_ATTR_SIZE_SHIFT), 4);
+  return add (LF_POINTER, body);
+}
+
+/* See pdb-internal.h.  */
+
 gdb::byte_vector
 test_tpi::stream () const
 {

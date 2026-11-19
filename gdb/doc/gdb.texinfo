@@ -21216,6 +21216,12 @@ checksum kind and value.
 @item maint info pdb-lines @r{[}path=@var{pdb-path}@r{]} @r{[}modi=@var{n}@r{]}
 The C13 line tables: section and offset ranges and their lines.
 
+@kindex maint info pdb-types
+@item maint info pdb-types @r{[}path=@var{pdb-path}@r{]} @r{[}kind=@var{leaf}@r{]}
+The TPI type records, each with the type indices it refers to.
+@samp{kind=@var{leaf}}, such as @samp{kind=LF_STRUCTURE}, lists only
+records of that kind.
+
 @kindex set always-read-ctf @r{[}on@r{|}off@r{]}
 @kindex show always-read-ctf
 @cindex always-read-ctf

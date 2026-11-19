@@ -60,12 +60,28 @@ struct pdb_scope_frame
    innermost last.  */
 using pdb_scope_stack = std::vector<pdb_scope_frame>;
 
+/* Return the little-endian 64-bit value at P.  */
+
+inline uint64_t
+read_u64 (const void *p)
+{
+  return bfd_getl64 (p);
+}
+
 /* Return the little-endian 32-bit value at P.  */
 
 inline uint32_t
 read_u32 (const void *p)
 {
   return bfd_getl32 (p);
+}
+
+/* Return the little-endian signed 32-bit value at P.  */
+
+inline int32_t
+read_i32 (const void *p)
+{
+  return static_cast<int32_t> (bfd_getl_signed_32 (p));
 }
 
 /* Return the little-endian 16-bit value at P.  */
@@ -76,12 +92,26 @@ read_u16 (const void *p)
   return bfd_getl16 (p);
 }
 
+/* Return the little-endian signed 16-bit value at P.  */
+
+inline int16_t
+read_i16 (const void *p)
+{
+  return static_cast<int16_t> (bfd_getl_signed_16 (p));
+}
+
 /* Return the byte at P.  */
 
 inline uint8_t
 read_u8 (const void *p)
 {
   return *static_cast<const uint8_t *> (p);
+}
+
+inline int8_t
+read_i8 (const void *p)
+{
+  return *static_cast<const int8_t *> (p);
 }
 
 /* Round a ULONGEST value up to the next N-byte boundary.  */
@@ -1276,15 +1306,48 @@ inline constexpr auto PDB_SYMBOL_VAR_NAME_OFFS = 10;
 inline constexpr auto LF_VTSHAPE = 0x000a;
 /* Label type.  */
 inline constexpr auto LF_LABEL = 0x000e;
+/* modifier (const, volatile).  */
+inline constexpr auto LF_MODIFIER = 0x1001;
+/* Pointer to another type.  */
+inline constexpr auto LF_POINTER = 0x1002;
 
 /* Procedure type.  */
 inline constexpr auto LF_PROCEDURE = 0x1008;
+/* Member function type.  */
+inline constexpr auto LF_MFUNCTION = 0x1009;
 /* Argument list for procedures.  */
 inline constexpr auto LF_ARGLIST = 0x1201;
 /* Field list for structs/classes.  */
 inline constexpr auto LF_FIELDLIST = 0x1203;
+/* Bit field.  */
+inline constexpr auto LF_BITFIELD = 0x1205;
 /* Method overload list.  */
 inline constexpr auto LF_METHODLIST = 0x1206;
+/* Array type.  */
+inline constexpr auto LF_ARRAY = 0x1503;
+/* Class type.  */
+inline constexpr auto LF_CLASS = 0x1504;
+/* Structure type.  */
+inline constexpr auto LF_STRUCTURE = 0x1505;
+/* Union type.  */
+inline constexpr auto LF_UNION = 0x1506;
+/* Enumeration type.  */
+inline constexpr auto LF_ENUM = 0x1507;
+/* Interface type.  */
+inline constexpr auto LF_INTERFACE = 0x1519;
+/* Numeric leaf encoding values.  These are prefix tags for variable-length
+   integers embedded inside type records (struct sizes, member offsets,
+   enum values).  See pdb_cv_read_numeric().  */
+inline constexpr auto LF_NUMERIC = 0x8000;
+inline constexpr auto LF_CHAR = 0x8000;
+inline constexpr auto LF_SHORT = 0x8001;
+inline constexpr auto LF_USHORT = 0x8002;
+inline constexpr auto LF_LONG = 0x8003;
+inline constexpr auto LF_ULONG = 0x8004;
+inline constexpr auto LF_QUADWORD = 0x8009;
+inline constexpr auto LF_UQUADWORD = 0x800a;
+/* Forward reference.  */
+inline constexpr auto CV_PROP_FWDREF = 0x0080;
 
 /* LF_PROCEDURE payload (after RecordKind).
        uint32_t rvtype      return type index
@@ -1298,8 +1361,128 @@ inline constexpr auto LF_PROC_ARGLIST_OFFS = 8;
 /* Minimum record data size.  */
 inline constexpr auto LF_PROC_SIZE = 12;
 
+/* LF_MFUNCTION payload (after RecordKind).
+       uint32_t rvtype       return type index
+       uint32_t classtype    containing class type index
+       uint32_t thistype     this pointer type index
+       uint8_t  calltype     calling convention (CV_call_e)
+       uint8_t  funcattr     attributes (unused)
+       uint16_t parmcount    number of parameters
+       uint32_t arglist      type index of argument list
+       int32_t  thisadjust   this adjuster (unused)  */
+inline constexpr auto LF_MFUNC_RVTYPE_OFFS = 0;
+inline constexpr auto LF_MFUNC_CLASSTYPE_OFFS = 4;
+inline constexpr auto LF_MFUNC_THISTYPE_OFFS = 8;
+inline constexpr auto LF_MFUNC_ARGLIST_OFFS = 16;
+/* Minimum record data size.  */
+inline constexpr auto LF_MFUNC_SIZE = 24;
+
 /* CV_call_e value for the platform's ordinary C calling convention.  */
 inline constexpr uint8_t CV_CALL_NEAR_C = 0x00;
+
+/* LF_CLASS / LF_STRUCTURE field offsets.
+       uint16_t count          number of members
+       uint16_t property       CV_prop_t flags (bit 7 = fwdref)
+       uint32_t field_list     type index of LF_FIELDLIST
+       uint32_t derived        type index of derived-from list
+       uint32_t vshape         type index of vshape table
+       numeric  size           structure byte size (variable length)
+       char[]   name           null-terminated name follows size
+       [char[] unique_name]    present when property bit 9 is set.  */
+inline constexpr auto LF_STRUCT_PROPERTY_OFFS = 2;
+inline constexpr auto LF_STRUCT_FIELDLIST_OFFS = 4;
+/* Numeric leaf/name start.  */
+inline constexpr auto LF_STRUCT_DATA_OFFS = 16;
+inline constexpr auto LF_STRUCT_MIN_SIZE = 16;
+
+/* LF_UNION field offsets.
+       uint16_t count
+       uint16_t property
+       uint32_t field_list
+       numeric  size            union byte size (variable length)
+       char[]   name            null-terminated name follows size
+       [char[] unique_name]     present when property bit 9 is set.  */
+inline constexpr auto LF_UNION_PROPERTY_OFFS = 2;
+inline constexpr auto LF_UNION_FIELDLIST_OFFS = 4;
+inline constexpr auto LF_UNION_DATA_OFFS = 8;
+inline constexpr auto LF_UNION_MIN_SIZE = 8;
+
+/* LF_ENUM field offsets.
+       uint16_t count          number of enumerators
+       uint16_t property       CV_prop_t flags
+       uint32_t utype          underlying integer type index
+       uint32_t field_list     type index of LF_FIELDLIST
+       char[]   name           null-terminated name
+       [char[] unique_name]    present when property bit 9 is set.  */
+inline constexpr auto LF_ENUM_PROPERTY_OFFS = 2;
+inline constexpr auto LF_ENUM_UTYPE_OFFS = 4;
+inline constexpr auto LF_ENUM_FIELDLIST_OFFS = 8;
+inline constexpr auto LF_ENUM_NAME_OFFS = 12;
+inline constexpr auto LF_ENUM_MIN_SIZE = 12;
+
+/* LF_MODIFIER sub-record layout.
+       uint32_t type          modified type index
+       uint16_t attr          CV_modifier_e flags.  */
+inline constexpr auto LF_MOD_TYPE_OFFS = 0;
+inline constexpr auto LF_MOD_ATTR_OFFS = 4;
+/* Minimum record data size.  */
+inline constexpr auto LF_MOD_SIZE = 6;
+
+/* LF_POINTER sub-record layout.
+       uint32_t utype         underlying type index
+       uint32_t attr          packed CV_pointer_attr bitfield.
+     A pointer to member (pmem / pmfunc) has two more fields:
+       uint32_t pmclass       containing class type index
+       uint16_t pmenum        member-pointer representation (not read).  */
+inline constexpr auto LF_POINTER_UTYPE_OFFS = 0;
+inline constexpr auto LF_POINTER_ATTR_OFFS = 4;
+/* Minimum record data size.  */
+inline constexpr auto LF_POINTER_SIZE = 8;
+/* Containing-class type index of a pointer to member.  */
+inline constexpr auto LF_POINTER_PMCLASS_OFFS = 8;
+
+/* LF_POINTER attribute bitfield (uint32_t at LF_POINTER_ATTR_OFFS).
+   Bit layout (little-endian):
+     bits  0- 4 : ptrtype     (CV_ptrtype_e)
+     bits  5- 7 : ptrmode     (CV_ptrmode_e)
+     bit      8 : isflat32
+     bit      9 : isvolatile
+     bit     10 : isconst
+     bit     11 : isunaligned
+     bit     12 : isrestrict
+     bits 13-18 : size        (pointer size in bytes)
+     bit     19 : ismocom
+     bit     20 : islref
+     bit     21 : isrref
+     bits 22-31 : unused.  */
+inline constexpr uint32_t LF_POINTER_ATTR_PTRTYPE_MASK = 0x1F;
+inline constexpr uint32_t LF_POINTER_ATTR_PTRMODE_SHIFT = 5;
+inline constexpr uint32_t LF_POINTER_ATTR_PTRMODE_MASK = 0x7;
+inline constexpr uint32_t LF_POINTER_ATTR_ISVOLATILE = 1u << 9;
+inline constexpr uint32_t LF_POINTER_ATTR_ISCONST = 1u << 10;
+inline constexpr uint32_t LF_POINTER_ATTR_ISRESTRICT = 1u << 12;
+inline constexpr uint32_t LF_POINTER_ATTR_SIZE_SHIFT = 13;
+inline constexpr uint32_t LF_POINTER_ATTR_SIZE_MASK = 0x3F;
+
+/* LF_ARRAY sub-record layout.
+       uint32_t elemtype      element type index
+       uint32_t idxtype       indexing type index
+       gdb_byte data[]        numeric leaf for total size in bytes,
+			      followed by NUL-terminated name.  */
+inline constexpr auto LF_ARRAY_ELEMTYPE_OFFS = 0;
+inline constexpr auto LF_ARRAY_IDXTYPE_OFFS = 4;
+inline constexpr auto LF_ARRAY_DATA_OFFS = 8;
+inline constexpr auto LF_ARRAY_MIN_SIZE = 8;
+
+/* LF_BITFIELD sub-record layout.
+       uint32_t type          underlying type index
+       uint8_t  length        number of bits
+       uint8_t  position      starting bit position.  */
+inline constexpr auto LF_BITFIELD_TYPE_OFFS = 0;
+inline constexpr auto LF_BITFIELD_LENGTH_OFFS = 4;
+inline constexpr auto LF_BITFIELD_POSITION_OFFS = 5;
+/* Minimum record data size.  */
+inline constexpr auto LF_BITFIELD_SIZE = 6;
 
 /* LF_ARGLIST sub-record layout.
        uint32_t count         number of type indices
@@ -1310,10 +1493,119 @@ inline constexpr auto LF_ARGLIST_COUNT_OFFS = 0;
 inline constexpr auto LF_ARGLIST_ARGS_OFFS = 4;
 inline constexpr auto LF_ARGLIST_MIN_SIZE = 4;
 
+/* CV_modifier_e: Modifier attribute bits in LF_MODIFIER attr.  */
+/* const modifier.  */
+inline constexpr auto CV_MODIFIER_CONST = 0x01;
+/* volatile modifier.  */
+inline constexpr auto CV_MODIFIER_VOLATILE = 0x02;
+
+
+/* CV_ptrmode_e: pointer/reference mode, bits 5-7 of LF_POINTER attr.  */
+/* Ordinary pointer (*).  */
+inline constexpr auto CV_PTRMODE_POINTER = 0;
+/* Lvalue reference (&).  */
+inline constexpr auto CV_PTRMODE_LVALUE_REF = 1;
+/* Pointer to data member (T C::*).  */
+inline constexpr auto CV_PTRMODE_PMEM = 2;
+/* Pointer to member function (R (C::*)(...)).  */
+inline constexpr auto CV_PTRMODE_PMFUNC = 3;
+/* Rvalue reference (&&).  */
+inline constexpr auto CV_PTRMODE_RVALUE_REF = 4;
+
+/* Extract CV_ptrmode_e from LF_POINTER.  */
+
+inline uint32_t
+cv_ptr_mode (uint32_t attr)
+{
+  return (attr >> LF_POINTER_ATTR_PTRMODE_SHIFT)
+	 & LF_POINTER_ATTR_PTRMODE_MASK;
+}
+
+/* Extract the pointer size in bytes from LF_POINTER.  */
+
+inline uint32_t
+cv_ptr_size (uint32_t attr)
+{
+  return (attr >> LF_POINTER_ATTR_SIZE_SHIFT) & LF_POINTER_ATTR_SIZE_MASK;
+}
+
+/* CV_ptrtype_e: address representation, bits 0-4 of LF_POINTER attr.  */
+/* Flat 32-bit address.  */
+inline constexpr auto CV_PTRTYPE_NEAR32 = 0x0a;
+/* 64-bit address.  */
+inline constexpr auto CV_PTRTYPE_64 = 0x0c;
+
+/* Extract CV_ptrtype_e from LF_POINTER.  */
+
+inline uint32_t
+cv_ptr_type (uint32_t attr)
+{
+  return attr & LF_POINTER_ATTR_PTRTYPE_MASK;
+}
+
+/* Return the address width in bytes of CV_ptrtype_e PTRTYPE, or 0 for the
+   16-bit, segmented and based representations.  */
+
+inline uint32_t
+cv_ptr_type_width (uint32_t ptrtype)
+{
+  switch (ptrtype)
+    {
+    case CV_PTRTYPE_NEAR32:
+      return 4;
+    case CV_PTRTYPE_64:
+      return 8;
+    default:
+      return 0;
+    }
+}
+
+/* Return true when MODE is a pointer to member (pmem or pmfunc).  */
+
+inline bool
+cv_ptr_is_member (uint32_t mode)
+{
+  return mode == CV_PTRMODE_PMEM || mode == CV_PTRMODE_PMFUNC;
+}
+
+/* Human-readable name for a CV_ptrmode_e value (for dumps).  */
+
+inline const char *
+cv_ptr_mode_name (uint32_t mode)
+{
+  switch (mode)
+    {
+    case CV_PTRMODE_POINTER:
+      return "ptr";
+    case CV_PTRMODE_LVALUE_REF:
+      return "lvref";
+    case CV_PTRMODE_PMEM:
+      return "pmem";
+    case CV_PTRMODE_PMFUNC:
+      return "pmfunc";
+    case CV_PTRMODE_RVALUE_REF:
+      return "rvref";
+    default:
+      return "?";
+    }
+}
+
 /* Index raw TPI records (stream 2) and allocate the type cache.  Missing
    streams and detected format errors raise pdb_error.  Record indexing
    does not construct GDB types.  */
 extern void pdb_read_tpi_stream (pdb_per_objfile *pdb);
+
+/* Read a CodeView numeric leaf.
+   Returns number of bytes consumed (0 on error).  */
+uint32_t pdb_cv_read_numeric (const gdb_byte *data, uint32_t max_len,
+			      uint64_t *value);
+
+/* Return the name that follows a numeric leaf in type record REC, and
+   set *VALUE to the leaf's value.  The leaf starts at OFFS in the
+   record's data, and the name after it is NUL-terminated.  Return
+   nullptr when the leaf or the name does not fit in the record.  */
+const char *pdb_cv_numeric_and_name (const pdb_tpi_type *rec, uint32_t offs,
+				     uint64_t *value);
 
 /* Return the NUL-terminated string at P in the bounded buffer [P, END),
    or nullptr if the range holds no NUL byte.  The reader uses this to
@@ -1536,6 +1828,9 @@ struct test_tpi
   /* Append an LF_PROCEDURE returning RET, with the COUNT parameters
      ARGLIST lists, and return its type index.  */
   uint32_t procedure (uint32_t ret, uint32_t arglist, uint16_t count);
+
+  /* A 64-bit LF_POINTER to TARGET; return its type index.  */
+  uint32_t pointer (uint32_t target);
 
   /* Return the stream, a TPI_VERSION_V80 header followed by the
      records.  */
