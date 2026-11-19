@@ -2814,9 +2814,9 @@ YY_PREFIX_p-exp-parser = pascal_yy
 		y.tab.h $*-gen.h.tmp -- \
 		$(YACC) $(YFLAGS) -p $(YY_PREFIX_$*) -t -d \
 			|| (rm -f $*-gen.c.tmp $*-gen.h.tmp; false)
-	@$(POST_PROCESS_PARSER_OUTPUT) bison $* < $*-gen.c.tmp > $*-gen.c.new \
+	@$(POST_PROCESS_PARSER_OUTPUT) $* < $*-gen.c.tmp > $*-gen.c.new \
 		&& rm -f $*-gen.c.tmp && mv $*-gen.c.new $*-gen.c
-	@$(POST_PROCESS_PARSER_OUTPUT) bison $* < $*-gen.h.tmp > $*-gen.h.new \
+	@$(POST_PROCESS_PARSER_OUTPUT) $* < $*-gen.h.tmp > $*-gen.h.new \
 		&& rm -f $*-gen.h.tmp && mv $*-gen.h.new $*-gen.h
 
 # XML rules
