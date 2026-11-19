@@ -22,6 +22,8 @@ Full documentation for ROCgdb is available at
 - The "maint info amdgpu address-aliases" command evaluates an
   expression to an address and shows the address it aliases to in
   every address space of the current AMD GPU architecture.
+- Add a "maint info wave-count" command that prints the number of
+  active heterogeneous waves in an inferior.
 
 ### Changed
 

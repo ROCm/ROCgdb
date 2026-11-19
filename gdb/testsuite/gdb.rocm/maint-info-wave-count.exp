@@ -1,0 +1,66 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Baseline test for "maintenance info wave-count".
+
+load_lib rocm.exp
+
+require allow_hip_tests
+
+standard_testfile .cpp
+
+if { [prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile { debug hip }] } {
+    return -1
+}
+
+with_rocm_gpu_lock {
+
+    clean_restart $testfile
+
+    # No inferior has an active GPU process yet.
+    gdb_test "maintenance info wave-count" "0" \
+	     "wave count before starting the inferior"
+
+    if { ![runto_main] } {
+	return -1
+    }
+
+    # The GPU process may be attached to by now, but no kernel has been
+    # dispatched yet, so there are no waves.
+    gdb_test "maintenance info wave-count" "0" \
+	     "wave count before dispatching the kernel"
+
+    gdb_breakpoint single_wave_kernel -allow-pending
+    gdb_test "continue" "Thread $::decimal .* hit Breakpoint $::decimal.*" \
+	     "continue to the kernel breakpoint"
+
+    # A single workgroup, single workitem kernel occupies exactly one wave.
+    gdb_test "maintenance info wave-count" "1" \
+	     "wave count with the current inferior implicit"
+
+    gdb_test "maintenance info wave-count 1" "1" \
+	     "wave count with an explicit inferior number"
+
+    gdb_test "maintenance info wave-count 2" \
+	     "No inferior number 2\\." \
+	     "wave count with a non-existent inferior number"
+
+    gdb_test "maintenance info wave-count 0" \
+	     "No inferior number 0\\." \
+	     "wave count with an out-of-range inferior number"
+}
