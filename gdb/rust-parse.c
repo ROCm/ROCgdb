@@ -77,7 +77,8 @@ static const char number_regex_text[] =
 
 /* The compiled number-matching regex.  */
 
-static regex_t number_regex;
+static compiled_regex number_regex (number_regex_text, REG_EXTENDED,
+				    _("internal error"));
 
 /* The kinds of tokens.  Note that single-character tokens are
    represented by themselves, so for instance '[' is a token.  */
@@ -910,8 +911,8 @@ rust_parser::lex_number ()
   int end_index;
   int type_index = -1;
 
-  match = regexec (&number_regex, pstate->lexptr, ARRAY_SIZE (subexps),
-		   subexps, 0);
+  match = number_regex.exec (pstate->lexptr, ARRAY_SIZE (subexps),
+			     subexps, 0);
   /* Failure means the regexp is broken.  */
   gdb_assert (match == 0);
 
@@ -2403,11 +2404,6 @@ rust_lex_tests ()
 
 INIT_GDB_FILE (rust_exp)
 {
-  int code = regcomp (&number_regex, number_regex_text, REG_EXTENDED);
-  /* If the regular expression was incorrect, it was a programming
-     error.  */
-  gdb_assert (code == 0);
-
 #if GDB_SELF_TEST
   selftests::register_test ("rust-lex", rust_lex_tests);
 #endif
