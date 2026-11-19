@@ -3,7 +3,7 @@
 Full documentation for ROCgdb is available at
 [rocm.docs.amd.com/rocgdb](https://rocm.docs.amd.com/projects/ROCgdb/en/latest/index.html)
 
-## ROCgdb-16.3 for ROCm-10.1
+## ROCgdb-18.1 for ROCm-10.3
 
 ### Added
 
@@ -22,6 +22,10 @@ Full documentation for ROCgdb is available at
 - The "maint info amdgpu address-aliases" command evaluates an
   expression to an address and shows the address it aliases to in
   every address space of the current AMD GPU architecture.
+- Add support for building ROCgdb with AMD GPU debugging enabled on
+  Windows (native Windows / MinGW builds).  TheRock-based builds are
+  not supported in this release; support is planned for a future
+  release.
 
 ### Changed
 
