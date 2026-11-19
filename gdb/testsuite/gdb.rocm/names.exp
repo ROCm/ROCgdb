@@ -212,7 +212,9 @@ foreach entry $all_kernels_info {
 
 # Test running all kernels at once outside the debugger first, to make
 # sure the runtime respects GPU_MAX_HW_QUEUES properly.
-set result [remote_exec target "env $inferior_env $binfile all"]
+set result [with_rocm_sanitizer_env {
+    remote_exec target "env $inferior_env $binfile all"
+}]
 set status [lindex $result 0]
 gdb_assert {$status == 0} "runs correctly outside debugger"
 

@@ -60,7 +60,7 @@ proc has_wave_coordinates {testname} {
 }
 
 proc do_test {debug_enabled} {
-  set spawn_id [spawn_wait_for_attach $::binfile]
+  set spawn_id [with_rocm_sanitizer_env {spawn_wait_for_attach $::binfile}]
   set prog_pid [spawn_id_get_pid $spawn_id]
 
   clean_restart

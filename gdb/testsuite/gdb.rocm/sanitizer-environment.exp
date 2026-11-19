@@ -1,0 +1,270 @@
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test the procs in lib/rocm.exp that set up the environment for the
+# programs that use a ROCm stack that is built with sanitizers.  They only
+# deal with strings, files and the environment, so this needs no GPU and
+# works the same with a ROCm stack that is not instrumented.
+
+load_lib rocm.exp
+
+# Return a line of ldd output for the library NAME found at PATH.
+
+proc sanitizer_ldd_line { name path } {
+    return [format "\t%s => %s (0x00007f)" $name $path]
+}
+
+# Test parsing the output of ldd.
+
+proc_with_prefix test_parse_runtimes {} {
+    set hip_lib /rocm/lib/libamdhip64.so
+    set asan /rocm/lib/libclang_rt.asan.so
+    set ubsan /rocm/lib/libclang_rt.ubsan_standalone.so
+    set hsa_lib /rocm/lib/libhsa-runtime64.so.1
+
+    set lines [list "\tlinux-vdso.so.1 (0x00007ffd)"]
+    lappend lines [sanitizer_ldd_line libclang_rt.asan.so $asan]
+    lappend lines [sanitizer_ldd_line libhsa-runtime64.so.1 $hsa_lib]
+    lappend lines [sanitizer_ldd_line libclang_rt.ubsan_standalone.so $ubsan]
+    set ldd_output [join $lines "\n"]
+    gdb_assert {[rocm_parse_sanitizer_runtimes $hip_lib $ldd_output] \
+		    eq [list $asan $ubsan]} \
+	"runtimes in ldd output"
+
+    set plain_output [sanitizer_ldd_line libhsa-runtime64.so.1 $hsa_lib]
+    gdb_assert {[rocm_parse_sanitizer_runtimes $hip_lib $plain_output]
+		eq {}} "no runtimes in ldd output"
+
+    set hwasan /rocm/lib/libclang_rt.hwasan.so
+    gdb_assert {[rocm_asan_runtimes [list $hwasan $asan]] eq $asan} \
+	"only the ASan runtime is an ASan runtime"
+}
+
+# Record the warning that would be issued with the arguments ARGS, so that
+# test_parse_runtimes_not_found does not add to the warnings of the run.
+
+proc sanitizer_record_warning { args } {
+    lappend ::sanitizer_warnings [join $args " "]
+}
+
+# Test that a runtime that ldd can't find is warned about and skipped.
+
+proc_with_prefix test_parse_runtimes_not_found {} {
+    set hip_lib /rocm/lib/libamdhip64.so
+    set asan /rocm/lib/libclang_rt.asan.so
+
+    set lines [list [sanitizer_ldd_line libclang_rt.asan.so $asan]]
+    lappend lines "\tlibclang_rt.tsan.so => not found"
+    set ldd_output [join $lines "\n"]
+
+    set ::sanitizer_warnings {}
+    set runtimes [with_override warning sanitizer_record_warning {
+	rocm_parse_sanitizer_runtimes $hip_lib $ldd_output
+    }]
+
+    gdb_assert {$runtimes eq [list $asan]} "not found runtime is skipped"
+    gdb_assert {[llength $::sanitizer_warnings] == 1
+		&& [string match "*libclang_rt.tsan.so*" \
+			[lindex $::sanitizer_warnings 0]]} \
+	"not found runtime is warned about"
+}
+
+# Return a line of nm output for the undefined symbol NAME.
+
+proc sanitizer_nm_line { name } {
+    return [format "                 U %s" $name]
+}
+
+# Test recognizing a HIP runtime with device side ASan.
+
+proc_with_prefix test_parse_device_asan {} {
+    set lines {}
+    foreach name {__asan_init __asan_report_load4 malloc} {
+	lappend lines [sanitizer_nm_line $name]
+    }
+    set host_only [join $lines "\n"]
+    gdb_assert {![rocm_parse_device_asan $host_only]} \
+	"host side ASan only"
+
+    lappend lines [sanitizer_nm_line __asan_report_nonself_error]
+    lappend lines [sanitizer_nm_line __asan_report_nonself_leak]
+    gdb_assert {[rocm_parse_device_asan [join $lines "\n"]]} \
+	"device side ASan"
+
+    gdb_assert {![rocm_parse_device_asan ""]} "no symbols"
+}
+
+# Test the variables that programs need.
+
+proc_with_prefix test_environment_for {} {
+    set asan /a/libclang_rt.asan.so
+    set tsan /t/libclang_rt.tsan.so
+
+    save_vars { ::env(LD_PRELOAD) ::env(HSA_XNACK) } {
+	unset -nocomplain ::env(LD_PRELOAD)
+	unset -nocomplain ::env(HSA_XNACK)
+
+	gdb_assert {[rocm_sanitizer_environment_for {}] eq {}} \
+	    "no runtimes"
+	gdb_assert {[rocm_sanitizer_environment_for {} 1] eq {}} \
+	    "no runtimes, even if XNACK is required"
+
+	gdb_assert {[rocm_sanitizer_environment_for [list $asan] 1] \
+			eq [list LD_PRELOAD $asan HSA_XNACK 1]} \
+	    "device side ASan sets XNACK"
+
+	gdb_assert {[rocm_sanitizer_environment_for [list $asan] 0] \
+			eq [list LD_PRELOAD $asan]} \
+	    "host side ASan needs no XNACK"
+	gdb_assert {[rocm_sanitizer_environment_for [list $asan]] \
+			eq [list LD_PRELOAD $asan]} \
+	    "XNACK is not set by default"
+
+	gdb_assert {[rocm_sanitizer_environment_for [list $tsan]] \
+			eq [list LD_PRELOAD $tsan]} \
+	    "runtime of another sanitizer needs no XNACK"
+
+	gdb_assert {[rocm_sanitizer_environment_for [list $tsan $asan] 1] \
+			eq [list LD_PRELOAD $asan:$tsan HSA_XNACK 1]} \
+	    "ASan runtime comes first"
+
+	set ::env(LD_PRELOAD) ""
+	gdb_assert {[rocm_sanitizer_environment_for [list $asan] 1] \
+			eq [list LD_PRELOAD $asan HSA_XNACK 1]} \
+	    "empty LD_PRELOAD adds no separator"
+
+	set ::env(LD_PRELOAD) /s/other.so
+	gdb_assert {[rocm_sanitizer_environment_for [list $asan] 1] \
+			eq [list LD_PRELOAD $asan:/s/other.so HSA_XNACK 1]} \
+	    "existing LD_PRELOAD is kept"
+
+	set ::env(HSA_XNACK) 0
+	gdb_assert {[rocm_sanitizer_environment_for [list $asan] 1] \
+			eq [list LD_PRELOAD $asan:/s/other.so]} \
+	    "existing HSA_XNACK is respected"
+    }
+}
+
+# Test running a body with environment variables.
+
+proc_with_prefix test_with_env_vars {} {
+    save_vars { ::env(ROCM_TEST_A) ::env(ROCM_TEST_B) } {
+	unset -nocomplain ::env(ROCM_TEST_A)
+	set ::env(ROCM_TEST_B) old_b
+
+	set seen [with_rocm_env_vars {ROCM_TEST_A new_a ROCM_TEST_B new_b} {
+	    list $::env(ROCM_TEST_A) $::env(ROCM_TEST_B)
+	}]
+	gdb_assert {$seen eq {new_a new_b}} "variables are set in the body"
+	gdb_assert {![info exists ::env(ROCM_TEST_A)]} \
+	    "new variable is removed"
+	gdb_assert {$::env(ROCM_TEST_B) eq "old_b"} \
+	    "existing variable is restored"
+
+	set failed [catch {
+	    with_rocm_env_vars {ROCM_TEST_A new_a ROCM_TEST_B new_b} {
+		error "body failed"
+	    }
+	} message]
+	gdb_assert {$failed == 1 && $message eq "body failed"} \
+	    "error in the body is passed on"
+	gdb_assert {![info exists ::env(ROCM_TEST_A)]
+		    && $::env(ROCM_TEST_B) eq "old_b"} \
+	    "environment is restored after an error"
+
+	set local 1
+	with_rocm_env_vars {} {
+	    set local 2
+	}
+	gdb_assert {$local == 2} "body runs in the caller's frame"
+
+	# A body that unsets a variable must not break the restore.
+	set failed [catch {
+	    with_rocm_env_vars {ROCM_TEST_A new_a ROCM_TEST_B new_b} {
+		unset ::env(ROCM_TEST_A)
+		unset ::env(ROCM_TEST_B)
+		set result body_result
+	    }
+	} message]
+	gdb_assert {$failed == 0} "body that unsets variables does not fail"
+	gdb_assert {![info exists ::env(ROCM_TEST_A)]
+		    && $::env(ROCM_TEST_B) eq "old_b"} \
+	    "environment is restored after the body unset variables"
+
+	# Control flow in the body must pass through.
+	foreach i {1 2} {
+	    with_rocm_env_vars {ROCM_TEST_A new_a} {
+		break
+	    }
+	}
+	gdb_assert {$i == 1 && ![info exists ::env(ROCM_TEST_A)]} \
+	    "break in the body leaves the loop and restores the environment"
+
+	proc return_from_body {} {
+	    with_rocm_env_vars {ROCM_TEST_A new_a} {
+		return early
+	    }
+	    return late
+	}
+	gdb_assert {[return_from_body] eq "early"
+		    && ![info exists ::env(ROCM_TEST_A)]} \
+	    "return in the body returns from the caller"
+    }
+}
+
+# Test finding libamdhip64 in a ROCm tree.
+
+proc_with_prefix test_find_hip_library {} {
+    set root [standard_output_file fake-rocm]
+    set other [standard_output_file other-rocm]
+    foreach dir [list $root $other] {
+	file delete -force $dir
+    }
+    file mkdir $root/lib/llvm/bin $root/bin $other/lib
+    foreach dir [list $root $other] {
+	close [open $dir/lib/libamdhip64.so w]
+    }
+
+    gdb_assert {[rocm_hip_library_in $root] eq "$root/lib/libamdhip64.so"} \
+	"library in a tree"
+    gdb_assert {[rocm_hip_library_in $root/bin] eq ""} \
+	"no library where there is none"
+
+    gdb_assert {[rocm_hip_library_above $root/bin/amdclang++] \
+		    eq "$root/lib/libamdhip64.so"} \
+	"library above a compiler in bin"
+    gdb_assert {[rocm_hip_library_above $root/lib/llvm/bin/amdllvm] \
+		    eq "$root/lib/libamdhip64.so"} \
+	"library above a compiler in lib/llvm/bin"
+
+    save_vars { ::env(ROCM_PATH) } {
+	set ::env(ROCM_PATH) $other
+	gdb_assert {[rocm_find_hip_library] eq "$other/lib/libamdhip64.so"} \
+	    "ROCM_PATH takes precedence"
+
+	set ::env(ROCM_PATH) $root/bin
+	gdb_assert {[rocm_find_hip_library] eq ""} \
+	    "ROCM_PATH without a library is not replaced by a guess"
+    }
+}
+
+test_parse_runtimes
+test_parse_runtimes_not_found
+test_parse_device_asan
+test_environment_for
+test_with_env_vars
+test_find_hip_library

@@ -64,6 +64,7 @@ proc do_test { num_inferiors } {
 		gdb_test "inferior $i" "Switching to inferior $i.*" \
 		    "switch to inferior $i"
 		gdb_load $::binfile
+		rocm_sanitizer_setup_inferior
 	    }
 	    gdb_test "start" "Temporary breakpoint $::decimal, main .*" \
 		"start inferior $i"
