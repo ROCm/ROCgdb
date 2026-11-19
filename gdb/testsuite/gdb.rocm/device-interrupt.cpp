@@ -51,7 +51,9 @@ main (int argc, char **argv)
 		      0 /*dynamicShared*/, 0 /*stream*/);
 
   /* Don't run forever.  */
-  gdb_watchdog (10);
+  #ifdef TIMEOUT
+    gdb_watchdog (TIMEOUT);
+  #endif
 
   /* Wait until kernel finishes.  In this case, this blocks
      "forever".  */
