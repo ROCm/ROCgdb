@@ -121,6 +121,9 @@ proc_with_prefix test_watchpoint_before_kernel {} {
 	continue_to_watchpoint_hit 30 40 "continue to watchpoint hit 3"
 	continue_to_watchpoint_hit 40 60 "continue to watchpoint hit 4"
 
+	# The watched memory is freed before the program exits.
+	delete_breakpoints
+
 	gdb_continue_to_end "" continue 1
     }
 }
@@ -148,6 +151,9 @@ proc_with_prefix test_watchpoint_inside_kernel {} {
 	continue_to_watchpoint_hit 100 300 "continue to watchpoint hit 2"
 	continue_to_watchpoint_hit 300 400 "continue to watchpoint hit 3"
 	continue_to_watchpoint_hit 400 600 "continue to watchpoint hit 4"
+
+	# The watched memory is freed before the program exits.
+	delete_breakpoints
 
 	gdb_continue_to_end "" continue 1
     }
@@ -208,6 +214,9 @@ proc_with_prefix test_multiple_watchpoints {} {
 	continue_to_watchpoint_hit 40 60 "continue to watchpoint hit 7"
 	continue_to_watchpoint_hit 400 600 "continue to watchpoint hit 8"
 
+	# The watched memory is freed before the program exits.
+	delete_breakpoints
+
 	gdb_continue_to_end "" continue 1
     }
 }
@@ -258,6 +267,9 @@ proc_with_prefix test_disable_enable_watchpoint {} {
 	gdb_test_no_output "enable $wp2_num" "enable wp2"
 
 	continue_to_watchpoint_hit 400 600 "continue to watchpoint hit 6"
+
+	# The watched memory is freed before the program exits.
+	delete_breakpoints
 
 	gdb_continue_to_end "" continue 1
     }
