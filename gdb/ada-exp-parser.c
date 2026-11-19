@@ -478,26 +478,20 @@ ada_parse_state::lex_number ()
 
   char *numbuf = (char *) obstack_alloc (&temp_space,
 					 pstate->lexptr - num_start);
+  canonicalize_numeral (numbuf, num_start, pstate->lexptr);
+
   if (subexps[HEX_NUMBER].rm_so != -1)
-    {
-      canonicalize_numeral (numbuf, num_start + 2, pstate->lexptr);
-      return process_int ("16#", numbuf, nullptr);
-    }
+    return process_int ("16#", numbuf + 2, nullptr);
   else if (subexps[FLOAT_POSEXP].rm_so != -1)
     {
-      canonicalize_numeral (numbuf, num_start, pstate->lexptr);
       char *e_ptr = strrchr (numbuf, 'e');
       *e_ptr = '\0';
       return process_int (nullptr, numbuf, e_ptr + 1);
     }
   else if (subexps[FLOAT_OPTEXP].rm_so != -1)
-    {
-      canonicalize_numeral (numbuf, num_start, pstate->lexptr);
-      return process_real (numbuf);
-    }
+    return process_real (numbuf);
   else if (subexps[FLOAT_EXTENSION].rm_so != -1)
     {
-      canonicalize_numeral (numbuf, num_start, pstate->lexptr);
       char *e_ptr = nullptr;
       if (subexps[EXPONENT].rm_so != -1)
 	{
@@ -517,7 +511,6 @@ ada_parse_state::lex_number ()
     error (_("Based real literals not implemented yet."));
 
   /* Must be a simple integer.  */
-  canonicalize_numeral (numbuf, num_start, pstate->lexptr);
   return process_int (nullptr, numbuf, nullptr);
 }
 
