@@ -90,10 +90,12 @@ SYMBOL TABLE:
 [0-9a-f]+ l       .text	0+000 \$xrv32i2p1_zbkb1p0_zbkc1p0_zbkx1p0_zk1p0_zkn1p0_zknd1p0_zkne1p0_zknh1p0_zkr1p0_zkt1p0
 [0-9a-f]+ l       .text	0+000 \$xrv32i2p1_zbkb1p0_zbkc1p0_zbkx1p0_zkn1p0_zknd1p0_zkne1p0_zknh1p0
 [0-9a-f]+ l       .text	0+000 \$xrv32i2p1_zbkb1p0_zbkc1p0_zbkx1p0_zks1p0_zksed1p0_zksh1p0
+[0-9a-f]+ l       .text	0+000 \$xrv32i2p1_zbc1p0_zbkc1p0
 [0-9a-f]+ l       .text	0+000 \$xrv32i2p1_zicsr2p0_zvbb1p0_zve32x1p0_zvkb1p0_zvl32b1p0
-[0-9a-f]+ l       .text	0+000 \$xrv32i2p1_zicsr2p0_zve32x1p0_zvkb1p0_zvkg1p0_zvkn1p0_zvkned1p0_zvkng1p0_zvknhb1p0_zvkt1p0_zvl32b1p0
-[0-9a-f]+ l       .text	0+000 \$xrv32i2p1_zicsr2p0_zvbc1p0_zve32x1p0_zvkb1p0_zvkn1p0_zvknc1p0_zvkned1p0_zvknhb1p0_zvkt1p0_zvl32b1p0
-[0-9a-f]+ l       .text	0+000 \$xrv32i2p1_zicsr2p0_zve32x1p0_zvkb1p0_zvkn1p0_zvkned1p0_zvknhb1p0_zvkt1p0_zvl32b1p0
+[0-9a-f]+ l       .text	0+000 \$xrv32i2p1_zicsr2p0_zve32x1p0_zvkb1p0_zvkg1p0_zvkn1p0_zvkned1p0_zvkng1p0_zvknha1p0_zvknhb1p0_zvkt1p0_zvl32b1p0
+[0-9a-f]+ l       .text	0+000 \$xrv32i2p1_zicsr2p0_zvbc1p0_zve32x1p0_zvkb1p0_zvkn1p0_zvknc1p0_zvkned1p0_zvknha1p0_zvknhb1p0_zvkt1p0_zvl32b1p0
+[0-9a-f]+ l       .text	0+000 \$xrv32i2p1_zicsr2p0_zve32x1p0_zvkb1p0_zvkn1p0_zvkned1p0_zvknha1p0_zvknhb1p0_zvkt1p0_zvl32b1p0
+[0-9a-f]+ l       .text	0+000 \$xrv32i2p1_zicsr2p0_zve32x1p0_zvknha1p0_zvknhb1p0_zvl32b1p0
 [0-9a-f]+ l       .text	0+000 \$xrv32i2p1_zicsr2p0_zve32x1p0_zvkb1p0_zvkg1p0_zvks1p0_zvksed1p0_zvksg1p0_zvksh1p0_zvkt1p0_zvl32b1p0
 [0-9a-f]+ l       .text	0+000 \$xrv32i2p1_zicsr2p0_zvbc1p0_zve32x1p0_zvkb1p0_zvks1p0_zvksc1p0_zvksed1p0_zvksh1p0_zvkt1p0_zvl32b1p0
 [0-9a-f]+ l       .text	0+000 \$xrv32i2p1_zicsr2p0_zve32x1p0_zvkb1p0_zvks1p0_zvksed1p0_zvksh1p0_zvkt1p0_zvl32b1p0

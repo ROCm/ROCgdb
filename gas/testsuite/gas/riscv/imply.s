@@ -105,10 +105,12 @@ imply b
 imply zk
 imply zkn
 imply zks
+imply zbc
 imply zvbb
 imply zvkng
 imply zvknc
 imply zvkn
+imply zvknhb
 imply zvksg
 imply zvksc
 imply zvks
