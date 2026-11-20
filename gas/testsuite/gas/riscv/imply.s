@@ -113,6 +113,7 @@ imply zvksg
 imply zvksc
 imply zvks
 
+imply sdext
 imply sdtrig
 
 imply smaia

@@ -123,6 +123,7 @@ All available -march extensions for RISC-V:
 	zcmp                                    1.0
 	zcmt                                    1.0
 	zclsd                                   1.0
+	sdext                                   1.0
 	sdtrig                                  1.0
 	sha                                     1.0
 	shcounterenw                            1.0
