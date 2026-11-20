@@ -27,7 +27,7 @@ if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
 }
 
 proc do_test {} {
-    set result [remote_exec target $::binfile]
+    set result [with_rocm_sanitizer_env {remote_exec target $::binfile}]
     set status [lindex $result 0]
     gdb_assert {$status == 0} "runs correctly outside debugger"
 }

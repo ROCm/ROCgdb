@@ -80,11 +80,361 @@ if {[info exists ::AMD_REDIRECT_LOG]} {
     rocm_redirect_log_to_output_dir
 }
 
+# Support for ROCm stacks that are built with sanitizers.
+#
+# A program that loads a sanitizer instrumented library needs the
+# sanitizer runtime to come first in its initial library list.  The test
+# programs are deliberately not built with sanitizers, so the runtime has
+# to be preloaded when they are started instead.  Only ASan has been
+# exercised so far.  The procs below are written so that other sanitizers
+# can be handled the same way.
+
+# Return lib/libamdhip64.so under ROCM_DIR, or "" if there is none.
+
+proc rocm_hip_library_in { rocm_dir } {
+    set lib [file join $rocm_dir lib libamdhip64.so]
+    if {[file exists $lib]} {
+	return $lib
+    }
+    return ""
+}
+
+# Return lib/libamdhip64.so of the ROCm tree that contains PATH, or ""
+# if there is none.  Look in each of the directories above PATH, because
+# how deep a file is in the tree depends on the installation, for example
+# bin/amdclang++ and lib/llvm/bin/amdllvm.
+
+proc rocm_hip_library_above { path } {
+    set dir [file dirname $path]
+    while {1} {
+	set lib [rocm_hip_library_in $dir]
+	if {$lib ne ""} {
+	    return $lib
+	}
+	set parent [file dirname $dir]
+	if {$parent eq $dir} {
+	    return ""
+	}
+	set dir $parent
+    }
+}
+
+# Return the libamdhip64.so that the tests use, or "" if it can't be
+# found.  An explicit ROCM_PATH is what the HIP compiler is told to use
+# (see the hip board), so it takes precedence.  Otherwise look in the
+# ROCm tree of the amdclang++ in PATH, as found and with symbolic links
+# resolved, and then in rocm_path, which is only a guess.
+
+proc rocm_find_hip_library {} {
+    global rocm_path
+
+    if {[info exists ::env(ROCM_PATH)] && $::env(ROCM_PATH) ne ""} {
+	set lib [rocm_hip_library_in $::env(ROCM_PATH)]
+	if {$lib eq ""} {
+	    verbose -log "no lib/libamdhip64.so in ROCM_PATH\
+			  ($::env(ROCM_PATH)), not looking elsewhere"
+	}
+	return $lib
+    }
+
+    set compiler [lindex [auto_execok amdclang++] 0]
+    if {$compiler ne ""} {
+	set paths [list $compiler]
+	if {![catch {exec readlink -f $compiler} resolved]} {
+	    lappend paths $resolved
+	}
+	foreach path $paths {
+	    set lib [rocm_hip_library_above $path]
+	    if {$lib ne ""} {
+		return $lib
+	    }
+	}
+    }
+
+    return [rocm_hip_library_in $rocm_path]
+}
+
+# Return the sanitizer runtime libraries that OUTPUT, the output of ldd
+# for HIP_LIB, lists as dependencies.  Warn if one is needed but can't be
+# found, because the tests would otherwise run as if the stack was not
+# instrumented and fail in confusing ways.
+
+proc rocm_parse_sanitizer_runtimes { hip_lib output } {
+    set re {(libclang_rt\.(?:asan|hwasan|lsan|msan|tsan|ubsan)\S*)}
+    append re {\s+=>\s+(/\S+|not found)}
+
+    set runtimes {}
+    foreach {_ lib path} [regexp -all -inline $re $output] {
+	if {$path eq "not found"} {
+	    warning "$lib is needed by $hip_lib but was not found, is\
+		     LD_LIBRARY_PATH set to include its directory?"
+	    continue
+	}
+	lappend runtimes $path
+    }
+
+    return $runtimes
+}
+
+# Return the list of the sanitizer runtime libraries that the ROCm stack
+# depends on, or {} if the stack is not sanitizer instrumented.
+#
+# The runtimes are taken from the dependencies of libamdhip64, so they
+# are exactly the ones that the instrumented ROCm libraries were built
+# against.
+
+gdb_caching_proc rocm_sanitizer_runtimes {} {
+    set hip_lib [rocm_find_hip_library]
+    if {$hip_lib eq ""} {
+	return {}
+    }
+
+    if {[catch {exec ldd $hip_lib 2>/dev/null} output]} {
+	warning "could not run ldd on $hip_lib, assuming that the ROCm\
+		 stack is not sanitizer instrumented"
+	return {}
+    }
+
+    return [rocm_parse_sanitizer_runtimes $hip_lib $output]
+}
+
+# Return the ASan runtimes in RUNTIMES.
+
+proc rocm_asan_runtimes { runtimes } {
+    set result {}
+    foreach runtime $runtimes {
+	if {[string match libclang_rt.asan* [file tail $runtime]]} {
+	    lappend result $runtime
+	}
+    }
+    return $result
+}
+
+# Return true if NM_OUTPUT, the output of "nm -D --undefined-only" for
+# libamdhip64, shows that the HIP runtime was built with device side ASan.
+# Such a runtime is built with DEVICE_ADDRESS_SANITIZER, which makes it
+# refer to __asan_report_nonself_* functions (__asan_report_nonself_error
+# and __asan_report_nonself_leak in the current runtime), so any symbol
+# with that prefix counts.  A runtime that only has host side ASan does
+# not.
+
+proc rocm_parse_device_asan { nm_output } {
+    return [expr {[string first __asan_report_nonself_ $nm_output] != -1}]
+}
+
+# Return true if the ROCm stack has device side ASan.  This is not the
+# same as having an ASan runtime, because a stack can be built with host
+# side ASan only (HOST_ASAN in TheRock), and then has no device
+# instrumentation.
+
+gdb_caching_proc rocm_stack_has_device_asan {} {
+    if {[llength [rocm_asan_runtimes [rocm_sanitizer_runtimes]]] == 0} {
+	return 0
+    }
+
+    set hip_lib [rocm_find_hip_library]
+    if {[catch {exec nm -D --undefined-only $hip_lib 2>/dev/null} output]} {
+	warning "could not run nm on $hip_lib, assuming that the ROCm\
+		 stack has device side ASan"
+	return 1
+    }
+
+    return [rocm_parse_device_asan $output]
+}
+
+# Return true if the ROCm stack needs XNACK to be on.  The HIP runtime
+# with device side ASan compiles its device code with
+# -fsanitize=address, which needs XNACK, so tests that run with XNACK
+# off can't work with it.  A stack with host side ASan only has no such
+# requirement.
+
+proc rocm_stack_requires_xnack {} {
+    return [rocm_stack_has_device_asan]
+}
+
+# Return the factor to give to with_timeout_factor for a step that
+# normally gets FACTOR * TIMEOUT seconds, in a ROCm stack
+# instrumented with the sanitizers whose runtimes are RUNTIMES.
+#
+# ThreadSanitizer makes some steps much slower.  A step that takes about
+# 10 minutes with it needs more than FACTOR times the default timeout,
+# which is 60 seconds.  If RUNTIMES has a ThreadSanitizer runtime, return
+# a factor large enough for the step to get at least TSAN_SECONDS, if that
+# is more than FACTOR.  When TIMEOUT is already long enough, for example
+# because a longer timeout was asked for, return FACTOR.  For the other
+# sanitizers, or if TIMEOUT is not positive (no timeout), return FACTOR.
+
+proc rocm_timeout_factor_for { factor timeout tsan_seconds runtimes } {
+    if { $timeout <= 0 } {
+	return $factor
+    }
+    foreach runtime $runtimes {
+	if { [string match libclang_rt.tsan* [file tail $runtime]] } {
+	    set needed [expr {int(ceil(double($tsan_seconds) / $timeout))}]
+	    return [expr {max($factor, $needed)}]
+	}
+    }
+    return $factor
+}
+
+# Return the NAME VALUE pairs of the environment variables that programs
+# need to use a ROCm stack instrumented with the sanitizers whose
+# runtimes are RUNTIMES.  The list is empty if RUNTIMES is empty, so
+# callers need no special casing.  XNACK_REQUIRED says whether the stack
+# needs XNACK to be on, see rocm_stack_requires_xnack.
+#
+# . LD_PRELOAD puts the runtimes first in the initial library list, with
+#   the ASan runtime in front of the others, followed by what the user
+#   already has in LD_PRELOAD, if anything.
+#
+# . HSA_XNACK=1 is set if XNACK_REQUIRED, which is the case for a ROCm
+#   stack with device side ASan.  Without it, the HIP runtime crashes
+#   when launching a kernel.  A value already set in the environment is
+#   respected.
+#
+# The ASan runtime disables core dumps by default, and the core dumps of
+# an ASan process are huge, so this does not change that.  The tests that
+# need a core file of the program are reported as untested or
+# unsupported with an ASan stack.
+
+proc rocm_sanitizer_environment_for { runtimes {xnack_required 0} } {
+    if {[llength $runtimes] == 0} {
+	return {}
+    }
+
+    set asan_runtimes [rocm_asan_runtimes $runtimes]
+    set preload $asan_runtimes
+    foreach runtime $runtimes {
+	if {[lsearch -exact $asan_runtimes $runtime] == -1} {
+	    lappend preload $runtime
+	}
+    }
+    if {[info exists ::env(LD_PRELOAD)] && $::env(LD_PRELOAD) ne ""} {
+	lappend preload $::env(LD_PRELOAD)
+    }
+
+    set vars [list LD_PRELOAD [join $preload :]]
+    if {$xnack_required && ![info exists ::env(HSA_XNACK)]} {
+	lappend vars HSA_XNACK 1
+    }
+
+    return $vars
+}
+
+# Return the environment that programs that use the ROCm stack need, see
+# rocm_sanitizer_environment_for.
+
+proc rocm_sanitizer_environment {} {
+    return [rocm_sanitizer_environment_for [rocm_sanitizer_runtimes] \
+		[rocm_stack_requires_xnack]]
+}
+
+# Run BODY with the environment variables in VARS, a list of NAME VALUE
+# pairs, set in the testsuite's environment, so that programs started
+# from BODY (directly, not through GDB) get them.  The previous
+# environment is restored afterwards, even if BODY fails.
+
+proc with_rocm_env_vars { vars body } {
+    set names {}
+    set script {}
+    foreach {name value} $vars {
+	lappend names ::env($name)
+	append script [list setenv $name $value]\n
+    }
+    append script $body
+
+    # save_vars restores the old values, and unsets the variables that
+    # did not exist, even if BODY fails, unsets them itself, or leaves
+    # with return, break or continue.
+    transparent_uplevel [list save_vars $names $script]
+}
+
+# Run BODY with the environment that rocm_sanitizer_environment returns.
+# Use this around the programs that a test starts itself, that is
+# outside of GDB, and that use the ROCm stack.  A test that forgets to do
+# so only fails with a ROCm stack that is sanitizer instrumented.
+
+proc with_rocm_sanitizer_env { body } {
+    return [uplevel 1 [list with_rocm_env_vars \
+			   [rocm_sanitizer_environment] $body]]
+}
+
+# Make GDB pass the environment that rocm_sanitizer_environment returns
+# on to the programs that it starts.  Setting it in GDB's own environment
+# instead would also preload the runtimes into GDB itself.  MODE is "cli"
+# or "mi", according to the interpreter that the GDB instance that was
+# just started is talking.  ARGS is unused; it only absorbs the arguments
+# that the execution trace passes to its callback.
+
+proc rocm_sanitizer_setup_gdb { mode args } {
+    global gdb_prompt mi_gdb_prompt gdb_instances
+
+    # The start procs return without starting a GDB when one is already
+    # running, or if starting it failed, and then there is nothing to do
+    # or no GDB to talk to.  Do this only once for each GDB instance.
+    if {![info exists ::gdb_spawn_id]
+	|| ([info exists ::rocm_sanitizer_gdb_instance]
+	    && $::rocm_sanitizer_gdb_instance == $gdb_instances)} {
+	return
+    }
+    set ::rocm_sanitizer_gdb_instance $gdb_instances
+
+    if {$mode eq "mi"} {
+	set command "-gdb-set environment"
+	set pattern "$mi_gdb_prompt\$"
+    } else {
+	set command "set environment"
+	set pattern "$gdb_prompt \$"
+    }
+
+    # Do this without gdb_test so that it does not add to the results.
+    foreach {name value} [rocm_sanitizer_environment] {
+	send_gdb "$command $name $value\n"
+	gdb_expect {
+	    -re $pattern { }
+	    timeout {
+		perror "timeout setting $name in the inferior environment"
+	    }
+	}
+    }
+}
+
+# Set the environment that rocm_sanitizer_environment returns in the
+# current inferior.  The environment is per inferior, and an inferior
+# created with "add-inferior" does not inherit what
+# rocm_sanitizer_setup_gdb set for the first one, so tests that create
+# inferiors need to call this after switching to each of them.  Does
+# nothing for a ROCm stack that is not sanitizer instrumented.
+
+proc rocm_sanitizer_setup_inferior {} {
+    foreach {name value} [rocm_sanitizer_environment] {
+	gdb_test_no_output -nopass "set environment $name $value" \
+	    "set $name in the inferior environment"
+    }
+}
+
+# Apply the sanitizer environment to the inferiors of every GDB instance,
+# whichever interpreter it uses.  default_mi_gdb_start has to exist before
+# it can be traced.  GDB instances that are started in other ways, for
+# example with gdb_spawn_with_cmdline_opts, or by a board that replaces
+# these start procs, do not get it.  Since boards/hip.exp and
+# boards/rocm-generic.exp load this file, this applies to every test run
+# with those boards, not only to gdb.rocm.  With a stack that is not
+# instrumented, only the load of mi-support.exp, and one ldd, happen.
+load_lib mi-support.exp
+if {[llength [rocm_sanitizer_runtimes]] > 0} {
+    trace add execution default_gdb_start leave \
+	[list rocm_sanitizer_setup_gdb cli]
+    trace add execution default_mi_gdb_start leave \
+	[list rocm_sanitizer_setup_gdb mi]
+}
+
 # Act as a drop-in replacement for "remote_exec host"
-# that logs the failures.
+# that logs the failures.  Programs that use the ROCm stack are started
+# with the environment that rocm_sanitizer_environment returns.
 
 proc log_host_exec { cmd } {
-    set result [remote_exec host "$cmd"]
+    set result [with_rocm_sanitizer_env {remote_exec host "$cmd"}]
     set exit_status [lindex $result 0]
     if {$exit_status != 0} {
 	# -1 indicates that $cmd could not be executed at all.
@@ -841,7 +1191,9 @@ proc rocm_core_find_1 {coredir binfile arg output_file \
     # pattern, there will be 2 hits: core.<pid> and core.<pid>.gpu
     save_vars { ::env(HSA_COREDUMP_PATTERN) } {
 	set ::env(HSA_COREDUMP_PATTERN) $coredump_pattern
-	set destcore [core_find_1 $coredir $binfile $arg $output_file]
+	set destcore [with_rocm_sanitizer_env {
+	    core_find_1 $coredir $binfile $arg $output_file
+	}]
     }
     set gpucore "$binfile.gpucore"
 
@@ -894,8 +1246,12 @@ proc rocm_core_find {binfile {deletefiles {}} {arg ""} {output_file "/dev/null"}
 
 proc rocm_generate_gcore_file { corefile_path } {
     # On some configurations, creating the core dump can take a significant
-    # amount of time.  Make sure to use an appropriate timeout value.
-    with_timeout_factor 5 {
+    # amount of time.  Make sure to use an appropriate timeout value.  With
+    # a ROCm stack instrumented with ThreadSanitizer, it takes about 640
+    # seconds on gfx942, so allow at least 900.
+    set factor [rocm_timeout_factor_for 5 [get_largest_timeout] 900 \
+		    [rocm_sanitizer_runtimes]]
+    with_timeout_factor $factor {
 	gdb_test_multiple "generate-core-file $corefile_path" "generate core" {
 	    -re -wrap "Cannot create an AMDGPU core dump.*" {
 		unsupported $gdb_test_name

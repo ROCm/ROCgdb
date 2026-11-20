@@ -17,9 +17,20 @@
 
 standard_testfile .f90
 
-if { [prepare_for_testing "failed to prepare" ${testfile} $srcfile {debug f90}] } {
+# Only the debug info of the test file matters here, so compile it to an
+# object file and load that, instead of linking an executable.  Linking adds
+# the Fortran runtime, which can come with a lot of debug info.  Then "maint
+# print objfiles" prints an index entry for every symbol of the runtime too,
+# tens of megabytes, which takes very long to read when each read returns a
+# single byte (check-read1).
+set objfile [standard_output_file ${testfile}.o]
+if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" ${objfile} object \
+	  {debug f90}] != "" } {
+    untested "failed to compile"
     return
 }
+
+clean_restart ${testfile}.o
 
 # Regression test for PR32276.
 gdb_test_lines "maint print objfiles" "local var not in index" "" -re-not "local_var"
