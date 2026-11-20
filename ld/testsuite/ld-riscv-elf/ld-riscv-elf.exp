@@ -237,10 +237,127 @@ if [istarget "riscv*-*-*"] {
 	    "-march=rv64i -mabi=lp64" {weakref64.s} \
 	    {{objdump -d weakref64.d}} "weakref64"]]
 
+    # Zcmt (jump table) tests.
+    run_dump_test "table-jump-jalt"
+    run_dump_test "table-jump-jt"
+    run_dump_test "table-jump-dump-unknown"
+    run_dump_test "table-jump-no-relo"
+    run_dump_test "table-jump-relax-tbljal"
+    run_dump_test "table-jump-no-relax-tbljal"
+
+    # Start with no table-jump options so that each command line tests its
+    # own final setting, including the default and the optional scheme.
+    run_dump_test "table-jump-tbljal-options"
+    run_dump_test "table-jump-tbljal-options" \
+	{{name {default has no JVT}} {DUMPPROG readelf} {readelf -SW} \
+	 {dump table-jump-disable-relax.d}}
+    foreach {name flags} {
+	{explicit zcmt} {--relax-tbljal=zcmt}
+	{disable then bare} {--no-relax-tbljal --relax-tbljal}
+	{disable then zcmt} {--no-relax-tbljal --relax-tbljal=zcmt}
+	{restore global relaxation} {--no-relax --relax --relax-tbljal=zcmt}
+    } {
+	run_dump_test "table-jump-tbljal-options" \
+	    [list [list name $name] [list ld $flags] \
+		 [list dump table-jump-relax-tbljal.d]]
+    }
+    foreach {name flags} {
+	{bare then disable} {--relax-tbljal --no-relax-tbljal}
+	{zcmt then disable} {--relax-tbljal=zcmt --no-relax-tbljal}
+    } {
+	run_dump_test "table-jump-tbljal-options" \
+	    [list [list name $name] [list ld $flags]]
+    }
+    foreach {name flags} {
+	{global disable then zcmt} {--no-relax --relax-tbljal=zcmt}
+	{zcmt then global disable} {--relax-tbljal=zcmt --no-relax}
+    } {
+	run_dump_test "table-jump-tbljal-options" \
+	    [list [list name $name] [list ld $flags] \
+		 [list DUMPPROG readelf] [list readelf -SW] \
+		 [list dump table-jump-disable-relax.d]]
+    }
+    foreach {name flags scheme} {
+	{empty scheme} {--relax-tbljal=} {}
+	{vendor scheme} {--relax-tbljal=xthead} xthead
+	{unknown scheme} {--relax-tbljal=other} other
+	{case-sensitive scheme} {--relax-tbljal=Zcmt} Zcmt
+	{multiple schemes} {--relax-tbljal=zcmt,other} zcmt,other
+	{invalid then valid} {--relax-tbljal=other --relax-tbljal=zcmt} other
+	{invalid then disable} {--relax-tbljal=other --no-relax-tbljal} other
+    } {
+	run_dump_test "table-jump-tbljal-options" \
+	    [list [list name $name] [list ld $flags] \
+		 [list error ".*unsupported table-jump relaxation scheme: $scheme"]]
+    }
+    run_dump_test "table-jump-tbljal-zcmt-rv32"
+
+    run_dump_test "table-jump-disable-relax"
+    run_dump_test "table-jump-disable-relax-reverse"
+    run_dump_test "table-jump-shorten-first"
+    run_dump_test "table-jump-multiple-local-sym"
+    run_dump_test "table-jump-benefit"
+    run_dump_test "table-jump-addend"
+    run_dump_test "table-jump-norelax"
+    run_dump_test "table-jump-no-zcmt"
+    run_dump_test "table-jump-zcmt-no-zca"
+    run_dump_test "table-jump-zcmt-no-zicsr"
+    run_dump_test "table-jump-zcd-conflict"
+    run_dump_test "table-jump-overflow"
+    run_dump_test "table-jump-equal-benefit"
+    run_dump_test "table-jump-rv32"
+    run_dump_test "table-jump-vma-zero"
+    run_dump_test "table-jump-emit-relocs"
+    # Check both populated JVT targets and consumed internal relocations.
+    run_dump_test "table-jump-jalt" \
+	[list [list name "RV64 --emit-relocs targets"] \
+	 [list ld "--emit-relocs"]]
+    run_dump_test "table-jump-rv32" \
+	[list [list name "RV32 --emit-relocs targets"] \
+	 [list ld "--emit-relocs"]]
+    run_dump_test "table-jump-rv32" \
+	[list [list name "RV32 --emit-relocs internal markers"] \
+	 [list ld "--emit-relocs"] [list DUMPPROG readelf] \
+	 [list readelf -rW] [list dump table-jump-emit-relocs.d]]
+    run_dump_test "table-jump-be64-bytes"
+    run_dump_test "table-jump-be64-text"
+    run_dump_test "table-jump-be32-bytes"
+    run_dump_test "table-jump-be32-text"
+    run_dump_test "table-jump-no-benefit-symbol"
+    run_dump_test "table-jump-no-benefit-section"
+    run_dump_test "table-jump-no-benefit-jvt-ref"
+    run_dump_test "table-jump-weak-base"
+    run_dump_test "table-jump-weak-base-no-table"
+    run_dump_test "table-jump-weak-base-no-table-section"
+    run_dump_test "table-jump-weak-base-disabled"
+    run_dump_test "table-jump-weak-base-rv32"
+    run_dump_test "table-jump-weak-base-rv32-no-table"
+    run_dump_test "table-jump-default-no-jvt"
+    run_dump_test "table-jump-default-jvt"
+    run_dump_test "table-jump-default-jvt-symbol"
+    run_dump_test "table-jump-default-jvt-relocs"
+    run_dump_test "table-jump-base-collision"
+    run_dump_test "table-jump-base-local-collision"
+    run_dump_test "table-jump-symbol-policy"
+    run_dump_test "table-jump-strip-symbol"
+    run_dump_test "table-jump-gc-dead"
+    run_dump_test "table-jump-gc-dead-symbol"
+    run_dump_test "table-jump-gc-comdat"
+    run_dump_test "table-jump-gc-comdat-symbol"
+    run_dump_test "table-jump-vma-lma"
+
     # The following tests require shared library support.
     if ![check_shared_lib_support] {
 	return
     }
+
+    run_dump_test "table-jump-pie"
+    run_dump_test "table-jump-pie-text"
+    run_dump_test "table-jump-pie-relocs"
+    run_dump_test "table-jump-shared"
+    run_dump_test "table-jump-shared-text"
+    run_dump_test "table-jump-shared-symbol"
+    run_dump_test "table-jump-shared-relocs"
 
     run_dump_test "relro-relax-lui"
     run_dump_test "relro-relax-pcrel"
