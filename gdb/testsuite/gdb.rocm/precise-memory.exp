@@ -42,17 +42,17 @@ proc do_test { xnack_request expected_insn } {
 	}
 
 	gdb_test "show amdgpu precise-memory" \
-	    "AMDGPU precise memory access reporting is off \\(currently disabled\\)." \
+	    "AMDGPU precise memory access reporting is off \\(currently disabled\\)" \
 	    "show precise-memory setting in CLI before"
 	gdb_test "interpreter-exec mi \"-gdb-show amdgpu precise-memory\"" \
-	    "\\^done,value=\"off\",verbose=\"AMDGPU precise memory access reporting is off \\(currently disabled\\).\\\\n\",effective-value=\"off\"" \
+	    "\\^done,value=\"off\",verbose=\"AMDGPU precise memory access reporting is off \\(currently disabled\\)\\\\n\",effective-value=\"off\"" \
 	    "show precise-memory setting in MI before"
 
 	set cli_effective_value ""
 	set mi_effective_value ""
 	# Assume precise-memory is available, unless GDB reports otherwise.
 	gdb_test_multiple "set amdgpu precise-memory on" "" {
-	    -re -wrap "warning: AMDGPU precise memory access reporting could not be enabled\\." {
+	    -re -wrap "warning: AMDGPU precise memory access reporting could not be changed\\." {
 		set cli_effective_value "disabled"
 		set mi_effective_value "off"
 		pass $gdb_test_name
@@ -69,10 +69,10 @@ proc do_test { xnack_request expected_insn } {
 	}
 
 	gdb_test "show amdgpu precise-memory" \
-	    "AMDGPU precise memory access reporting is on \\(currently ${cli_effective_value}\\)\\." \
+	    "AMDGPU precise memory access reporting is on \\(currently ${cli_effective_value}\\)" \
 	    "show precise-memory setting in CLI after"
 	gdb_test "interpreter-exec mi \"-gdb-show amdgpu precise-memory\"" \
-	    "\\^done,value=\"on\",verbose=\"AMDGPU precise memory access reporting is on \\(currently ${cli_effective_value}\\).\\\\n\",effective-value=\"${mi_effective_value}\"" \
+	    "\\^done,value=\"on\",verbose=\"AMDGPU precise memory access reporting is on \\(currently ${cli_effective_value}\\)\\\\n\",effective-value=\"${mi_effective_value}\"" \
 	    "show precise-memory setting in MI after"
 
 	if { $cli_effective_value eq "disabled" } {
