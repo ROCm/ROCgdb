@@ -1421,6 +1421,7 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	    case 't': USE_BITS (OP_MASK_CRS2S, OP_SH_CRS2S); break;
 	    case 'x': break; /* CRS2S, constrained to equal RD.  */
 	    case 'z': break; /* CRS2S, constrained to be x0.  */
+	    case 'r': break; /* Register constrained to be ra.  */
 	    case '>': /* CITYPE immediate, compressed shift.  */
 	    case 'u': /* CITYPE immediate, compressed lui.  */
 	    case 'v': /* CITYPE immediate, li to compressed lui.  */
@@ -3006,6 +3007,11 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		case 'z': /* RS2, constrained to equal x0.  */
 		  if (!reg_lookup (&asarg, RCLASS_GPR, &regno)
 		      || regno != 0)
+		    break;
+		  continue;
+		case 'r': /* Register constrained to equal ra.  */
+		  if (!reg_lookup (&asarg, RCLASS_GPR, &regno)
+		      || regno != X_RA)
 		    break;
 		  continue;
 		case '>': /* Shift amount, 0 - (XLEN-1).  */
