@@ -1,5 +1,9 @@
 -*- text -*-
 
+* Add the RISC-V --relax-tbljal[=zcmt] and --no-relax-tbljal options for
+  opt-in Zcmt table-jump relaxation in non-position-independent executable
+  links.  An omitted scheme selects zcmt; unsupported schemes are errors.
+
 * The alpha target supports indirect functions (STT_GNU_IFUNC), using the
   newly allocated R_ALPHA_IRELATIVE (42) dynamic relocation.  No dynamic
   linker or C library startup code implements that relocation yet, so a

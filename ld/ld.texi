@@ -33,6 +33,7 @@
 @set PDP11
 @set POWERPC
 @set POWERPC64
+@set RISCV
 @set Renesas
 @set S/390
 @set SPU
@@ -4167,6 +4168,51 @@ an error.
 @itemx --no-compact-branches
 These options control the generation of compact instructions by the linker
 in the PLT entries for MIPS R6.
+
+@end table
+
+@c man end
+@end ifset
+
+@ifset RISCV
+@subsection Options specific to RISC-V targets
+
+@c man begin OPTIONS
+
+@table @gcctabopt
+
+@kindex --relax-tbljal
+@item --relax-tbljal
+@itemx --relax-tbljal=@var{scheme}
+Enable RISC-V table-jump relaxation using @var{scheme}.  The only supported
+scheme is currently @samp{zcmt}; omitting the argument is equivalent to
+@samp{--relax-tbljal=zcmt}.  An explicit scheme must follow @samp{=} with
+no intervening space.  Empty or unsupported scheme names are errors.
+
+Zcmt table-jump relaxation is performed only when the input architecture
+attributes permit the Zcmt extension.  The extension requires Zca and
+Zicsr, and is not compatible with Zcd.  This relaxation is disabled by
+default and is initially supported only for non-position-independent
+executable links.  It is conservatively disabled for PIC, PIE and shared
+links.
+
+The last @samp{--relax-tbljal} or @samp{--no-relax-tbljal} option determines
+whether table-jump relaxation is requested.  Disabling relaxation with
+@samp{--no-relax} also disables table-jump relaxation, regardless of where
+the table-jump option appears.
+
+When a non-empty @code{.riscv.jvt} section is emitted, the linker defines
+a local @code{__jvt_base$} symbol at the table base.  Programs using this
+relaxation must initialize the @code{jvt} CSR to @code{__jvt_base$}
+before executing @code{cm.jt} or @code{cm.jalt}.  The symbol is not
+defined when no profitable table is emitted; generic startup code that
+unconditionally references @code{__jvt_base$} is therefore unsupported
+unless it arranges an optional reference or is linked only when a JVT is
+emitted.
+
+@kindex --no-relax-tbljal
+@item --no-relax-tbljal
+Disable RISC-V table-jump relaxation.  This is the default.
 
 @end table
 

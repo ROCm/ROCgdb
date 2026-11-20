@@ -66,6 +66,8 @@ struct riscv_elf_params
 {
   /* Whether to relax code sequences to GP-relative addressing.  */
   bool relax_gp;
+  /* Whether to relax code sequences for Zcmt.  */
+  bool relax_zcmt;
   /* Whether to check if SUB_ULEB128 relocation has non-zero addend.  */
   bool check_uleb128;
   /* How to mark the output for Zicfilp and Zicfiss.  */

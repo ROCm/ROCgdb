@@ -21,6 +21,7 @@
 @set PDP11
 @set POWERPC
 @set POWERPC64
+@set RISCV
 @set Renesas
 @set S/390
 @set SPU

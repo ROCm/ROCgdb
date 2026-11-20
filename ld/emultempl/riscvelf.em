@@ -26,6 +26,7 @@ fragment <<EOF
 #include "elfxx-riscv.h"
 
 static struct riscv_elf_params params = { .relax_gp = 1,
+					  .relax_zcmt = false,
 					  .check_uleb128 = 0,
 					  .zicfilp = RISCV_ZICFILP_IMPLICIT,
 					  .zicfiss = RISCV_ZICFISS_IMPLICIT,
@@ -52,6 +53,8 @@ EOF
 PARSE_AND_LIST_LONGOPTS=${PARSE_AND_LIST_LONGOPTS}'
     { "relax-gp", no_argument, NULL, OPTION_RELAX_GP },
     { "no-relax-gp", no_argument, NULL, OPTION_NO_RELAX_GP },
+    { "relax-tbljal", optional_argument, NULL, OPTION_RELAX_TBLJAL },
+    { "no-relax-tbljal", no_argument, NULL, OPTION_NO_RELAX_TBLJAL },
     { "check-uleb128", no_argument, NULL, OPTION_CHECK_ULEB128 },
     { "no-check-uleb128", no_argument, NULL, OPTION_NO_CHECK_ULEB128 },
 '
@@ -59,6 +62,8 @@ PARSE_AND_LIST_LONGOPTS=${PARSE_AND_LIST_LONGOPTS}'
 PARSE_AND_LIST_OPTIONS=${PARSE_AND_LIST_OPTIONS}'
   fprintf (file, _("  --relax-gp                  Perform GP relaxation\n"));
   fprintf (file, _("  --no-relax-gp               Don'\''t perform GP relaxation\n"));
+  fprintf (file, _("  --relax-tbljal[=zcmt]       Enable RISC-V table-jump relaxation (scheme: zcmt)\n"));
+  fprintf (file, _("  --no-relax-tbljal           Disable RISC-V table-jump relaxation (default)\n"));
   fprintf (file, _("  --check-uleb128             Check if SUB_ULEB128 has non-zero addend\n"));
   fprintf (file, _("  --no-check-uleb128          Don'\''t check if SUB_ULEB128 has non-zero addend\n"));
   fprintf (file, _("\
@@ -127,6 +132,16 @@ PARSE_AND_LIST_ARGS_CASES=${PARSE_AND_LIST_ARGS_CASES}'
 
     case OPTION_NO_RELAX_GP:
       params.relax_gp = 0;
+      break;
+
+    case OPTION_RELAX_TBLJAL:
+      if (optarg != NULL && strcmp (optarg, "zcmt") != 0)
+	fatal (_("%P: unsupported table-jump relaxation scheme: %s\n"), optarg);
+      params.relax_zcmt = true;
+      break;
+
+    case OPTION_NO_RELAX_TBLJAL:
+      params.relax_zcmt = false;
       break;
 
     case OPTION_CHECK_ULEB128:
