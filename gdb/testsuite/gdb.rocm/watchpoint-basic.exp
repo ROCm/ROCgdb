@@ -135,7 +135,9 @@ proc_with_prefix test_watchpoint_inside_kernel {} {
 	    return
 	}
 
-	gdb_breakpoint "kernel" -allow-pending -temporary
+	# -qualified, so that this does not also match methods named
+	# "kernel" in a runtime that has debug info.
+	gdb_breakpoint "kernel" -allow-pending -temporary -qualified
 	gdb_test "continue" \
 	    "hit Temporary breakpoint.*, kernel .*" \
 	    "continue to kernel"
