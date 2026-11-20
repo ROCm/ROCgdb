@@ -372,7 +372,7 @@ struct gdb_quit_bad_alloc
   ATTRIBUTE_PRINTF (2, 3);
 [[noreturn]] extern void throw_quit (const char *fmt, ...)
   ATTRIBUTE_PRINTF (1, 2);
-[[noreturn]] [[noreturn]] extern void throw_forced_quit (const char *fmt, ...)
+[[noreturn]] extern void throw_forced_quit (const char *fmt, ...)
   ATTRIBUTE_PRINTF (1, 2);
 
 #endif /* GDBSUPPORT_COMMON_EXCEPTIONS_H */
