@@ -40,7 +40,7 @@ SYMBOL TABLE:
 0+06 l       .text.section.padding	0+00 \$d
 0+00 l    d  .text.relax.align	0+00 .text.relax.align
 0+00 l       .text.relax.align	0+00 \$xrv32i2p1_c2p0_zca1p0
-0+08 l       .text.relax.align	0+00 \$xrv32i2p1
+0+0a l       .text.relax.align	0+00 \$xrv32i2p1
 0+0a l       .text.section.padding	0+00 \$xrv32i2p1_c2p0_zca1p0
 0+03 l       .text.odd.align.start.insn	0+00 \$d
 0+04 l       .text.odd.align.start.insn	0+00 \$xrv32i2p1

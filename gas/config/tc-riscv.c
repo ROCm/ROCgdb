@@ -5402,7 +5402,12 @@ bool
 riscv_frag_align_code (int n)
 {
   bfd_vma bytes = (bfd_vma) 1 << n;
-  bfd_vma insn_alignment = riscv_opts.rvc ? 2 : 4;
+  struct riscv_segment_info_type *info
+    = &seg_info (now_seg)->tc_segment_info_data;
+  /* Relaxing RVC code anywhere before this point can move it by 2 bytes,
+     even if RVC is off here, so use the 2-byte worst case then.  */
+  bfd_vma insn_alignment
+    = (riscv_opts.rvc || (elf_flags & EF_RISCV_RVC)) ? 2 : 4;
   bfd_vma worst_case_bytes = bytes - insn_alignment;
   char *nops;
   expressionS ex;
@@ -5412,24 +5417,22 @@ riscv_frag_align_code (int n)
   if (bytes <= insn_alignment)
     {
       if (bytes == insn_alignment)
-	seg_info (now_seg)->tc_segment_info_data.last_insn16 = false;
+	info->last_insn16 = false;
       return false;
     }
 
   /* When not relaxing, riscv_handle_align handles code alignment.  But
      if relaxable code came before in this section, the linker may still
      move this point, so emit R_RISCV_ALIGN anyway.  */
-  if (!riscv_opts.relax
-      && !seg_info (now_seg)->tc_segment_info_data.last_relax)
+  if (!riscv_opts.relax && !info->last_relax)
     return false;
 
   /* If the last item emitted was not an ordinary insn, first align back to
      insn granularity.  Don't do this unconditionally, to avoid altering frags
      when that's not actually needed.  */
-  if (seg_info (now_seg)->tc_segment_info_data.map_state != MAP_INSN
-      || seg_info (now_seg)->tc_segment_info_data.last_insn16)
+  if (info->map_state != MAP_INSN || info->last_insn16)
     frag_align_code (riscv_opts.rvc ? 1 : 2, 0);
-  seg_info (now_seg)->tc_segment_info_data.last_insn16 = false;
+  info->last_insn16 = false;
 
   /* Maybe we should use frag_var to create a new rs_align_code fragment,
      rather than just use frag_more to handle an alignment here?  So that we

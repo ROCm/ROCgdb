@@ -226,6 +226,11 @@ if [istarget "riscv*-*-*"] {
     run_dump_test "attr-phdr"
     run_dump_test "relax-max-align-gp"
     run_dump_test "relax-data-segment-align"
+    foreach n {1 2 3 4 5 6 7 8 9 10 11 12} {
+	foreach v {norvc norelax.norvc norelax relax.rvc} {
+	    run_dump_test "relax-align-$n-$v"
+	}
+    }
     run_dump_test "uleb128"
     run_dump_test "pr31179"
     run_dump_test "pr31179-r"

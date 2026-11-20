@@ -19,12 +19,12 @@ Disassembly of section .text:
 [ 	]+6:[ 	]+R_RISCV_LO12_I[ 	]+foo
 [ 	]+6:[ 	]+R_RISCV_RELAX[ 	]+\*ABS\*
 [ 	]+a:[ 	]+8082[ 	]+ret
-[ 	]+c:[ 	]+00000013[ 	]+nop
-[ 	]+c:[ 	]+R_RISCV_ALIGN[ 	]+\*ABS\*\+0x4
+[ 	]+c:[ 	]+0001[ 	]+nop
+[ 	]+c:[ 	]+R_RISCV_ALIGN[ 	]+\*ABS\*\+0x6
+[ 	]+e:[ 	]+00000013[ 	]+nop
 
-0+0010 <SHOULD_ALIGN_8_HERE>:
-[ 	]+10:[ 	]+12345678[ 	]+\.word[ 	]+0x12345678
+0+0012 <SHOULD_ALIGN_8_HERE>:
+[ 	]+12:[ 	]+12345678[ 	]+\.word[ 	]+0x12345678
 
-0+0014 <foo>:
-[ 	]+14:[ 	]+8082[ 	]+ret
-[ 	]+16:[ 	]+0001[ 	]+nop
+0+0016 <foo>:
+[ 	]+16:[ 	]+8082[ 	]+ret
