@@ -1311,7 +1311,6 @@ static const struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"zvkng", "+zvkn,+zvkg", check_implicit_always},
   {"zvknc", "+zvkn,+zvbc", check_implicit_always},
   {"zvkn", "+zvkned,+zvknhb,+zvkb,+zvkt", check_implicit_always},
-  {"zvknhb", "+zvknha", check_implicit_always},
   {"zvksg", "+zvks,+zvkg", check_implicit_always},
   {"zvksc", "+zvks,+zvbc", check_implicit_always},
   {"zvks", "+zvksed,+zvksh,+zvkb,+zvkt", check_implicit_always},
@@ -1321,7 +1320,7 @@ static const struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"zvkg", "+zve32x", check_implicit_always},
   {"zvkned", "+zve32x", check_implicit_always},
   {"zvknha", "+zve32x", check_implicit_always},
-  {"zvknhb", "+zve32x", check_implicit_always},
+  {"zvknhb", "+zvknha,+zve32x", check_implicit_always},
   {"zvksed", "+zve32x", check_implicit_always},
   {"zvksh", "+zve32x", check_implicit_always},
 
