@@ -897,6 +897,7 @@ enum
   REG_0F18,
   REG_0F1C_P_0_MOD_0,
   REG_0F1E_P_1_MOD_3,
+  REG_0F1E_P_3_MOD_3,
   REG_0F38D8_PREFIX_1,
   REG_0F3A0F_P_1,
   REG_0F71,
@@ -961,6 +962,7 @@ enum
   MOD_0F1B_PREFIX_1,
   MOD_0F1C_PREFIX_0,
   MOD_0F1E_PREFIX_1,
+  MOD_0F1E_PREFIX_3,
   MOD_0FAE_REG_0,
   MOD_0FAE_REG_1,
   MOD_0FAE_REG_2,
@@ -3006,8 +3008,19 @@ static const struct dis386 reg_table[][8] = {
     { "nopQ",		{ Ev }, PREFIX_IGNORED },
     { "nopQ",		{ Ev }, PREFIX_IGNORED },
     { "nopQ",		{ Ev }, PREFIX_IGNORED },
-    { "nopQ",		{ Ev }, PREFIX_IGNORED },
+    { "rddoitm",	{ Ev }, 0 },
     { RM_TABLE (RM_0F1E_P_1_MOD_3_REG_7) },
+  },
+  /* REG_0F1E_P_3_MOD_3 */
+  {
+    { "nopQ",		{ Ev }, PREFIX_IGNORED },
+    { "nopQ",		{ Ev }, PREFIX_IGNORED },
+    { "nopQ",		{ Ev }, PREFIX_IGNORED },
+    { "nopQ",		{ Ev }, PREFIX_IGNORED },
+    { "nopQ",		{ Ev }, PREFIX_IGNORED },
+    { "nopQ",		{ Ev }, PREFIX_IGNORED },
+    { "wrdoitm",	{ Ev }, 0 },
+    { "nopQ",		{ Ev }, PREFIX_IGNORED },
   },
   /* REG_0F38D8_PREFIX_1 */
   {
@@ -3448,7 +3461,7 @@ static const struct dis386 prefix_table[][4] = {
     { "nopQ",	{ Ev }, 0 },
     { MOD_TABLE (MOD_0F1E_PREFIX_1) },
     { "nopQ",	{ Ev }, 0 },
-    { NULL,	{ XX }, PREFIX_IGNORED },
+    { MOD_TABLE (MOD_0F1E_PREFIX_3) },
   },
 
   /* PREFIX_0F2A */
@@ -8701,6 +8714,11 @@ static const struct dis386 mod_table[][2] = {
     { REG_TABLE (REG_0F1E_P_1_MOD_3) },
   },
   {
+    /* MOD_0F1E_PREFIX_3 */
+    { "nopQ",		{ Ev }, PREFIX_IGNORED },
+    { REG_TABLE (REG_0F1E_P_3_MOD_3) },
+  },
+  {
     /* MOD_0FAE_REG_0 */
     { "fxsave",		{ FXSAVE }, 0 },
     { PREFIX_TABLE (PREFIX_0FAE_REG_0_MOD_3) },
@@ -8855,7 +8873,7 @@ static const struct dis386 rm_table[][8] = {
     { "nopQ",		{ Ev }, PREFIX_IGNORED },
     { "endbr64",	{ Skip_MODRM }, 0 },
     { "endbr32",	{ Skip_MODRM }, 0 },
-    { "nopQ",		{ Ev }, PREFIX_IGNORED },
+    { "setdoitm",	{ Skip_MODRM }, 0 },
     { "nopQ",		{ Ev }, PREFIX_IGNORED },
     { "nopQ",		{ Ev }, PREFIX_IGNORED },
     { "nopQ",		{ Ev }, PREFIX_IGNORED },

@@ -1275,6 +1275,7 @@ static const arch_entry cpu_arch[] =
   SUBARCH (padlockphe2, PADLOCKPHE2, PADLOCKPHE2, false),
   SUBARCH (padlockxmodx, PADLOCKXMODX, PADLOCKXMODX, false),
   SUBARCH (movrs, MOVRS, MOVRS, false),
+  SUBARCH (doitm, DOITM, DOITM, false),
 };
 
 #undef SUBARCH

@@ -1938,19 +1938,19 @@ Disassembly of section .text:
  +[a-f0-9]+:	f3 0f 1e ed          	repz nop %ebp
  +[a-f0-9]+:	f3 0f 1e ee          	repz nop %esi
  +[a-f0-9]+:	f3 0f 1e ef          	repz nop %edi
- +[a-f0-9]+:	f3 0f 1e f0          	repz nop %eax
- +[a-f0-9]+:	f3 0f 1e f1          	repz nop %ecx
- +[a-f0-9]+:	f3 0f 1e f2          	repz nop %edx
- +[a-f0-9]+:	f3 0f 1e f3          	repz nop %ebx
- +[a-f0-9]+:	f3 0f 1e f4          	repz nop %esp
- +[a-f0-9]+:	f3 0f 1e f5          	repz nop %ebp
- +[a-f0-9]+:	f3 0f 1e f6          	repz nop %esi
- +[a-f0-9]+:	f3 0f 1e f7          	repz nop %edi
+ +[a-f0-9]+:	f3 0f 1e f0          	rddoitm %eax
+ +[a-f0-9]+:	f3 0f 1e f1          	rddoitm %ecx
+ +[a-f0-9]+:	f3 0f 1e f2          	rddoitm %edx
+ +[a-f0-9]+:	f3 0f 1e f3          	rddoitm %ebx
+ +[a-f0-9]+:	f3 0f 1e f4          	rddoitm %esp
+ +[a-f0-9]+:	f3 0f 1e f5          	rddoitm %ebp
+ +[a-f0-9]+:	f3 0f 1e f6          	rddoitm %esi
+ +[a-f0-9]+:	f3 0f 1e f7          	rddoitm %edi
  +[a-f0-9]+:	f3 0f 1e f8          	repz nop %eax
  +[a-f0-9]+:	f3 0f 1e f9          	repz nop %ecx
  +[a-f0-9]+:	f3 0f 1e fa          	endbr64
  +[a-f0-9]+:	f3 0f 1e fb          	endbr32
- +[a-f0-9]+:	f3 0f 1e fc          	repz nop %esp
+ +[a-f0-9]+:	f3 0f 1e fc          	setdoitm
  +[a-f0-9]+:	f3 0f 1e fd          	repz nop %ebp
  +[a-f0-9]+:	f3 0f 1e fe          	repz nop %esi
  +[a-f0-9]+:	f3 0f 1e ff          	repz nop %edi
@@ -2010,14 +2010,14 @@ Disassembly of section .text:
  +[a-f0-9]+:	f2 0f 1e ed          	repnz nop %ebp
  +[a-f0-9]+:	f2 0f 1e ee          	repnz nop %esi
  +[a-f0-9]+:	f2 0f 1e ef          	repnz nop %edi
- +[a-f0-9]+:	f2 0f 1e f0          	repnz nop %eax
- +[a-f0-9]+:	f2 0f 1e f1          	repnz nop %ecx
- +[a-f0-9]+:	f2 0f 1e f2          	repnz nop %edx
- +[a-f0-9]+:	f2 0f 1e f3          	repnz nop %ebx
- +[a-f0-9]+:	f2 0f 1e f4          	repnz nop %esp
- +[a-f0-9]+:	f2 0f 1e f5          	repnz nop %ebp
- +[a-f0-9]+:	f2 0f 1e f6          	repnz nop %esi
- +[a-f0-9]+:	f2 0f 1e f7          	repnz nop %edi
+ +[a-f0-9]+:	f2 0f 1e f0          	wrdoitm %eax
+ +[a-f0-9]+:	f2 0f 1e f1          	wrdoitm %ecx
+ +[a-f0-9]+:	f2 0f 1e f2          	wrdoitm %edx
+ +[a-f0-9]+:	f2 0f 1e f3          	wrdoitm %ebx
+ +[a-f0-9]+:	f2 0f 1e f4          	wrdoitm %esp
+ +[a-f0-9]+:	f2 0f 1e f5          	wrdoitm %ebp
+ +[a-f0-9]+:	f2 0f 1e f6          	wrdoitm %esi
+ +[a-f0-9]+:	f2 0f 1e f7          	wrdoitm %edi
  +[a-f0-9]+:	f2 0f 1e f8          	repnz nop %eax
  +[a-f0-9]+:	f2 0f 1e f9          	repnz nop %ecx
  +[a-f0-9]+:	f2 0f 1e fa          	repnz nop %edx
