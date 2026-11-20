@@ -5389,9 +5389,11 @@ append_composite_type_field_raw (struct type *t, const char *name,
 {
   struct field *f;
 
-  t->set_num_fields (t->num_fields () + 1);
+  /* Reallocate the array before updating the number of fields, so that
+     fields () never covers more elements than are allocated.  */
   t->set_fields (XRESIZEVEC (struct field, t->fields ().data (),
-			     t->num_fields ()));
+			     t->num_fields () + 1));
+  t->set_num_fields (t->num_fields () + 1);
   f = &t->field (t->num_fields () - 1);
   memset (f, 0, sizeof f[0]);
   f[0].set_type (field);
