@@ -60,8 +60,13 @@ set success_count 0
 proc do_test { fault core_type output_type } {
     incr ::total_count
     set use_pipe [expr {$output_type eq "pipe"}]
-    save_vars { ::env(HSA_ENABLE_LIGHTWEIGHT_COREDUMP) } {
+    save_vars { ::env(HSA_ENABLE_LIGHTWEIGHT_COREDUMP) \
+		::env(HIP_SKIP_ABORT_ON_GPU_ERROR) } {
 	set ::env(HSA_ENABLE_LIGHTWEIGHT_COREDUMP) [expr {$core_type == "lightweight"}]
+	# Device exceptions honor HIP_SKIP_ABORT_ON_GPU_ERROR, which defaults
+	# to on and suppresses the host abort.  This test needs that abort
+	# so the runtime writes a core.
+	set ::env(HIP_SKIP_ABORT_ON_GPU_ERROR) 0
 	set coredump [rocm_core_find $::binfile {} $fault "/dev/null" $use_pipe]
     }
 

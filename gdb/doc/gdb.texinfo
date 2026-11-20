@@ -30190,7 +30190,10 @@ contains the state of all the agents, queues and waves running on those
 agents when a fault occurred.  After this file has been generated, the
 @acronym{AMD} @acronym{ROCm} runtime aborts the host process so the
 Linux kernel can generate the host core file describing the state of the
-host threads, and the inferior memory.
+host threads, and the inferior memory.  The HIP runtime skips that
+abort for a device-side assertion, an out-of-memory error, or an
+invalid dispatch when @env{HIP_SKIP_ABORT_ON_GPU_ERROR} is enabled,
+which is the default.
 
 The file produced by the @acronym{AMD} @acronym{GPU} runtime is named
 @file{gpucore.@var{pid}} where @var{pid} is the process identifier of the host
@@ -30244,6 +30247,21 @@ fault occurs on an agent, the following command can be used:
 @smallexample
 ulimit -c unlimited
 @end smallexample
+
+@env{HIP_SKIP_ABORT_ON_GPU_ERROR} controls whether the HIP runtime
+aborts the host process after a GPU error.  It is enabled by default.
+While it is enabled, a device-side assertion, an out-of-memory error,
+or an invalid dispatch returns @code{hipErrorLaunchFailure} instead of
+calling @code{abort}, even when core dumps are enabled with
+@kbd{ulimit}.  The Linux kernel then does not write the host core file,
+so the GPU core file and the host core file cannot be merged.  The
+@acronym{AMD} @acronym{ROCm} runtime may still write the GPU core file
+when the core size limit is nonzero.
+
+Set @env{HIP_SKIP_ABORT_ON_GPU_ERROR} to @samp{0} before the runtime is
+initialized to keep the abort and obtain both core files.  A memory
+access fault still aborts the process when a core dump is enabled with
+@kbd{ulimit}.
 
 @value{GDBN} needs to be presented a unified core file to inspect the state of
 a heterogeneous process.  You can use the @value{COREMERGEN} utility

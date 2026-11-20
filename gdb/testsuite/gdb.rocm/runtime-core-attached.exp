@@ -65,6 +65,12 @@ with_rocm_gpu_lock {
     save_vars { ::env(HSA_COREDUMP_PATTERN) } {
 	unset -nocomplain ::env(HSA_COREDUMP_PATTERN)
 
+	# Device exceptions honor HIP_SKIP_ABORT_ON_GPU_ERROR, which defaults
+	# to on and suppresses the host abort.  This test needs that abort
+	# so the runtime writes a core.
+	gdb_test_no_output "set environment HIP_SKIP_ABORT_ON_GPU_ERROR 0" \
+	    "disable skip-abort so the runtime aborts"
+
 	# Wait for program to crash and cores to be written.  This can take
 	# a while for large core dumps.
 	with_timeout_factor 3 {
