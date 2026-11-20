@@ -89,33 +89,11 @@ proc_with_prefix test_host_watchpoint_after_runtime_load {} {
     }
 }
 
-# On some systems, KFD corrupts the watchpoint configurations
-# during the first dispatch's queue mapping.  This leads to
-# watchpoints not being triggered, if they were set before the
-# first dispatch.  As a result, those test scenarios run to the
-# end and exit prematurely.
-
-gdb_caching_proc target_has_xfail {} {
-    set xfail_arches {gfx1100 gfx1101 gfx1103 gfx1150 gfx1151 gfx1200 gfx1201}
-
-    set targets [find_amdgpu_devices]
-    if {[llength $targets] == 0} {
-	# Can't determine GPU type, don't set up xfail.  The test will probably
-	# not run correctly anyway.
-	return 0
-    }
-
-    # The test will run on GPU-0, so it should be the first of the list.
-    set target [lindex $targets 0]
-
-    return [expr {[lsearch -exact $xfail_arches $target] != -1}]
-}
-
 # This is used when dealing with the first watchpoints that are
 # set before the first dispatch.
 
 proc maybe_xfail {} {
-    if {[target_has_xfail]} {
+    if {[target_has_kfd_watchpoint_corruption]} {
 	setup_xfail "*-*-*" "watchpoint configuration corruption in kfd."
     }
 }

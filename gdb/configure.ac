@@ -342,7 +342,7 @@ if test "$gdb_require_amd_dbgapi" = true \
   # stability until amd-dbgapi hits 1.0, but for convenience, still check for
   # greater or equal that version.  It can be handy when testing with a newer
   # version of the library.
-  PKG_CHECK_MODULES([AMD_DBGAPI], [amd-dbgapi >= 0.82.0],
+  PKG_CHECK_MODULES([AMD_DBGAPI], [amd-dbgapi >= 0.84.0],
 		    [has_amd_dbgapi=yes], [has_amd_dbgapi=no])
 
   if test "$has_amd_dbgapi" = "yes"; then
@@ -378,12 +378,6 @@ if test "$gdb_require_amd_dbgapi" = true \
     AC_MSG_CHECKING([whether AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE is available])
     AC_CHECK_DECLS(AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE,
 		   [], [], [[#include <amd-dbgapi/amd-dbgapi.h>]])
-
-    # Detect if amd_dbgapi_process_set_property is available.
-    # This function became available since amd-dbgapi version 0.83.0.
-    AC_MSG_CHECKING([whether amd_dbgapi_process_set_property is available])
-    AC_CHECK_DECLS(amd_dbgapi_process_set_property, [], [],
-		   [[#include <amd-dbgapi/amd-dbgapi.h>]])
 
     CPPFLAGS="$save_CPPFLAGS"
 
