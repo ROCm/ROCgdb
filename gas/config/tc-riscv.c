@@ -5447,6 +5447,8 @@ riscv_frag_align_code (int n)
 
   fix_new_exp (frag_now, nops - frag_now->fr_literal, 0,
 	       &ex, false, BFD_RELOC_RISCV_ALIGN);
+  /* The linker may now change the size of this section.  */
+  info->last_relax = true;
 
   riscv_mapping_state (MAP_INSN, worst_case_bytes, true/* fr_align_code */);
 
