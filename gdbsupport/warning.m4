@@ -49,6 +49,7 @@ build_warnings=" \
 -Wno-error=deprecated-register \
 -Wno-mismatched-tags \
 -Wno-sign-compare -Wno-error=maybe-uninitialized \
+-Wno-stringop-overflow \
 -Wno-switch \
 -Wno-unused \
 -Wpointer-arith \
