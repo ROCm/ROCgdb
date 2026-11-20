@@ -25,17 +25,7 @@ THE SOFTWARE.
 #include <hip/hip_runtime.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#define CHECK(cmd)							      \
-  {									      \
-    hipError_t error = cmd;						      \
-    if (error != hipSuccess)						      \
-      {									      \
-	fprintf (stderr, "error: '%s'(%d) at %s:%d\n",			      \
-		 hipGetErrorString (error), error, __FILE__, __LINE__);	      \
-	exit (EXIT_FAILURE);						      \
-      }									      \
-  }
+#include "rocm-test-utils.h"
 
 __global__ void
 bit_extract_kernel (uint32_t *C_d, const uint32_t *A_d, size_t N)
@@ -87,8 +77,21 @@ main (int argc, char *argv[])
   CHECK (hipMemcpy (A_d, A_h, Nbytes, hipMemcpyHostToDevice));
 
   printf ("info: launch 'bit_extract_kernel' \n");
-  const unsigned blocks = 512;
+  /* Dispatch more waves than the device can run at once so the hog can
+     keep inferior 1 below full occupancy.  When the hog exits, hardware
+     still has pending work that a faulty GDB would present as a stop in
+     inferior 1 while inferior 2 is starting.  */
   const unsigned threadsPerBlock = 256;
+  unsigned blocks = 512;
+  int max_waves = device_max_waves (&props);
+  if (max_waves > 0 && props.warpSize > 0)
+    {
+      unsigned waves_per_wg = threadsPerBlock / props.warpSize;
+      if (waves_per_wg > 0)
+	blocks = ((unsigned) max_waves * 2) / waves_per_wg;
+      if (blocks < 512)
+	blocks = 512;
+    }
   hipLaunchKernelGGL (bit_extract_kernel, dim3 (blocks),
 		      dim3 (threadsPerBlock), 0, 0, C_d, A_d, N);
 
