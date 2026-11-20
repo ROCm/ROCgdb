@@ -158,6 +158,7 @@ struct riscv_segment_info_type
   enum riscv_seg_mstate map_state;
   bool rvc;
   bool last_insn16;
+  bool last_relax;
   /* The current mapping symbol with architecture string.  */
   symbolS *arch_map_symbol;
 };

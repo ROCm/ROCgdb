@@ -1982,6 +1982,9 @@ append_insn (struct riscv_cl_insn *ip, expressionS *address_expr,
 				  address_expr, false, reloc_type);
 
 	  ip->fixp->fx_tcbit = riscv_opts.relax;
+	  /* The linker may now change the size of this section.  */
+	  if (riscv_opts.relax)
+	    seg_info (now_seg)->tc_segment_info_data.last_relax = true;
 	  ip->fixp->tc_fix_data.source_macro = source_macro;
 	}
     }
@@ -5413,8 +5416,11 @@ riscv_frag_align_code (int n)
       return false;
     }
 
-  /* When not relaxing, riscv_handle_align handles code alignment.  */
-  if (!riscv_opts.relax)
+  /* When not relaxing, riscv_handle_align handles code alignment.  But
+     if relaxable code came before in this section, the linker may still
+     move this point, so emit R_RISCV_ALIGN anyway.  */
+  if (!riscv_opts.relax
+      && !seg_info (now_seg)->tc_segment_info_data.last_relax)
     return false;
 
   /* If the last item emitted was not an ordinary insn, first align back to
