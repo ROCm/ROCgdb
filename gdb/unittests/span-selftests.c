@@ -314,18 +314,21 @@ check_ptr_ptr_ctor ()
   SELF_CHECK (view.data () == &data[1]);
   SELF_CHECK (view[0] == data[1]);
   SELF_CHECK (view[1] == data[2]);
-
-  gdb_byte array[] = {0x11, 0x22, 0x33, 0x44};
-  const gdb_byte *p1 = array;
-  gdb_byte *p2 = array + ARRAY_SIZE (array);
-  gdb::span<const gdb_byte> view2 (p1, p2);
 }
 
-/* Check construction with a pair of pointers of mixed constness.  */
+/* Check construction with a pair of pointers of mixed constness.
+
+   This is skipped when using libstdc++'s std::span in debug mode,
+   because of this libstdc++ bug requiring the two arguments to have
+   the exact same type:
+
+     https://gcc.gnu.org/bugzilla/show_bug.cgi?id=100990#c1
+  */
 
 static void
 check_ptr_ptr_mixed_cv ()
 {
+#if !defined (_GLIBCXX_DEBUG) || __cplusplus < 202002L
   gdb_byte array[] = {0x11, 0x22, 0x33, 0x44};
   const gdb_byte *cp = array;
   gdb_byte *p = array;
@@ -333,6 +336,12 @@ check_ptr_ptr_mixed_cv ()
   gdb::span<const gdb_byte> view2 (p, cp);
   SELF_CHECK (view1.empty ());
   SELF_CHECK (view2.empty ());
+
+  const gdb_byte *p1 = array;
+  gdb_byte *p2 = array + ARRAY_SIZE (array);
+  gdb::span<const gdb_byte> view3 (p1, p2);
+  SELF_CHECK (view3.size () == ARRAY_SIZE (array));
+#endif
 }
 
 /* Check range-for support (i.e., begin()/end()).  This is a template
