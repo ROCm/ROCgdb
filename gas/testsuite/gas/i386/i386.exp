@@ -555,6 +555,8 @@ if [gas_32_check] then {
     run_dump_test "movrs"
     run_dump_test "movrs-intel"
     run_list_test "movrs-inval"
+    run_dump_test "avx10-vpmldsabflydq"
+    run_dump_test "avx10-vpmldsabflydq-intel"
     run_list_test "sg"
     run_dump_test "clzero"
     run_dump_test "invlpgb"

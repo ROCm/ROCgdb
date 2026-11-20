@@ -504,6 +504,11 @@
   {
     { EVEX_LEN_TABLE (EVEX_LEN_0F3A8F_X86_64_W_0) },
   },
+  /* EVEX_W_0F3ADC */
+  {
+    { Bad_Opcode },
+    { "vpmldsabflydq",	{ XM, Vex, EXx, Ib }, PREFIX_DATA },
+  },
   /* EVEX_W_MAP4_8F_R_0 */
   {
     { "pop2", { { PUSH2_POP2_Fixup, q_mode}, Eq }, NO_PREFIX },

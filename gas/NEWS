@@ -1,5 +1,7 @@
 -*- text -*-
 
+* Add support for the x86 AVX10_VPMLDSABFLYDQ instruction.
+
 * Add support for the x86 ACE V1 instructions.
 
 * Support for .previous, .pushsection and .popsection for COFF targets.

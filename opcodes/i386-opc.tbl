@@ -3707,6 +3707,12 @@ vunpackb, 0x3d, AVX10_V2_AUX, Modrm|Masking|Space0F3A|VexW0|Disp8ShiftVL|CheckOp
 
 // AVX10_V2_AUX instructions end.
 
+// AVX10_VPMLDSABFLYDQ instructions.
+
+vpmldsabflydq, 0x66dc, VPMLDSABFLYDQ, Modrm|Space0F3A|Src1VVVV|VexW1|Disp8ShiftVL|CheckOperandSize|NoSuf, { Imm8, RegXMM|RegYMM|RegZMM|Unspecified|BaseIndex, RegXMM|RegYMM|RegZMM, RegXMM|RegYMM|RegZMM }
+
+// AVX10_VPMLDSABFLYDQ instructions end.
+
 // MOVRS instructions.
 
 prefetchrst2, 0xf18/4, MOVRS, Modrm|Anysize|IgnoreSize|NoSuf, { BaseIndex }

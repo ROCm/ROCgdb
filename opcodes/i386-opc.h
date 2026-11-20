@@ -213,6 +213,8 @@ enum i386_cpu
   CpuAVX10_1_AUX,
   /* AVX10 V2 Auxiliary Instructions support required.  */
   CpuAVX10_V2_AUX,
+  /* AVX10_VPMLDSABFLYDQ Instructions support required.  */
+  CpuVPMLDSABFLYDQ,
   /* TDX Instructions support required.  */
   CpuTDX,
   /* Intel AVX VNNI Instructions support required.  */
@@ -524,6 +526,7 @@ typedef union i386_cpu_flags
       unsigned int cpuavx512_bmm:1;
       unsigned int cpuavx10_1_aux:1;
       unsigned int cpuavx10_v2_aux:1;
+      unsigned int cpuvpmldsabflydq:1;
       unsigned int cputdx:1;
       unsigned int cpuavx_vnni:1;
       unsigned int cpuavx512_fp16:1;
