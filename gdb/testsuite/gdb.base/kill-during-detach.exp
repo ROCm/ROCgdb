@@ -126,10 +126,23 @@ proc run_test { exit_p checkpoint_p } {
 	# NOTE: The 'checkpoint' system in GDB appears to be a little
 	# iffy.  This detach does seem to restore the checkpoint, but
 	# it leaves the inferior stuck in a running state.
-	gdb_test_no_output "python kill_and_detach()"
+
+	# Double the timeout, to account for the fact that we're doing two
+	# things in kill_and_detach.
+	with_timeout_factor 2 {
+	    gdb_test_no_output "python kill_and_detach()"
+	}
     } else {
-	gdb_test "python kill_and_detach()" \
-	    "\\\[Inferior $::decimal \[^\r\n\]+ detached\\\]"
+	# Double the timeout, to account for the fact that we're doing two
+	# things in kill_and_detach.
+	with_timeout_factor 2 {
+	    gdb_test "python kill_and_detach()" \
+		[subst_vars {\[Inferior $::decimal [^\r\n]+ detached\]}]
+	}
+
+	# Do a simple command to drain late output of the previous command in
+	# case it timed out.
+	gdb_test "info inferiors" "<null>.*"
     }
 }
 
