@@ -315,16 +315,20 @@ proc_with_prefix cli_test {} {
 	    # Without any error, "$_hiperr" must be "void".
 	    gdb_test "p \$_hiperr" " = void" "not in scope"
 
-	    # Check "hipError_t" type is known.
+	    # Check "hipError_t" type is known.  Looking up a type can make
+	    # GDB read the debug info of the HIP runtime, which is slow when
+	    # the runtime has some, so allow for it.
 	    set type_found false
-	    gdb_test_multiple "info types hipError_t" \
-		"check if hipError_t type exists" {
-		-re ".*File \[^\r\n\]+:\r\n" {
-		    set type_found true
-		    exp_continue
-		}
-		-re "$::gdb_prompt $" {
-		    gdb_assert {$type_found} $gdb_test_name
+	    with_timeout_factor 5 {
+		gdb_test_multiple "info types hipError_t" \
+		    "check if hipError_t type exists" {
+		    -re ".*File \[^\r\n\]+:\r\n" {
+			set type_found true
+			exp_continue
+		    }
+		    -re "$::gdb_prompt $" {
+			gdb_assert {$type_found} $gdb_test_name
+		    }
 		}
 	    }
 
@@ -342,21 +346,38 @@ proc_with_prefix cli_test {} {
 	    gdb_test_no_output "set args launch"
 	    runto_main
 
-	    # Check "hipError_t" type is not detected.
-	    set type_found true
-	    gdb_test_multiple "info types hipError_t" \
-		"check hipError_t type existence" {
-		-re -wrap "\r\nAll types matching regular expression \"hipError_t\":" {
-		    set type_found false
-		    pass $gdb_test_name
+	    # Check "hipError_t" type is not detected.  As above, this can
+	    # be slow.
+	    set type_found false
+	    with_timeout_factor 5 {
+		gdb_test_multiple "info types hipError_t" \
+		    "check hipError_t type existence" {
+		    -re ".*File \[^\r\n\]+:\r\n" {
+			set type_found true
+			exp_continue
+		    }
+		    -re "$::gdb_prompt $" {
+			pass $gdb_test_name
+		    }
 		}
 	    }
-	    gdb_assert {!$type_found} "there must be no hipError_t"
+
+	    # The program has no debug info, but the HIP runtime can have
+	    # some, for example in a RelWithDebInfo build, and then it
+	    # provides the "hipError_t" type.  $_hiperr is then an enum, and
+	    # the case this section is about can't be tested.
+	    if {$type_found} {
+		unsupported "there must be no hipError_t"
+	    } else {
+		pass "there must be no hipError_t"
+	    }
 
 	    catch_hiperr
 	    check_hip_launch_kernel_err "cont"
-	    gdb_test "p \$_hiperr" " = $::hip_launch_kernel_err_no" \
-		"print as $::hip_launch_kernel_err_no"
+	    if {!$type_found} {
+		gdb_test "p \$_hiperr" " = $::hip_launch_kernel_err_no" \
+		    "print as $::hip_launch_kernel_err_no"
+	    }
 	}
     }
     gdb_exit
