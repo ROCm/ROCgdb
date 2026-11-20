@@ -554,6 +554,8 @@ const struct riscv_opcode riscv_opcodes[] =
 {"bnez",        0, INSN_CLASS_I, "s,p",       MATCH_BNE, MASK_BNE|MASK_RS2, match_opcode, INSN_ALIAS|INSN_CONDBRANCH },
 {"bne",         0, INSN_CLASS_ZCA, "Cs,Cz,Cp",  MATCH_C_BNEZ, MASK_C_BNEZ, match_opcode, INSN_ALIAS|INSN_CONDBRANCH|INSN_NON_EXACT },
 {"bne",         0, INSN_CLASS_I, "s,t,p",     MATCH_BNE, MASK_BNE, match_opcode, INSN_CONDBRANCH },
+{"beqi",        0, INSN_CLASS_ZIBI, "s,Wbi,p", MATCH_BEQI, MASK_BEQI, match_opcode, INSN_CONDBRANCH },
+{"bnei",        0, INSN_CLASS_ZIBI, "s,Wbi,p", MATCH_BNEI, MASK_BNEI, match_opcode, INSN_CONDBRANCH },
 {"addi",        0, INSN_CLASS_ZCA, "Ct,Cc,CK",  MATCH_C_ADDI4SPN, MASK_C_ADDI4SPN, match_c_addi4spn, INSN_ALIAS | INSN_NON_EXACT },
 {"addi",        0, INSN_CLASS_ZCA, "d,CU,Cj",   MATCH_C_ADDI, MASK_C_ADDI, match_rd_nonzero, INSN_ALIAS | INSN_NON_EXACT },
 {"addi",        0, INSN_CLASS_ZCA, "d,CU,z",    MATCH_C_NOP, MASK_C_ADDI|MASK_RVC_IMM, match_c_nop, INSN_ALIAS | INSN_NON_EXACT },

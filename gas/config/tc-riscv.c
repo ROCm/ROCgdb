@@ -1556,6 +1556,16 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 		  goto unknown_validate_operand;
 		}
 	      break;
+	    case 'b':
+	      switch (*++oparg)
+		{
+		case 'i':
+		  USE_BITS (OP_MASK_RS2, OP_SH_RS2);
+		  break;
+		default:
+		  goto unknown_validate_operand;
+		}
+	      break;
 	    case 'f':
 	      switch (*++oparg)
 		{
@@ -3848,7 +3858,28 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		      goto unknown_riscv_ip_operand;
 		    }
 		  break;
-
+		case 'b':
+		  switch (*++oparg)
+		    {
+		    case 'i':
+		      my_getExpression (imm_expr, asarg, false);
+		      check_absolute_expr (ip, imm_expr, false);
+		      if (imm_expr->X_add_number > 31
+			  || imm_expr->X_add_number == 0
+			  || imm_expr->X_add_number < -1)
+			as_bad (_ ("improper beqi/bnei immediate value (%ld)"),
+				(long) imm_expr->X_add_number);
+		      unsigned encoded_value = imm_expr->X_add_number == -1
+						   ? 0
+						   : imm_expr->X_add_number;
+		      INSERT_OPERAND (RS2, *ip, encoded_value);
+		      imm_expr->X_op = O_absent;
+		      asarg = expr_parse_end;
+		      continue;
+		    default:
+		      goto unknown_riscv_ip_operand;
+		    }
+		  break;
 		case 'f':
 		  switch (*++oparg)
 		    {

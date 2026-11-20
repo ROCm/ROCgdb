@@ -797,6 +797,22 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		  goto undefined_modifier;
 		}
 	      break;
+	    case 'b':
+	      switch (*++oparg)
+		{
+		case 'i':
+		  {
+		    int value = EXTRACT_OPERAND (RS2, l);
+		    if (value == 0)
+		      value = -1;
+		    print (info->stream, dis_style_immediate, "%d",
+			   (int) value);
+		  }
+		  break;
+		default:
+		  goto undefined_modifier;
+		}
+	      break;
 	    case 'f':
 	      switch (*++oparg)
 		{
