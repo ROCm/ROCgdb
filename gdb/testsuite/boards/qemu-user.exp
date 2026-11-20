@@ -1,0 +1,244 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This file is a dejagnu "board file" and is used to run the testsuite
+# using QEMU's usermode emulation.  Use --target to specify desired target.
+#
+# To use a specific QEMU, pass custom options to QEMU, specify the target
+# toolchain to use, set environment variable QEMU, QEMU_FLAGS, CROSS (see
+# examples below).
+#
+# Note that to execute dynamically linked programs with qemu-user, a minimal
+# sysroot is required.  It contains the target system's dynamic linker and the
+# shared libraries needed by the program.  If it is not located at the default
+# path, either set QEMU_LD_PREFIX to the sysroot path or set QEMU_FLAGS to
+# "-L /path/to/sysroot".
+#
+# To avoid the need for minimal sysroot altogether, force static compilation
+# by setting CFLAGS_FOR_TARGET to "-static" (see example below).  Note however
+# that some tests need dynamic linking (for example, gdb.base/solib-vanish.exp)
+#
+# Example usage:
+#
+#     make check RUNTESTFLAGS='--target=riscv64-unknown-linux-gnu --target_board=qemu-user'
+#
+#     make check QEMU=qemu-aarch64 QEMU_FLAGS='-L /usr/aarch64-linux-gnu' \
+#        CROSS=aarch64-linux-gnu- \
+#        RUNTESTFLAGS='--target=aarch64-linux-gnu --target_board=qemu-user'
+#
+#     make check CROSS=/opt/gcc-8-armhf/bin/arm-linux-gnueabihf- \
+#        RUNTESTFLAGS='--target=arm-unknown-linux-gnueabihf --target_board=qemu-user'
+#
+#     make check \
+#        RUNTESTFLAGS='CFLAGS_FOR_TARGET=-static --target=aarch64-unknown-linux-gnu --target_board=qemu-user'
+#
+
+# Load this for "gdb_target_cmd_ext"
+load_lib gdbserver-support.exp
+
+#
+# Setup
+#
+set qemu ""
+set qemu_flags {}
+set cross ""
+
+# Provide sensible defaults based on TARGET_TRIPLET (--target option).
+# Add more if needed.
+switch -glob $target_triplet {
+    "x86_64-*-linux-gnu" {
+	set qemu "qemu-x86_64"
+	set cross "x86_64-linux-gnu-"
+    }
+    "riscv64-*-linux-gnu" {
+	set qemu "qemu-riscv64"
+	set cross "riscv64-linux-gnu-"
+    }
+    "aarch64-*-linux-gnu" {
+	set qemu "qemu-aarch64"
+	set cross "aarch64-linux-gnu-"
+    }
+    "arm-*-linux-gnueabihf" {
+	set qemu "qemu-arm"
+	set cross "arm-linux-gnueabihf-"
+    }
+    "powerpc-*-linux-gnu" {
+	set qemu "qemu-ppc"
+	set cross "powerpc-linux-gnu-"
+    }
+    "powerpc64le-*-linux-gnu" {
+	set qemu "qemu-ppc64le"
+	set cross "powerpc64le-linux-gnu-"
+    }
+    default {
+	if { ![info exist ::env(QEMU)] || ![info exists ::env(CROSS)] } {
+	    error "No defaults for target $target_triplet - you may want to specify QEMU and CROSS variables."
+	}
+    }
+}
+
+#
+# Allow user to specify QEMU binary and/or custom options by setting
+# QEMU and/or QEMU_FLAGS environment variables.
+#
+if [info exists ::env(QEMU)] {
+    set qemu $::env(QEMU)
+}
+if [info exists ::env(QEMU_FLAGS)] {
+    # Here we split QEMU_FLAGS to a list of arguments.  We use a simplistic
+    # method by splitting by space - so shell-style quoting and escaping is
+    # not supported.
+    set qemu_flags [regexp -all -inline {\S+} $::env(QEMU_FLAGS)]
+}
+
+#
+# Allow user to specify target toolchain by setting CROSS environment variable
+#
+if [info exists ::env(CROSS)] {
+    set cross $::env(CROSS)
+}
+
+set qemu_spawn_id ""
+
+set_board_info compiler "${cross}gcc"
+set_board_info c++compiler "${cross}g++"
+
+set_board_info use_gdb_stub 1
+set_board_info gdb_protocol "remote"
+set_board_info gdb,do_reload_on_run 1
+set_board_info gdb,nofileio 1
+set_board_info exit_is_reliable 1
+# QEMU does not support HW watchpoints
+set_board_info gdb,no_hardware_watchpoints 1
+
+
+
+# Helper function to reap previously spawn QEMU.  Calling this function
+# if no QEMU is running is no-op.
+
+proc qemu_reap { } {
+    global qemu_spawn_id
+
+    if { $qemu_spawn_id != "" } {
+	verbose -log "qemu-user: closing previous spawn id $qemu_spawn_id"
+	catch { close -i $qemu_spawn_id }
+
+	# Some tests get QEMU/its gdb stub into a state where the process
+	# doesn't want to die.  Use -nowait to tell TCL to wait in background
+	# instead of blocking.
+	wait -nowait -i $qemu_spawn_id
+	set qemu_spawn_id ""
+	unset ::inferior_spawn_id
+    }
+}
+
+# Helper function to run QEMU.  Returns the port number on which QEMU
+# stub listens or 0 on failure.
+
+proc qemu_spawn { file inferior_args } {
+    global qemu_spawn_id
+    global qemu
+    global qemu_flags
+
+    # Close any previous QEMU instance.
+    qemu_reap
+
+    # Run QEMU.
+    while 1 {
+	set portnum [get_portnum]
+	set qemu_args [list {*}$qemu_flags -g $portnum $file {*}$inferior_args]
+
+	if {[catch { spawn $qemu {*}$qemu_args } err ]} {
+	    verbose -log "qemu-user: failed to spawn QEMU: $err"
+	    return 0
+	}
+	set qemu_spawn_id $spawn_id
+
+	# QEMU stub doesn't do inferior I/O through GDB.  But we can
+	# talk to the program using QEMU's tty instead.
+	global inferior_spawn_id
+	set inferior_spawn_id $spawn_id
+
+	expect {
+	    -i $qemu_spawn_id
+	    -timeout 1
+	    -re ".*Address already in use.*" {
+		# Port already in use.  Cleanup and retry.
+		verbose -log "qemu-user: port $portnum is already in use."
+
+		qemu_reap
+		continue
+	    }
+	    eof {
+		verbose -log "qemu-user: QEMU terminated prematurely."
+
+		qemu_reap
+		return 0
+	    }
+
+	}
+
+	verbose -log "qemu-user: spawned with spawn id $qemu_spawn_id, pid [exp_pid $qemu_spawn_id], stub listening at $portnum"
+	break
+    }
+
+    return $portnum
+}
+
+
+
+# gdb_reload -- load a file into the target.
+
+proc gdb_reload { {inferior_args {}} } {
+    global last_loaded_file
+    set portnum [qemu_spawn $last_loaded_file $inferior_args]
+
+    if { $portnum == 0 } {
+	return 1
+    }
+
+    set res [gdb_target_cmd_ext "remote" ":$portnum"]
+
+    if { $res == 2 } {
+	unsupported "qemu-user: cannot connect to QEMU stub (likely because QEMU does not support non-stop mode)."
+	# QEMU does not support non-stop mode.  Exit here to avoid subsequent
+	# failures / timeouts.
+	qemu_reap
+	exit 0
+    }
+    if { $res != 0 } {
+	qemu_reap
+	return 1
+    }
+    return 0
+}
+
+proc mi_gdb_target_load { } {
+    global last_loaded_file
+    set portnum [qemu_spawn $last_loaded_file ""]
+
+    if { $portnum == 0 } {
+	return -1
+    }
+
+    if {[mi_gdb_target_cmd "remote" ":$portnum"] != 0} {
+	qemu_reap
+	return -1
+    }
+
+    return 0
+}
+
+set GDBFLAGS "${GDBFLAGS} -iex \"set auto-connect-native-target off\""
