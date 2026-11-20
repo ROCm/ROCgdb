@@ -1,3 +1,14 @@
 # Add suppression patterns here, one per line.
 # See https://clang.llvm.org/docs/ThreadSanitizer.html#suppressing-reports
 # for the ThreadSanitizer suppression file format.
+#
+# ThreadSanitizer only reads one suppressions file.  The testsuite
+# (gdb/testsuite/lib/gdb.exp) only falls back to gdb/tsan-suppressions.txt
+# when TSAN_OPTIONS has no suppressions= entry, so when test_rocgdb.py
+# passes this file, gdb/tsan-suppressions.txt is not read.  Keep the entries
+# of gdb/tsan-suppressions.txt in here too.
+
+# Problem in ncurses, see:
+# - https://sourceware.org/bugzilla/show_bug.cgi?id=29328.
+# - https://lists.gnu.org/archive/html/bug-ncurses/2022-07/msg00002.html
+mutex:newterm
