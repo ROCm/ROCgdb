@@ -21,7 +21,12 @@ main (int argc, char *argv[])
   /* This is expected to fail with GCC prior to PR114186.  */
   while ((type = ctf_type_next (fp, &it, NULL, 1)) != -1)
     if (ctf_type_kind (fp, type) == CTF_K_ARRAY)
-      printf ("%s\n", ctf_type_aname (fp, type));
+      {
+	char *foo;
+
+	printf ("%s\n", foo = ctf_type_aname (fp, type));
+	free (foo);
+      }
 
   ctf_dict_close (fp);
   ctf_close (ctf);
