@@ -155,9 +155,13 @@ static struct internal_extra_pe_aouthdr pe;
 static int dll;
 static int pe_subsystem = ${SUBSYSTEM};
 static flagword real_flags = 0;
+#if defined(TARGET_IS_armpe) || defined(TARGET_IS_arm_wince_pe)
 static int support_old_code = 0;
 static char * thumb_entry_symbol = NULL;
+#endif
+#ifdef DLL_SUPPORT
 static lang_assignment_statement_type *image_base_statement = 0;
+#endif
 static unsigned short pe_dll_characteristics = DEFAULT_DLL_CHARACTERISTICS;
 static bool insert_timestamp = true;
 static bool orphan_init_done;
@@ -263,8 +267,10 @@ gld${EMULATION_NAME}_add_options
     {"section-alignment", required_argument, NULL, OPTION_SECTION_ALIGNMENT},
     {"stack", required_argument, NULL, OPTION_STACK},
     {"subsystem", required_argument, NULL, OPTION_SUBSYSTEM},
+#if defined(TARGET_IS_armpe) || defined(TARGET_IS_arm_wince_pe)
     {"support-old-code", no_argument, NULL, OPTION_SUPPORT_OLD_CODE},
     {"thumb-entry", required_argument, NULL, OPTION_THUMB_ENTRY},
+#endif
     {"use-nul-prefixed-import-tables", no_argument, NULL,
      OPTION_USE_NUL_PREFIXED_IMPORT_TABLES},
     {"no-leading-underscore", no_argument, NULL, OPTION_NO_LEADING_UNDERSCORE},
@@ -747,12 +753,14 @@ gld${EMULATION_NAME}_handle_option (int optc)
     case OPTION_IMAGE_BASE:
       set_pe_value ("__image_base__");
       break;
+#if defined(TARGET_IS_armpe) || defined(TARGET_IS_arm_wince_pe)
     case OPTION_SUPPORT_OLD_CODE:
       support_old_code = 1;
       break;
     case OPTION_THUMB_ENTRY:
       thumb_entry_symbol = optarg;
       break;
+#endif
     case OPTION_USE_NUL_PREFIXED_IMPORT_TABLES:
       pe_use_nul_prefixed_import_tables = true;
       break;
@@ -1012,7 +1020,7 @@ gld${EMULATION_NAME}_set_symbols (void)
   for (j = 0; init[j].ptr; j++)
     {
       long val = init[j].value;
-      lang_assignment_statement_type *rv;
+      lang_assignment_statement_type *rv ATTRIBUTE_UNUSED;
 
       rv = lang_add_assignment (exp_assign (GET_INIT_SYMBOL_NAME (j),
 					    exp_intop (val), false));
@@ -1025,9 +1033,12 @@ gld${EMULATION_NAME}_set_symbols (void)
       /* This might be a long long or other special type.  */
       else if (init[j].size == sizeof (bfd_vma))
 	*(bfd_vma *) init[j].ptr = val;
-      else	abort ();
+      else
+	abort ();
+#ifdef DLL_SUPPORT
       if (j == IMAGEBASEOFF)
 	image_base_statement = rv;
+#endif
     }
   /* Restore the pointer.  */
   pop_stat_ptr ();
