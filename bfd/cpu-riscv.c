@@ -117,6 +117,8 @@ bool
 riscv_elf_is_mapping_symbols (const char *name)
 {
   return (!strcmp (name, "$d")
+	  || startswith (name, "$d.")
 	  || !strcmp (name, "$x")
-	  || !strncmp (name, "$xrv", 4));
+	  || startswith (name, "$x.")
+	  || startswith (name, "$xrv"));
 }

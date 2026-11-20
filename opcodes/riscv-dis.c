@@ -1342,14 +1342,14 @@ riscv_update_map_state (int n,
     return;
 
   name = bfd_asymbol_name(info->symtab[n]);
-  if (strcmp (name, "$d") == 0)
+  if (strcmp (name, "$d") == 0 || startswith (name, "$d."))
     *state = MAP_DATA;
-  else if (strcmp (name, "$x") == 0)
+  else if (strcmp (name, "$x") == 0 || startswith (name, "$x."))
     {
       *state = MAP_INSN;
       riscv_dis_parse_subset (info, pd->default_arch);
     }
-  else if (strncmp (name, "$xrv", 4) == 0)
+  else if (startswith (name, "$xrv"))
     {
       *state = MAP_INSN;
 
