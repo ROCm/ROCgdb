@@ -77,18 +77,32 @@ struct reg_buffer_common
   virtual int register_size (int regnum) const = 0;
 
   /* Supply register REGNUM, whose contents are stored in SRC, to this register
-     buffer.  */
+     buffer.  If SRC.data() == nullptr then the register is marked unavailable.  */
   virtual void raw_supply (int regnum, gdb::span<const gdb_byte> src)
     = 0;
 
+  /* Supply register REGNUM, whose contents are *SRC.  If SRC == nullptr then the
+     register is marked unavailable.  */
   void raw_supply (int regnum, const uint64_t *src)
   {
+    /* Creating a std::span with nullptr data and non-zero length is undefined.  */
     raw_supply (regnum,
-		gdb::make_span ((const gdb_byte *) src, sizeof (*src)));
+		(src == nullptr
+		 ? gdb::span<const gdb_byte> {}
+		 : gdb::make_span ((const gdb_byte *) src, sizeof (*src))));
   }
 
+  /* Supply register REGNUM, whose contents are *SRC.  There must be at least
+     register_size(REGNUM) bytes available at SRC.  If SRC == nullptr then the
+     register is marked unavailable.  */
   void raw_supply (int regnum, const gdb_byte *src)
-  { raw_supply (regnum, gdb::make_span (src, register_size (regnum))); }
+  {
+    /* Creating a std::span with nullptr data and non-zero length is undefined.  */
+    raw_supply (regnum,
+		(src == nullptr
+		 ? gdb::span<const gdb_byte> {}
+		 : gdb::make_span (src, register_size (regnum))));
+  }
 
   /* Supply part of register REGNUM with zeroed value.  Start at OFFSET in
      the register, with size SIZE.  The rest of the register is left

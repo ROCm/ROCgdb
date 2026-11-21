@@ -1162,7 +1162,11 @@ reg_buffer::raw_supply (int regnum, const void *src)
   assert_regnum (regnum);
 
   int size = m_descr->sizeof_register[regnum];
-  raw_supply (regnum, gdb::make_span ((const gdb_byte *) src, size));
+
+  /* Creating a std::span with nullptr data and non-zero length is undefined.  */
+  raw_supply (regnum, (src == nullptr
+		       ? gdb::span<const gdb_byte> {}
+		       : gdb::make_span ((const gdb_byte *) src, size)));
 }
 
 /* See regcache.h.  */

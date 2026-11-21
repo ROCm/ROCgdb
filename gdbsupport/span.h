@@ -270,6 +270,7 @@ template<typename U>
 constexpr inline span<U>
 make_span (U *array, size_t size) noexcept
 {
+  gdb_assert (array != nullptr || size == 0);
   return {array, size};
 }
 

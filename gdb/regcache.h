@@ -222,7 +222,8 @@ public:
   /* See gdbsupport/common-regcache.h.  */
   void raw_supply (int regnum, gdb::span<const gdb_byte> src) override;
 
-  /* Deprecated overload of the above.  */
+  /* Deprecated overload of the above.  If SRC is nullptr then the register is
+     marked as unavailable.  */
   void raw_supply (int regnum, const void *src);
 
   void raw_supply (int regnum, const reg_buffer &src)
