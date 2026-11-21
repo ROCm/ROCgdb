@@ -109,7 +109,9 @@ public:
 	   typename = Requires<DecayedConvertible<U>>>
   constexpr span (U *array, size_t size) noexcept
     : m_array (array), m_size (size)
-  {}
+  {
+    gdb_assert (m_array != nullptr || m_size == 0);
+  }
 
   /* Create a span from a range.  This is templated on both U
      an V to allow passing in a mix of 'const T *' and 'T *'.  */
@@ -118,7 +120,9 @@ public:
 	   typename = Requires<DecayedConvertible<V>>>
   constexpr span (U *begin, V *end) noexcept
     : m_array (begin), m_size (end - begin)
-  {}
+  {
+    gdb_assert ((begin == nullptr) == (end == nullptr));
+  }
 
   /* Create a span from an array.  */
   template<typename U, size_t Size,
