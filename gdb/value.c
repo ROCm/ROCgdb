@@ -1158,6 +1158,11 @@ value::contents_for_printing ()
   if (m_lazy)
     fetch_lazy ();
 
+  /* Avoid creating a std::span with nullptr for data and a non-zero length,
+     this is undefined.  */
+  if (m_contents == nullptr)
+    return {};
+
   ULONGEST length = enclosing_type ()->length ();
   return gdb::make_span (m_contents.get (), length);
 }
@@ -1166,6 +1171,11 @@ gdb::span<const gdb_byte>
 value::contents_for_printing () const
 {
   gdb_assert (!m_lazy);
+
+  /* Avoid creating a std::span with nullptr for data and a non-zero length,
+     this is undefined.  */
+  if (m_contents == nullptr)
+    return {};
 
   ULONGEST length = enclosing_type ()->length ();
   return gdb::make_span (m_contents.get (), length);
