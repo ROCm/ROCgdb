@@ -57,6 +57,11 @@ main ()
 	return 0;
 
       /* In grandchild.  */
+
+      /* Alarms are not inherited by child processes.  Set the alarm again to
+	 stop the process running forever.  */
+      alarm (60);
+
       daemon_main ();
 
       while (1)

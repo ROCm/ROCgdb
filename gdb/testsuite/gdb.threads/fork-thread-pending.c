@@ -75,6 +75,12 @@ thread_forker (void *arg)
       done = 1;
       break;
     case 0:
+      /* Child.  */
+
+      /* Alarms are not inherited by child processes.  Set the alarm again to
+	 stop the process running forever.  */
+      alarm (600);
+
       i = pthread_create (&thread, NULL, start, NULL);
       assert (i == 0);
       i = pthread_join (thread, NULL);

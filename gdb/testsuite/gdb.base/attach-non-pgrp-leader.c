@@ -34,6 +34,16 @@ main ()
   child_pid = fork ();
   if (child_pid == -1)
     return 1;
+  else if (child_pid == 0)
+    {
+      /* Child.  */
+
+      /* Alarms are not inherited by child processes.  Set the alarm again to
+	 stop the process running forever.  */
+      alarm (60);
+    }
+
+  /* Parent and child.  */
 
   while (1)
     {
