@@ -1413,6 +1413,7 @@ static const struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"smnpm", "+zicsr", check_implicit_always},
   {"smmpm", "+zicsr", check_implicit_always},
 
+  {"ss", "+zicsr", check_implicit_always},
   {"ssaia", "+zicsr", check_implicit_always},
   {"ssccfg", "+sscsrind", check_implicit_always},
   {"sspmpen", "+sspmp", check_implicit_always},
