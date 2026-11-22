@@ -1433,6 +1433,7 @@ static const struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"svade", "+zicsr", check_implicit_always},
   {"svadu", "+zicsr", check_implicit_always},
   {"svbare", "+zicsr", check_implicit_always},
+  {"svukte", "+zicsr", check_implicit_always},
   {NULL, NULL, NULL}
 };
 
@@ -1712,6 +1713,7 @@ static const struct riscv_supported_ext riscv_supported_std_s_ext[] =
   {"svnapot",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"svpbmt",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"svrsw60t59b",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"svukte",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"svvptc",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"ssqosid",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"sspmp",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
@@ -2388,6 +2390,12 @@ riscv_parse_check_conflicts (riscv_parse_subset_t *rps)
     {
       rps->error_handler
 	(_("`zclsd' conflicts with the `c+f'/`zcf' extension"));
+      no_conflict = false;
+    }
+  if (riscv_lookup_subset (rps->subset_list, "svukte", &subset) && xlen != 64)
+    {
+      rps->error_handler (_ ("rv%d does not support the `svukte' extension"),
+			  xlen);
       no_conflict = false;
     }
   if (riscv_lookup_subset (rps->subset_list, "ssnpm", &subset) && xlen != 64)
