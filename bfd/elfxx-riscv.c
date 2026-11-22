@@ -1481,7 +1481,7 @@ static const struct riscv_profiles riscv_profiles_table[] =
    "_zicclsm_zic64b_za64rs_zihintpause_zba_zbb_zbs_zicbom_zicbop"
    "_zicboz_zfhmin_zkt_zvfhmin_zvbb_zvkt_zihintntl_zicond_zimop_zcmop_zcb"
    "_zfa_zawrs_supm_svbare_svade_ssccptr_sstvecd_sstvala_sscounterenw_svpbmt"
-   "_svinval_svnapot_sstc_sscofpmf_ssnpm_ssu64xl_sha"},
+   "_svinval_svnapot_sstc_ss1p13_sscofpmf_ssnpm_ssu64xl_sha_zifencei"},
 
   /* RVB23 contains all mandatory base ISA for RVA22U64 and the new extension
      'zihintntl,zicond,zimop,zcmop,zfa,zawrs' as mandatory
@@ -1497,7 +1497,7 @@ static const struct riscv_profiles riscv_profiles_table[] =
    "_zicclsm_zic64b_za64rs_zihintpause_zba_zbb_zbs_zicbom_zicbop"
    "_zicboz_zfhmin_zkt_zvfhmin_zvbb_zvkt_zihintntl_zicond_zimop_zcmop_zcb"
    "_zfa_zawrs_supm_svbare_svade_ssccptr_sstvecd_sstvala_sscounterenw_svpbmt"
-   "_svinval_svnapot_sstc_sscofpmf_ssu64xl"},
+   "_svinval_svnapot_sstc_ss1p13_sscofpmf_ssu64xl_zifencei"},
 
   /* Terminate the list.  */
   {NULL, NULL}
