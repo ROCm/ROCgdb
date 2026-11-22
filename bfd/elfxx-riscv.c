@@ -1449,12 +1449,23 @@ static const struct riscv_profiles riscv_profiles_table[] =
   {"rva20u64", "rv64imafdc_zicsr_zicntr_ziccif_ziccrse_ziccamoa"
    "_zicclsm_za128rs"},
 
+  /* RVA20S64 adds Zifencei and supervisor requirements to RVA20U64.
+     BFD does not currently encode the Sv39 translation mode.  */
+  {"rva20s64", "rv64imafdc_zicsr_zicntr_ziccif_ziccrse_ziccamoa"
+   "_zicclsm_za128rs_zifencei_ss1p11_ssccptr_sstvala_sstvecd_svade_svbare"},
+
   /* RVA22U contains the 'i,m,a,f,d,c,zicsr,zihintpause,zba,zbb,zbs,zicntr,
      zihpm,ziccif,ziccrse,ziccamoa, zicclsm,zic64b,za64rs,zicbom,zicbop,zicboz,
      zfhmin,zkt' as mandatory extensions.  */
   {"rva22u64", "rv64imafdc_zicsr_zicntr_ziccif_ziccrse_ziccamoa"
    "_zicclsm_zic64b_za64rs_zihintpause_zba_zbb_zbs_zicbom_zicbop"
    "_zicboz_zfhmin_zkt"},
+
+  /* RVA22S64 adds Zifencei and supervisor requirements to RVA22U64.  */
+  {"rva22s64", "rv64imafdcb_zicsr_zicntr_zihpm_ziccif_ziccrse_ziccamoa"
+   "_zicclsm_zic64b_za64rs_zihintpause_zba_zbb_zbs_zicbom_zicbop"
+   "_zicboz_zfhmin_zkt_zifencei_ss1p12_ssccptr_sscounterenw_sstvala_sstvecd"
+   "_svade_svbare_svinval_svpbmt"},
 
   /* RVA23 contains all mandatory base ISA for RVA22U64 and the new extension
      'v,zihintntl,zvfhmin,zvbb,zvkt,zicond,zimop,zcmop,zfa,zawrs' as mandatory

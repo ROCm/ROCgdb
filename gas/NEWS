@@ -17,6 +17,8 @@
 
 * Add support for new variants and encodings of RISC-V Zvabd extension v0.9.
 
+* Add support for the RISC-V RVA20S64 and RVA22S64 profiles in -march.
+
 * Add support for RISC-V standard extensions:
   ziccamoc 1.0, zama16b v1.0, sspmp v1.0, sspmpen v1.0, smpmpdeleg v1.0,
   shlcofideleg v1.0 and svukte v1.0.
