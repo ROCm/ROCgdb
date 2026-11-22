@@ -41,9 +41,18 @@ file delete $marker_file
 # Run the inferior, which will create MARKER_FILE.
 send_gdb "run \"$marker_file\"\n"
 
-# Spin until MARKER_FILE appears.
-while { ! [file exists $marker_file] } {
+# Spin until MARKER_FILE appears.  Wait up to ::TIMEOUT seconds.  If the
+# inferior fails to start (gdbserver crash, inferior startup issues) then we
+# don't want this test to spin forever.
+for { set i 0 } { ![file exists $marker_file] && $i < $::timeout } { incr i } {
     sleep 1
+}
+
+# In case the loop above bailed out due to timeout, spot that the marker file
+# hasn't appeared yet and abandon this test.
+if { ![file exists $marker_file] } {
+    unresolved "marker file failed to appear"
+    return
 }
 
 # We now know that the inferior has started, and that the 'Starting
