@@ -84,7 +84,7 @@ hip_launch_kernel ()
   kernel<<<1, max_block + 1>>> ();
   hipError_t err = hipGetLastError ();
   /* Older HIP runtimes report hipErrorInvalidConfiguration here.  Starting
-     with ROCm 10.3, an invalid launch configuration is reported as
+     with ROCm 10.4, an invalid launch configuration is reported as
      hipErrorInvalidValue, for parity with CUDA 13.  Accept either.  */
   assert (hipErrorInvalidValue == err || hipErrorInvalidConfiguration == err);
 
