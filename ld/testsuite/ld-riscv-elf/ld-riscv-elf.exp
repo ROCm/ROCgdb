@@ -529,6 +529,11 @@ if [istarget "riscv*-*-*"] {
     run_dump_test "ifunc-seperate-plt-pic"
     run_dump_test "ifunc-seperate-pcrel-pie"
     run_dump_test "ifunc-seperate-pcrel-pic"
+    run_dump_test "ifunc-debug-nonalloc"
+    run_dump_test "ifunc-note-nonalloc"
+    run_dump_test "ifunc-global-debug-nonalloc"
+    run_dump_test "ifunc-plain-nonalloc"
+    run_dump_test "ifunc-global-plain-nonalloc"
 
     # Tests related to mixing medany code into position-independent targets,
     # where it's not always possible to generate correct addressing sequences.

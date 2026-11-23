@@ -3610,11 +3610,19 @@ riscv_elf_relocate_section (struct bfd_link_info *info,
 	    {
 	      h = riscv_elf_get_local_sym_hash (htab, input_bfd, rel, false);
 	      if (h == NULL)
-		abort ();
-
-	      /* Set STT_GNU_IFUNC symbol value.  */
-	      h->root.u.def.value = sym->st_value;
-	      h->root.u.def.section = sec;
+		{
+		  /* Only a non-alloc section, which the relocation scan
+		     skips, refers to the symbol.  Relocate it as against
+		     STT_FUNC.  */
+		  if ((input_section->flags & SEC_ALLOC) != 0)
+		    abort ();
+		}
+	      else
+		{
+		  /* Set STT_GNU_IFUNC symbol value.  */
+		  h->root.u.def.value = sym->st_value;
+		  h->root.u.def.section = sec;
+		}
 	    }
 	}
       else
@@ -3655,18 +3663,9 @@ riscv_elf_relocate_section (struct bfd_link_info *info,
 
 	  if ((input_section->flags & SEC_ALLOC) == 0)
 	    {
-	      /* If this is a SHT_NOTE section without SHF_ALLOC, treat
-		 STT_GNU_IFUNC symbol as STT_FUNC.  */
-	      if (elf_section_type (input_section) == SHT_NOTE)
-		goto skip_ifunc;
-
-	      /* Dynamic relocs are not propagated for SEC_DEBUGGING
-		 sections because such sections are not SEC_ALLOC and
-		 thus ld.so will not process them.  */
-	      if ((input_section->flags & SEC_DEBUGGING) != 0)
-		continue;
-
-	      abort ();
+	      /* A non-alloc section is not loaded, so relocate a
+		 reference from it as against STT_FUNC.  */
+	      goto skip_ifunc;
 	    }
 	  else if (h->plt.offset == (bfd_vma) -1
 		   /* The following relocation may not need the .plt entries
