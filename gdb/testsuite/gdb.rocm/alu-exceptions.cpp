@@ -44,8 +44,9 @@ __global__ void
 raise_denorm ()
 {
   enable_alu_exceptions ();
-  volatile float inp = std::numeric_limits<float>::denorm_min ();
-  volatile float b = inp * inp; /* Break here for denorm.  */
+  volatile float a = std::numeric_limits<float>::denorm_min ();
+  volatile float b = std::numeric_limits<float>::denorm_min ();
+  volatile float c = a * b; /* Break here for denorm.  */
 }
 
 __global__ void
@@ -68,16 +69,18 @@ __global__ void
 raise_underflow ()
 {
   enable_alu_exceptions ();
-  volatile float min = std::numeric_limits<float>::min ();
-  volatile float c = min * min; /* Break here for underflow.  */
+  volatile float a = std::numeric_limits<float>::min ();
+  volatile float b = std::numeric_limits<float>::min ();
+  volatile float c = a * b; /* Break here for underflow.  */
 }
 
 __global__ void
 raise_inexact ()
 {
   enable_alu_exceptions ();
-  volatile float f = 1.1f;
-  volatile float r = f * f; /* Break here for inexact.  */
+  volatile float a = 1.1f;
+  volatile float b = 1.1f;
+  volatile float c = a * b; /* Break here for inexact.  */
 }
 
 __global__ void
