@@ -28,12 +28,12 @@ if { [prepare_for_testing "failed to prepare" $executable] } {
 set test_spawn_id [spawn_wait_for_attach $binfile]
 set testpid [spawn_id_get_pid $test_spawn_id]
 
-set parentpid 0
+set child_pid 0
 
 set test "attach"
 gdb_test_multiple "attach $testpid" $test {
     -re "Attaching to program: \[^\r\n\]*, process $testpid\r\n.*warning: process $testpid is already traced by process (${::decimal})\r\n.*ptrace: Operation not permitted\\.\r\n$gdb_prompt $" {
-	set parentpid $expect_out(1,string)
+	set child_pid $expect_out(1,string)
 	pass $test
     }
     -re "Attaching to program: \[^\r\n\]*, process $testpid\r\n.*ptrace: Operation not permitted\\.\r\n$gdb_prompt $" {
@@ -44,7 +44,7 @@ gdb_test_multiple "attach $testpid" $test {
     }
 }
 
-if {$parentpid != 0} {
-    exec kill -9 $parentpid
+if {$child_pid != 0} {
+    exec kill -9 $child_pid
 }
 kill_wait_spawned_process $test_spawn_id
