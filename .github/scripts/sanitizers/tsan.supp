@@ -1,3 +1,7 @@
 # Add suppression patterns here, one per line.
 # See https://clang.llvm.org/docs/ThreadSanitizer.html#suppressing-reports
 # for the ThreadSanitizer suppression file format.
+#
+# gdb/tsan-suppressions.txt does not need to be copied here.  ThreadSanitizer
+# only reads one suppressions file, so test_rocgdb.py appends that file to a
+# copy of this one and passes the copy to the testsuite.
