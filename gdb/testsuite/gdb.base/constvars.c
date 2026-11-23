@@ -127,15 +127,17 @@ main (void)
   volatile float          * volatile vitality = &vacuity;
   volatile double         * volatile voracity = &vertigo;
 
-  /* volatile arrays */
-  volatile char violent[2] = {vox, vox};
-  volatile unsigned char violet[2] = {victuals, victuals};
-  volatile short vips[2] = {vixen, vixen};
-  volatile unsigned short virgen[2] = {vitriol, vitriol};
-  volatile long vulgar[2] = {vellum, vellum};
-  volatile unsigned long vulture[2] = {valve, valve};
-  volatile float vilify[2] = {vacuity, vacuity};
-  volatile double villar[2] = {vertigo, vertigo};
+  /* volatile arrays.  The second element is read through the pointer to
+     avoid two unsequenced accesses to the same volatile variable in one
+     initializer.  */
+  volatile char violent[2] = {vox, *vapidity};
+  volatile unsigned char violet[2] = {victuals, *velocity};
+  volatile short vips[2] = {vixen, *veneer};
+  volatile unsigned short virgen[2] = {vitriol, *video};
+  volatile long vulgar[2] = {vellum, *vacuum};
+  volatile unsigned long vulture[2] = {valve, *veniality};
+  volatile float vilify[2] = {vacuity, *vitality};
+  volatile double villar[2] = {vertigo, *voracity};
 
   /* const volatile vars */
 
@@ -188,8 +190,8 @@ main (void)
   const volatile unsigned char     * const volatile vendor = &vicar;
 
   /* const volatile arrays */
-  const volatile char vindictive[2] = {victor, victor};
-  const volatile unsigned char vegetation[2] = {vicar, vicar};
+  const volatile char vindictive[2] = {victor, *vagary};
+  const volatile unsigned char vegetation[2] = {vicar, *vendor};
 
   /* various structs with const members */
 
