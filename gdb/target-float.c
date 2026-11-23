@@ -792,9 +792,12 @@ host_float_ops<T>::to_target (const struct floatformat *fmt,
       T dtopnv, dbotnv;
 
       dtop = (double) dfrom;
+      /* Read the volatile once, so there are no unsequenced accesses to
+	 it.  The value read back is already rounded to double.  */
+      double dtop_val = dtop;
       /* If the rounded top half is Inf, the bottom must be 0 not NaN
 	 or Inf.  */
-      if (dtop + dtop == dtop && dtop != 0.0)
+      if (dtop_val + dtop_val == dtop_val && dtop_val != 0.0)
 	dbot = 0.0;
       else
 	dbot = (double) (dfrom - (T) dtop);
