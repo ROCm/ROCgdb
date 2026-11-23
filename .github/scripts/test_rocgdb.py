@@ -2409,6 +2409,49 @@ def _prepend_to_path_var(env_vars: Dict[str, str], name: str, parts: List[str]) 
     env_vars[name] = os.pathsep.join(parts + ([existing] if existing else []))
 
 
+def _merge_gdb_suppressions(
+    sanitizer: str, suppression_file: Path, testsuite_dir: Path, out_dir: Path
+) -> Path:
+    """
+    Append gdb's own suppressions to our suppressions file for a sanitizer.
+
+    A sanitizer reads a single suppressions file.  gdb's testsuite only
+    falls back to gdb/<sanitizer>-suppressions.txt when *SAN_OPTIONS has no
+    suppressions= entry, so passing our file would hide gdb's entries.  Write
+    a copy of our file with gdb's file appended to out_dir, which is known
+    to be writable (the install directory may not be).
+
+    Args:
+        sanitizer: Sanitizer name, e.g. "tsan".
+        suppression_file: Our .supp file.
+        testsuite_dir: gdb/testsuite directory; gdb's file is in its parent.
+        out_dir: Directory where the merged file is written.
+
+    Returns:
+        Path of the merged file, or suppression_file if gdb has no file for
+        this sanitizer or the merged file could not be written.
+    """
+    gdb_file = testsuite_dir.parent / f"{sanitizer}-suppressions.txt"
+    if not gdb_file.is_file():
+        return suppression_file
+
+    merged = out_dir / f"{sanitizer}.supp"
+    try:
+        content = suppression_file.read_text(encoding="utf-8")
+        if content and not content.endswith("\n"):
+            content += "\n"
+        content += f"\n# Appended from {gdb_file}\n"
+        content += gdb_file.read_text(encoding="utf-8")
+        merged.write_text(content, encoding="utf-8")
+    except OSError as exc:
+        logger.warning(
+            f"{STATUS_WARN} Could not merge {gdb_file} into {suppression_file}: "
+            f"{exc}. Using {suppression_file} alone."
+        )
+        return suppression_file
+    return merged
+
+
 def setup_sanitizer_environment(env_vars: Dict[str, str], testsuite_dir: Path) -> None:
     """
     Pre-configure *SAN_OPTIONS for every sanitizer we know about.
@@ -2439,7 +2482,16 @@ def setup_sanitizer_environment(env_vars: Dict[str, str], testsuite_dir: Path) -
                                    attached intentionally so users can
                                    populate the templates without code
                                    changes. suppressions is per-runtime
-                                   and does not collide.
+                                   and does not collide. A sanitizer reads
+                                   a single suppressions file, so when
+                                   gdb/<sanitizer>-suppressions.txt exists
+                                   (e.g. gdb/tsan-suppressions.txt), its
+                                   content is appended to a copy of the
+                                   .supp template in the log directory and
+                                   that copy is used instead. Otherwise
+                                   the testsuite's own fallback to that
+                                   file (gdb/testsuite/lib/gdb.exp) would
+                                   be skipped.
 
     If the shared log directory cannot be created (e.g. read-only
     testsuite mount), the log_path option is omitted and the sanitizer
@@ -2469,6 +2521,10 @@ def setup_sanitizer_environment(env_vars: Dict[str, str], testsuite_dir: Path) -
 
         suppression_file = suppressions_dir / f"{sanitizer}.supp"
         if suppression_file.is_file():
+            if log_dir_ready:
+                suppression_file = _merge_gdb_suppressions(
+                    sanitizer, suppression_file, testsuite_dir, log_dir
+                )
             options.append(f"suppressions={suppression_file}")
 
         env_var_name = f"{sanitizer.upper()}_OPTIONS"
