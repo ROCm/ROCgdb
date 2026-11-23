@@ -25,6 +25,12 @@ AC_CONFIG_MACRO_DIRS([import/m4])
 AC_CONFIG_MACRO_DIRS([../config])
 AM_MAINTAINER_MODE
 
+# Gnulib is built in isolation, but in practice it's always used in
+# combination with libiberty, which does contain an fnmatch.  Let gnulib know
+# this.  This ensures that if gnulib provides a copy, it will name it
+# rpl_fnmatch, avoiding name clashes with the version from libiberty.
+: ${ac_cv_func_fnmatch=yes}
+
 AC_PROG_CC
 AC_USE_SYSTEM_EXTENSIONS
 # Needs to run before gl_EARLY so it can override AC_SYS_LARGEFILE included
