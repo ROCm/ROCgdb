@@ -16,9 +16,8 @@
 require can_spawn_for_attach
 
 standard_testfile
-set executable ${testfile}
 
-if { [prepare_for_testing "failed to prepare" $executable] } {
+if { [prepare_for_testing "failed to prepare" $testfile] } {
     return
 }
 
@@ -30,17 +29,25 @@ set testpid [spawn_id_get_pid $test_spawn_id]
 
 set child_pid 0
 
-set test "attach"
-gdb_test_multiple "attach $testpid" $test {
-    -re "Attaching to program: \[^\r\n\]*, process $testpid\r\n.*warning: process $testpid is already traced by process (${::decimal})\r\n.*ptrace: Operation not permitted\\.\r\n$gdb_prompt $" {
+set re_pass \
+    [multi_line \
+	 [subst_vars {Attaching to program: [^\r\n]*, process $testpid}] \
+	 ".*warning: process $testpid is already traced by process ($decimal)" \
+	 {.*ptrace: Operation not permitted[.]}]
+set re_fail \
+    [multi_line \
+	 [subst_vars {Attaching to program: [^\r\n]*, process $testpid}] \
+	 {.*ptrace: Operation not permitted[.]}]
+gdb_test_multiple "attach $testpid" "attach" {
+    -re -wrap $re_pass {
 	set child_pid $expect_out(1,string)
-	pass $test
+	pass $gdb_test_name
     }
-    -re "Attaching to program: \[^\r\n\]*, process $testpid\r\n.*ptrace: Operation not permitted\\.\r\n$gdb_prompt $" {
-	fail $test
+    -re -wrap $re_fail {
+	fail $gdb_test_name
     }
-    -re "\r\n$gdb_prompt $" {
-	xfail $test
+    -re -wrap "" {
+	xfail $gdb_test_name
     }
 }
 
