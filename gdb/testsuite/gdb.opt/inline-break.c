@@ -231,9 +231,13 @@ main (int argc, char *argv[])
 
   x = func6a (x);
 
-  x = func7a (x) + func7b (x);
+  int r7a = func7a (x);
+  int r7b = func7b (x);
+  x = r7a + r7b;
 
-  x = func8a (x) + func8b (x);
+  int r8a = func8a (x);
+  int r8b = func8b (x);
+  x = r8a + r8b;
 
   x = not_inline_func3 (-21);
 
