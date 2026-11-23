@@ -29,6 +29,12 @@
   attributes, which are deprecated by the RISC-V psABI.  Use binutils 2.47
   or earlier to select another privileged spec version.
 
+* The RISC-V option -misa-spec and the configure option --with-isa-spec are
+  deprecated and have no effect.  The default versions of the RISC-V
+  extensions follow the ISA spec 20191213.  The assembler warns if
+  -misa-spec=2.2 or -misa-spec=20190608 is used.  Use binutils 2.47 or
+  earlier to select another ISA spec version.
+
 Changes in 2.47:
 
 * New command line option --reloc-section-sym=[all|internal|none]

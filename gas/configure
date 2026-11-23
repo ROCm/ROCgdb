@@ -13008,18 +13008,12 @@ _ACEOF
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_arch" >&5
 $as_echo "$with_arch" >&6; }
 
-        # --with-isa-spec=[2.2|20190608|20191213].
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for default configuration of --with-isa-spec" >&5
-$as_echo_n "checking for default configuration of --with-isa-spec... " >&6; }
-        if test "x${with_isa_spec}" != x; then
-
-cat >>confdefs.h <<_ACEOF
-#define DEFAULT_RISCV_ISA_SPEC "$with_isa_spec"
-_ACEOF
-
+        # --with-isa-spec is deprecated and has no effect.
+        if test "x${with_isa_spec}" != x \
+           && test "x${with_isa_spec}" != x20191213; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: --with-isa-spec is deprecated and has no effect, the extension versions follow the 20191213 ISA spec; use binutils 2.47 or earlier to select another version" >&5
+$as_echo "$as_me: WARNING: --with-isa-spec is deprecated and has no effect, the extension versions follow the 20191213 ISA spec; use binutils 2.47 or earlier to select another version" >&2;}
         fi
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_isa_spec" >&5
-$as_echo "$with_isa_spec" >&6; }
 
         # --with-priv-spec is deprecated and has no effect.
         if test "x${with_priv_spec}" != x; then

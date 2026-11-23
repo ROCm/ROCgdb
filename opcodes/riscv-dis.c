@@ -50,8 +50,6 @@ struct riscv_private_data
   bfd_size_type jvt_size;
   /* Current XLEN for the disassembler.  */
   unsigned xlen;
-  /* Default ISA specification version.  */
-  enum riscv_spec_class default_isa_spec;
   /* Used for architecture parser.  */
   riscv_parse_subset_t riscv_rps_dis;
   /* Default architecture string for the object file.  It will be changed once
@@ -1732,12 +1730,11 @@ riscv_init_disasm_info (struct disassemble_info *info)
 
   pd->xlen = 0;
   riscv_set_xlen_from_elf (pd, info);
-  pd->default_isa_spec = ISA_SPEC_CLASS_DRAFT - 1;
 
   pd->riscv_rps_dis.subset_list = xcalloc (1, sizeof (riscv_parse_subset_t));
   pd->riscv_rps_dis.error_handler = opcodes_error_handler;
   pd->riscv_rps_dis.xlen = &pd->xlen;
-  pd->riscv_rps_dis.isa_spec = &pd->default_isa_spec;
+  pd->riscv_rps_dis.use_default_version = true;
   pd->riscv_rps_dis.check_unknown_prefixed_ext = false;
   pd->default_arch = "rv64gc";
   if (info->section != NULL)

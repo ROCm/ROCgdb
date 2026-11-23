@@ -103,14 +103,6 @@ static const bfd_arch_info_type arch_info_struct[] =
 const bfd_arch_info_type bfd_riscv_arch =
   N (64, 0, "riscv", true, &arch_info_struct[0]);
 
-/* List for all supported ISA spec versions.  */
-const struct riscv_spec riscv_isa_specs[] =
-{
-  {"2.2",      ISA_SPEC_CLASS_2P2},
-  {"20190608", ISA_SPEC_CLASS_20190608},
-  {"20191213", ISA_SPEC_CLASS_20191213},
-};
-
 /* Define mapping symbols for riscv.  */
 
 bool

@@ -51,10 +51,11 @@ will check the default configure setting --with-arch=ISA.
 
 @cindex @samp{-misa-spec=ISAspec} option, RISC-V
 @item -misa-spec=ISAspec
-Select the default isa spec version.  If the version of ISA isn't set
-by -march, then assembler helps to set the version according to
-the default chosen spec.  If this option isn't set, then assembler will
-check the default configure setting --with-isa-spec=ISAspec.
+This option is deprecated and has no effect.  The default versions of the
+extensions follow the ISA spec 20191213.  The assembler warns if ISAspec is
+@samp{2.2} or @samp{20190608}.
+The configure setting --with-isa-spec=ISAspec is also deprecated and has
+no effect.  Use binutils 2.47 or earlier to select another version.
 
 @cindex @samp{-mpriv-spec=PRIVspec} option, RISC-V
 @item -mpriv-spec=PRIVspec

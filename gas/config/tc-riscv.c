@@ -149,15 +149,9 @@ struct riscv_ip_error
 #define DEFAULT_RISCV_ARCH_WITH_EXT NULL
 #endif
 
-/* Need to sync the version with RISC-V compiler.  */
-#ifndef DEFAULT_RISCV_ISA_SPEC
-#define DEFAULT_RISCV_ISA_SPEC "20191213"
-#endif
-
 static const char default_arch[] = DEFAULT_ARCH;
 static const char *default_arch_with_ext = DEFAULT_RISCV_ARCH_WITH_EXT;
 static const char *file_arch_str = NULL;
-static enum riscv_spec_class default_isa_spec = ISA_SPEC_CLASS_NONE;
 
 static unsigned xlen = 0; /* The width of an x-register.  */
 static unsigned abi_xlen = 0; /* The width of a pointer in the ABI.  */
@@ -182,23 +176,25 @@ static bool start_assemble = false;
 
 static bool probing_insn_operands;
 
-/* Set the default_isa_spec.  Return 0 if the spec isn't supported.
-   Otherwise, return 1.  */
+/* -misa-spec is deprecated, the default extension versions no longer
+   depend on it.  GCC passes -misa-spec=20191213 by default, so only warn
+   for the older specs.  Return 0 if the spec isn't known.  Otherwise,
+   return 1.  */
 
 static int
-riscv_set_default_isa_spec (const char *s)
+riscv_check_deprecated_isa_spec (const char *s)
 {
-  enum riscv_spec_class class = ISA_SPEC_CLASS_NONE;
-  RISCV_GET_ISA_SPEC_CLASS (s, class);
-  if (class == ISA_SPEC_CLASS_NONE)
+  if (strcmp (s, "20191213") == 0)
+    return 1;
+  if (strcmp (s, "2.2") == 0 || strcmp (s, "20190608") == 0)
     {
-      as_bad ("unknown default ISA spec `%s' set by "
-	      "-misa-spec or --with-isa-spec", s);
-      return 0;
+      as_warn (_("-misa-spec=%s is deprecated and has no effect, the "
+		 "extension versions follow the 20191213 ISA spec; use "
+		 "binutils 2.47 or earlier to select another version"), s);
+      return 1;
     }
-  else
-    default_isa_spec = class;
-  return 1;
+  as_bad (_("unknown default ISA spec `%s' set by -misa-spec"), s);
+  return 0;
 }
 
 /* This is the set of options which the .option pseudo-op may modify.  */
@@ -262,7 +258,7 @@ static riscv_parse_subset_t riscv_rps_as =
 			   riscv_opts_stack is created or updated.  */
   as_bad,		/* error_handler.  */
   &xlen,		/* xlen.  */
-  &default_isa_spec,	/* isa_spec.  */
+  true,			/* use_default_version.  */
   true,			/* check_unknown_prefixed_ext.  */
 };
 
@@ -296,7 +292,7 @@ riscv_set_arch (const char *s)
     .subset_list = XCNEW (riscv_subset_list_t),
     .error_handler = as_bad,
     .xlen = &newxlen,
-    .isa_spec = &default_isa_spec,
+    .use_default_version = true,
     .check_unknown_prefixed_ext = true,
   };
 
@@ -4736,7 +4732,7 @@ md_parse_option (int c, const char *arg)
       break;
 
     case OPTION_MISA_SPEC:
-      return riscv_set_default_isa_spec (arg);
+      return riscv_check_deprecated_isa_spec (arg);
 
     case OPTION_MPRIV_SPEC:
       as_warn (_("-mpriv-spec is deprecated and has no effect, the "
@@ -4773,10 +4769,6 @@ riscv_after_parse_args (void)
       else
 	as_bad ("unknown default architecture `%s'", default_arch);
     }
-
-  /* Set default specs.  */
-  if (default_isa_spec == ISA_SPEC_CLASS_NONE)
-    riscv_set_default_isa_spec (DEFAULT_RISCV_ISA_SPEC);
 
   riscv_set_arch (default_arch_with_ext);
 
@@ -5715,7 +5707,7 @@ RISC-V options:\n\
   -fpic or -fPIC              generate position-independent code\n\
   -fno-pic                    don't generate position-independent code (default)\n\
   -march=ISA                  set the RISC-V architecture\n\
-  -misa-spec=ISAspec          set the RISC-V ISA spec (2.2, 20190608, 20191213)\n\
+  -misa-spec=ISAspec          deprecated and ignored (always 20191213)\n\
   -mpriv-spec=PRIVspec        deprecated and ignored (always 1.13)\n\
   -mabi=ABI                   set the RISC-V ABI\n\
   -mrelax                     enable relax (default)\n\

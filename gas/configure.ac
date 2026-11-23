@@ -657,13 +657,11 @@ changequote([,])dnl
         fi
         AC_MSG_RESULT($with_arch)
 
-        # --with-isa-spec=[2.2|20190608|20191213].
-        AC_MSG_CHECKING(for default configuration of --with-isa-spec)
-        if test "x${with_isa_spec}" != x; then
-          AC_DEFINE_UNQUOTED(DEFAULT_RISCV_ISA_SPEC, "$with_isa_spec",
-                             [Define default value for RISC-V -misa-spec.])
+        # --with-isa-spec is deprecated and has no effect.
+        if test "x${with_isa_spec}" != x \
+           && test "x${with_isa_spec}" != x20191213; then
+          AC_MSG_WARN([--with-isa-spec is deprecated and has no effect, the extension versions follow the 20191213 ISA spec; use binutils 2.47 or earlier to select another version])
         fi
-        AC_MSG_RESULT($with_isa_spec)
 
         # --with-priv-spec is deprecated and has no effect.
         if test "x${with_priv_spec}" != x; then

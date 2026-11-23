@@ -1,11 +1,11 @@
 All available -march extensions for RISC-V:
 	e                                       1.9
-	i                                       2.1, 2.0
+	i                                       2.1
 	m                                       2.0
-	a                                       2.1, 2.0
-	f                                       2.2, 2.0
-	d                                       2.2, 2.0
-	q                                       2.2, 2.0
+	a                                       2.1
+	f                                       2.2
+	d                                       2.2
+	q                                       2.2
 	c                                       2.0
 	b                                       1.0
 	v                                       1.0
@@ -146,7 +146,7 @@ All available -march extensions for RISC-V:
 	smrnmi                                  1.0
 	smstateen                               1.0
 	smdbltrp                                1.0
-	ss                                      1.11, 1.12, 1.13
+	ss                                      1.11
 	ssaia                                   1.0
 	ssccfg                                  1.0
 	ssccptr                                 1.0

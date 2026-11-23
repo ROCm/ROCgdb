@@ -1514,7 +1514,6 @@ static const struct riscv_profiles riscv_profiles_table[] =
 struct riscv_supported_ext
 {
   const char *name;
-  enum riscv_spec_class isa_spec_class;
   int major_version;
   int minor_version;
   unsigned long default_enable;
@@ -1524,271 +1523,251 @@ struct riscv_supported_ext
 
 static const struct riscv_supported_ext riscv_supported_std_ext[] =
 {
-  {"e",		ISA_SPEC_CLASS_20191213,	1, 9, 0 },
-  {"e",		ISA_SPEC_CLASS_20190608,	1, 9, 0 },
-  {"e",		ISA_SPEC_CLASS_2P2,		1, 9, 0 },
-  {"i",		ISA_SPEC_CLASS_20191213,	2, 1, 0 },
-  {"i",		ISA_SPEC_CLASS_20190608,	2, 1, 0 },
-  {"i",		ISA_SPEC_CLASS_2P2,		2, 0, 0 },
+  {"e",			1, 9, 0 },
+  {"i",			2, 1, 0 },
   /* The g is a special case which we don't want to output it,
      but still need it when adding implicit extensions.  */
-  {"g",		ISA_SPEC_CLASS_NONE, RISCV_UNKNOWN_VERSION, RISCV_UNKNOWN_VERSION, EXT_DEFAULT },
-  {"m",		ISA_SPEC_CLASS_20191213,	2, 0, 0 },
-  {"m",		ISA_SPEC_CLASS_20190608,	2, 0, 0 },
-  {"m",		ISA_SPEC_CLASS_2P2,		2, 0, 0 },
-  {"a",		ISA_SPEC_CLASS_20191213,	2, 1, 0 },
-  {"a",		ISA_SPEC_CLASS_20190608,	2, 0, 0 },
-  {"a",		ISA_SPEC_CLASS_2P2,		2, 0, 0 },
-  {"f",		ISA_SPEC_CLASS_20191213,	2, 2, 0 },
-  {"f",		ISA_SPEC_CLASS_20190608,	2, 2, 0 },
-  {"f",		ISA_SPEC_CLASS_2P2,		2, 0, 0 },
-  {"d",		ISA_SPEC_CLASS_20191213,	2, 2, 0 },
-  {"d",		ISA_SPEC_CLASS_20190608,	2, 2, 0 },
-  {"d",		ISA_SPEC_CLASS_2P2,		2, 0, 0 },
-  {"q",		ISA_SPEC_CLASS_20191213,	2, 2, 0 },
-  {"q",		ISA_SPEC_CLASS_20190608,	2, 2, 0 },
-  {"q",		ISA_SPEC_CLASS_2P2,		2, 0, 0 },
-  {"c",		ISA_SPEC_CLASS_20191213,	2, 0, 0 },
-  {"c",		ISA_SPEC_CLASS_20190608,	2, 0, 0 },
-  {"c",		ISA_SPEC_CLASS_2P2,		2, 0, 0 },
-  {"b",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"v",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"h",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {NULL, 0, 0, 0, 0}
+  {"g",			RISCV_UNKNOWN_VERSION, RISCV_UNKNOWN_VERSION, EXT_DEFAULT },
+  {"m",			2, 0, 0 },
+  {"a",			2, 1, 0 },
+  {"f",			2, 2, 0 },
+  {"d",			2, 2, 0 },
+  {"q",			2, 2, 0 },
+  {"c",			2, 0, 0 },
+  {"b",			1, 0, 0 },
+  {"v",			1, 0, 0 },
+  {"h",			1, 0, 0 },
+  {NULL, 0, 0, 0}
 };
 
 static const struct riscv_supported_ext riscv_supported_std_z_ext[] =
 {
-  {"zic64b",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"ziccamoa",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"ziccamoc",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"ziccid",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"ziccif",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zicclsm",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"ziccrse",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zicbom",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zicbop",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zicboz",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zicond",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zicntr",		ISA_SPEC_CLASS_DRAFT,		2, 0, 0 },
-  {"zicsr",		ISA_SPEC_CLASS_20191213,	2, 0, 0 },
-  {"zicsr",		ISA_SPEC_CLASS_20190608,	2, 0, 0 },
-  {"zifencei",		ISA_SPEC_CLASS_20191213,	2, 0, 0 },
-  {"zifencei",		ISA_SPEC_CLASS_20190608,	2, 0, 0 },
-  {"zihintntl",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zihintpause",	ISA_SPEC_CLASS_DRAFT,		2, 0, 0 },
-  {"zihpm",		ISA_SPEC_CLASS_DRAFT,		2, 0, 0 },
-  {"zimop",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zicfiss",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zicfilp",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zilsd",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zibi",		ISA_SPEC_CLASS_DRAFT,		0, 9, 0 },
-  {"zmmul",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"za64rs",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"za128rs",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zaamo",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zabha",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zacas",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zalasr",           ISA_SPEC_CLASS_DRAFT,           1, 0,  0 },
-  {"zalrsc",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zama16b",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zawrs",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zfbfmin",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zfa",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zfh",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zfhmin",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zfinx",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zdinx",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zqinx",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zhinx",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zhinxmin",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zbb",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zba",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zbc",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zbs",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zbkb",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zbkc",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zbkx",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zk",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zkn",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zknd",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zkne",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zknh",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zkr",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zks",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zksed",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zksh",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zkt",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zve32x",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zve32f",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zve64x",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zve64f",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zve64d",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvabd",		ISA_SPEC_CLASS_DRAFT,		0, 9, 0 },
-  {"zvbb",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvbc",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvfbdota32f",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvfbfmin",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvfbfwma",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvfh",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvfhmin",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvfqwbdota8f",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvfqwdota8f",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvfwbdota16bf",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvfwdota16bf",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvkb",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvkg",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvkn",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvkng",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvknc",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvkned",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvknha",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvknhb",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvksed",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvksh",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvks",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvksg",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvksc",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvkt",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvqwbdota8i",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvqwbdota16i",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvqwdota8i",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvqwdota16i",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvl32b",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvl64b",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvl128b",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvl256b",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvl512b",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvl1024b",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvl2048b",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvl4096b",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvl8192b",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvl16384b",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvl32768b",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvl65536b",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"ztso",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zca",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zcb",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zce",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zcf",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zcd",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zcmop",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zcmp",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zcmt",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zclsd",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {NULL, 0, 0, 0, 0}
+  {"zic64b",		1, 0, 0 },
+  {"ziccamoa",		1, 0, 0 },
+  {"ziccamoc",		1, 0, 0 },
+  {"ziccid",		1, 0, 0 },
+  {"ziccif",		1, 0, 0 },
+  {"zicclsm",		1, 0, 0 },
+  {"ziccrse",		1, 0, 0 },
+  {"zicbom",		1, 0, 0 },
+  {"zicbop",		1, 0, 0 },
+  {"zicboz",		1, 0, 0 },
+  {"zicond",		1, 0, 0 },
+  {"zicntr",		2, 0, 0 },
+  {"zicsr",		2, 0, 0 },
+  {"zifencei",		2, 0, 0 },
+  {"zihintntl",		1, 0, 0 },
+  {"zihintpause",	2, 0, 0 },
+  {"zihpm",		2, 0, 0 },
+  {"zimop",		1, 0, 0 },
+  {"zicfiss",		1, 0, 0 },
+  {"zicfilp",		1, 0, 0 },
+  {"zilsd",		1, 0, 0 },
+  {"zibi",		0, 9, 0 },
+  {"zmmul",		1, 0, 0 },
+  {"za64rs",		1, 0, 0 },
+  {"za128rs",		1, 0, 0 },
+  {"zaamo",		1, 0, 0 },
+  {"zabha",		1, 0, 0 },
+  {"zacas",		1, 0, 0 },
+  {"zalasr",		1, 0, 0 },
+  {"zalrsc",		1, 0, 0 },
+  {"zama16b",		1, 0, 0 },
+  {"zawrs",		1, 0, 0 },
+  {"zfbfmin",		1, 0, 0 },
+  {"zfa",		1, 0, 0 },
+  {"zfh",		1, 0, 0 },
+  {"zfhmin",		1, 0, 0 },
+  {"zfinx",		1, 0, 0 },
+  {"zdinx",		1, 0, 0 },
+  {"zqinx",		1, 0, 0 },
+  {"zhinx",		1, 0, 0 },
+  {"zhinxmin",		1, 0, 0 },
+  {"zbb",		1, 0, 0 },
+  {"zba",		1, 0, 0 },
+  {"zbc",		1, 0, 0 },
+  {"zbs",		1, 0, 0 },
+  {"zbkb",		1, 0, 0 },
+  {"zbkc",		1, 0, 0 },
+  {"zbkx",		1, 0, 0 },
+  {"zk",		1, 0, 0 },
+  {"zkn",		1, 0, 0 },
+  {"zknd",		1, 0, 0 },
+  {"zkne",		1, 0, 0 },
+  {"zknh",		1, 0, 0 },
+  {"zkr",		1, 0, 0 },
+  {"zks",		1, 0, 0 },
+  {"zksed",		1, 0, 0 },
+  {"zksh",		1, 0, 0 },
+  {"zkt",		1, 0, 0 },
+  {"zve32x",		1, 0, 0 },
+  {"zve32f",		1, 0, 0 },
+  {"zve64x",		1, 0, 0 },
+  {"zve64f",		1, 0, 0 },
+  {"zve64d",		1, 0, 0 },
+  {"zvabd",		0, 9, 0 },
+  {"zvbb",		1, 0, 0 },
+  {"zvbc",		1, 0, 0 },
+  {"zvfbdota32f",	1, 0, 0 },
+  {"zvfbfmin",		1, 0, 0 },
+  {"zvfbfwma",		1, 0, 0 },
+  {"zvfh",		1, 0, 0 },
+  {"zvfhmin",		1, 0, 0 },
+  {"zvfqwbdota8f",	1, 0, 0 },
+  {"zvfqwdota8f",	1, 0, 0 },
+  {"zvfwbdota16bf",	1, 0, 0 },
+  {"zvfwdota16bf",	1, 0, 0 },
+  {"zvkb",		1, 0, 0 },
+  {"zvkg",		1, 0, 0 },
+  {"zvkn",		1, 0, 0 },
+  {"zvkng",		1, 0, 0 },
+  {"zvknc",		1, 0, 0 },
+  {"zvkned",		1, 0, 0 },
+  {"zvknha",		1, 0, 0 },
+  {"zvknhb",		1, 0, 0 },
+  {"zvksed",		1, 0, 0 },
+  {"zvksh",		1, 0, 0 },
+  {"zvks",		1, 0, 0 },
+  {"zvksg",		1, 0, 0 },
+  {"zvksc",		1, 0, 0 },
+  {"zvkt",		1, 0, 0 },
+  {"zvqwbdota8i",	1, 0, 0 },
+  {"zvqwbdota16i",	1, 0, 0 },
+  {"zvqwdota8i",	1, 0, 0 },
+  {"zvqwdota16i",	1, 0, 0 },
+  {"zvl32b",		1, 0, 0 },
+  {"zvl64b",		1, 0, 0 },
+  {"zvl128b",		1, 0, 0 },
+  {"zvl256b",		1, 0, 0 },
+  {"zvl512b",		1, 0, 0 },
+  {"zvl1024b",		1, 0, 0 },
+  {"zvl2048b",		1, 0, 0 },
+  {"zvl4096b",		1, 0, 0 },
+  {"zvl8192b",		1, 0, 0 },
+  {"zvl16384b",		1, 0, 0 },
+  {"zvl32768b",		1, 0, 0 },
+  {"zvl65536b",		1, 0, 0 },
+  {"ztso",		1, 0, 0 },
+  {"zca",		1, 0, 0 },
+  {"zcb",		1, 0, 0 },
+  {"zce",		1, 0, 0 },
+  {"zcf",		1, 0, 0 },
+  {"zcd",		1, 0, 0 },
+  {"zcmop",		1, 0, 0 },
+  {"zcmp",		1, 0, 0 },
+  {"zcmt",		1, 0, 0 },
+  {"zclsd",		1, 0, 0 },
+  {NULL, 0, 0, 0}
 };
 
 static const struct riscv_supported_ext riscv_supported_std_s_ext[] =
 {
-  {"sdext",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"sdtrig",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"sha",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"shcounterenw",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"shgatpa",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"shlcofideleg",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"shtvala",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"shvsatpa",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"shvstvala",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"shvstvecd",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"smaia",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"smcdeleg",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"smcsrind",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"smcntrpmf",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"smctr",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"smepmp",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"smpmpdeleg",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"smpmpmt",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"smrnmi",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"smstateen",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"smdbltrp",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"ss",		ISA_SPEC_CLASS_DRAFT,		1, 11, 0 },
-  {"ss",		ISA_SPEC_CLASS_DRAFT,		1, 12, 0 },
-  {"ss",		ISA_SPEC_CLASS_DRAFT,		1, 13, 0 },
-  {"ssaia",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"ssccfg",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"ssccptr",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"sscsrind",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"sscofpmf",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"sscounterenw",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"ssctr",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"ssstateen",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"ssstrict",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"sstc",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"sstvala",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"sstvecd",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"ssu64xl",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"ssdbltrp",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"svade",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"svadu",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"svbare",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"svinval",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"svnapot",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"svpbmt",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"svrsw60t59b",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"svukte",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"svvptc",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"ssqosid",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"sspmp",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"sspmpen",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"ssnpm",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"smnpm",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"smmpm",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"sspm",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"supm",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {NULL, 0, 0, 0, 0}
+  {"sdext",		1, 0, 0 },
+  {"sdtrig",		1, 0, 0 },
+  {"sha",		1, 0, 0 },
+  {"shcounterenw",	1, 0, 0 },
+  {"shgatpa",		1, 0, 0 },
+  {"shlcofideleg",		1, 0, 0 },
+  {"shtvala",		1, 0, 0 },
+  {"shvsatpa",		1, 0, 0 },
+  {"shvstvala",		1, 0, 0 },
+  {"shvstvecd",		1, 0, 0 },
+  {"smaia",		1, 0, 0 },
+  {"smcdeleg",		1, 0, 0 },
+  {"smcsrind",		1, 0, 0 },
+  {"smcntrpmf",		1, 0, 0 },
+  {"smctr",		1, 0, 0 },
+  {"smepmp",		1, 0, 0 },
+  {"smpmpdeleg",		1, 0, 0 },
+  {"smpmpmt",		1, 0, 0 },
+  {"smrnmi",		1, 0, 0 },
+  {"smstateen",		1, 0, 0 },
+  {"smdbltrp",		1, 0, 0 },
+  {"ss",		1, 11, 0 },
+  {"ssaia",		1, 0, 0 },
+  {"ssccfg",		1, 0, 0 },
+  {"ssccptr",		1, 0, 0 },
+  {"sscsrind",		1, 0, 0 },
+  {"sscofpmf",		1, 0, 0 },
+  {"sscounterenw",	1, 0, 0 },
+  {"ssctr",		1, 0, 0 },
+  {"ssstateen",		1, 0, 0 },
+  {"ssstrict",		1, 0, 0 },
+  {"sstc",		1, 0, 0 },
+  {"sstvala",		1, 0, 0 },
+  {"sstvecd",		1, 0, 0 },
+  {"ssu64xl",		1, 0, 0 },
+  {"ssdbltrp",		1, 0, 0 },
+  {"svade",		1, 0, 0 },
+  {"svadu",		1, 0, 0 },
+  {"svbare",		1, 0, 0 },
+  {"svinval",		1, 0, 0 },
+  {"svnapot",		1, 0, 0 },
+  {"svpbmt",		1, 0, 0 },
+  {"svrsw60t59b",		1, 0, 0 },
+  {"svukte",		1, 0, 0 },
+  {"svvptc",		1, 0, 0 },
+  {"ssqosid",		1, 0, 0 },
+  {"sspmp",		1, 0, 0 },
+  {"sspmpen",		1, 0, 0 },
+  {"ssnpm",		1, 0, 0 },
+  {"smnpm",		1, 0, 0 },
+  {"smmpm",		1, 0, 0 },
+  {"sspm",		1, 0, 0 },
+  {"supm",		1, 0, 0 },
+  {NULL, 0, 0, 0}
 };
 
 static const struct riscv_supported_ext riscv_supported_std_zxm_ext[] =
 {
-  {NULL, 0, 0, 0, 0}
+  {NULL, 0, 0, 0}
 };
 
 static const struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
 {
-  {"xandesbfhcvt",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
-  {"xandesvbfhcvt",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
-  {"xandesvdot",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
-  {"xandesvpackfph",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
-  {"xandesvsinth",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
-  {"xandesvsintload",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
-  {"xcvalu",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xcvbi",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xcvbitmanip",	ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
-  {"xcvelw",		ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
-  {"xcvmac",		ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
-  {"xcvmem",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xcvsimd",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xmipscbop",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xmipscmov",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xmipsexectl",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xmipslsp",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsfcease",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsfvcp",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsfvfnrclipxfqf",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsfvqmaccdod",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsfvqmaccqoq",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsmtvdot",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsmtvdotii",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xtheadba",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xtheadbb",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xtheadbs",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xtheadcmo",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xtheadcondmov",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xtheadfmemidx",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xtheadfmv",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xtheadint",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xtheadmac",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xtheadmemidx",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xtheadmempair",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xtheadsync",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xtheadvdot",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xtheadvector",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xtheadzvamo",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xventanacondops",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xxtvarith",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xxtvcoder",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {NULL, 0, 0, 0, 0}
+  {"xandesbfhcvt",	5, 0, 0 },
+  {"xandesvbfhcvt",	5, 0, 0 },
+  {"xandesvdot",	5, 0, 0 },
+  {"xandesvpackfph",	5, 0, 0 },
+  {"xandesvsinth",	5, 0, 0 },
+  {"xandesvsintload",	5, 0, 0 },
+  {"xcvalu",		1, 0, 0 },
+  {"xcvbi",		1, 0, 0 },
+  {"xcvbitmanip",	1, 0, 0 },
+  {"xcvelw",		1, 0, 0 },
+  {"xcvmac",		1, 0, 0 },
+  {"xcvmem",		1, 0, 0 },
+  {"xcvsimd",		1, 0, 0 },
+  {"xmipscbop",		1, 0, 0 },
+  {"xmipscmov",		1, 0, 0 },
+  {"xmipsexectl",	1, 0, 0 },
+  {"xmipslsp",		1, 0, 0 },
+  {"xsfcease",		1, 0, 0 },
+  {"xsfvcp",		1, 0, 0 },
+  {"xsfvfnrclipxfqf",	1, 0, 0 },
+  {"xsfvqmaccdod",	1, 0, 0 },
+  {"xsfvqmaccqoq",	1, 0, 0 },
+  {"xsmtvdot",		1, 0, 0 },
+  {"xsmtvdotii",	1, 0, 0 },
+  {"xtheadba",		1, 0, 0 },
+  {"xtheadbb",		1, 0, 0 },
+  {"xtheadbs",		1, 0, 0 },
+  {"xtheadcmo",		1, 0, 0 },
+  {"xtheadcondmov",	1, 0, 0 },
+  {"xtheadfmemidx",	1, 0, 0 },
+  {"xtheadfmv",		1, 0, 0 },
+  {"xtheadint",		1, 0, 0 },
+  {"xtheadmac",		1, 0, 0 },
+  {"xtheadmemidx",	1, 0, 0 },
+  {"xtheadmempair",	1, 0, 0 },
+  {"xtheadsync",	1, 0, 0 },
+  {"xtheadvdot",	1, 0, 0 },
+  {"xtheadvector",	1, 0, 0 },
+  {"xtheadzvamo",	1, 0, 0 },
+  {"xventanacondops",	1, 0, 0 },
+  {"xxtvarith",		1, 0, 0 },
+  {"xxtvcoder",		1, 0, 0 },
+  {NULL, 0, 0, 0}
 };
 
 static const struct riscv_supported_ext *riscv_all_supported_ext[] =
@@ -2036,13 +2015,11 @@ riscv_add_subset (riscv_subset_list_t *subset_list,
 /* Get the default versions from the riscv_supported_*ext tables.  */
 
 static void
-riscv_get_default_ext_version (enum riscv_spec_class default_isa_spec,
-			       const char *name,
+riscv_get_default_ext_version (const char *name,
 			       int *major_version,
 			       int *minor_version)
 {
-  if (name == NULL
-      || default_isa_spec == ISA_SPEC_CLASS_NONE)
+  if (name == NULL)
     return;
 
   const struct riscv_supported_ext *table = NULL;
@@ -2060,9 +2037,7 @@ riscv_get_default_ext_version (enum riscv_spec_class default_isa_spec,
   int i = 0;
   while (table != NULL && table[i].name != NULL)
     {
-      if (strcmp (table[i].name, name) == 0
-	  && (table[i].isa_spec_class == ISA_SPEC_CLASS_DRAFT
-	      || table[i].isa_spec_class == default_isa_spec))
+      if (strcmp (table[i].name, name) == 0)
 	{
 	  *major_version = table[i].major_version;
 	  *minor_version = table[i].minor_version;
@@ -2088,9 +2063,8 @@ riscv_parse_add_subset (riscv_parse_subset_t *rps,
 
   if ((major_version == RISCV_UNKNOWN_VERSION
        || minor_version == RISCV_UNKNOWN_VERSION)
-      && rps->isa_spec != NULL)
-    riscv_get_default_ext_version (*rps->isa_spec, subset,
-				   &major_version, &minor_version);
+      && rps->use_default_version)
+    riscv_get_default_ext_version (subset, &major_version, &minor_version);
 
   /* We don't care the versions of the implicit extensions.  */
   if (!implicit
@@ -2101,9 +2075,7 @@ riscv_parse_add_subset (riscv_parse_subset_t *rps,
 	rps->error_handler
 	  (_("x ISA extension `%s' must be set with the versions"),
 	   subset);
-      /* Allow old ISA spec can recognize zicsr and zifencei.  */
-      else if (strcmp (subset, "zicsr") != 0
-	       && strcmp (subset, "zifencei") != 0)
+      else
 	rps->error_handler
 	  (_("cannot find default versions of the ISA extension `%s'"),
 	   subset);
@@ -2918,7 +2890,7 @@ riscv_update_subset (riscv_parse_subset_t *rps,
     .subset_list = riscv_copy_subset_list (rps->subset_list),
     .error_handler = rps->error_handler,
     .xlen = &newxlen,
-    .isa_spec = rps->isa_spec,
+    .use_default_version = rps->use_default_version,
     .check_unknown_prefixed_ext = rps->check_unknown_prefixed_ext,
   };
 
@@ -3659,9 +3631,6 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
 void
 riscv_print_extensions (void)
 {
-  /* Record the previous printed extension.
-     Print the current one if they are not the same.  */
-  const struct riscv_supported_ext *cur = NULL, *prev = NULL;
   int i, j;
 
   printf ("All available -march extensions for RISC-V:");
@@ -3669,32 +3638,15 @@ riscv_print_extensions (void)
   for (i = 0; riscv_all_supported_ext[i] != NULL; i++)
     {
       const struct riscv_supported_ext *exts = riscv_all_supported_ext[i];
-      prev = NULL;
       for (j = 0; exts[j].name != NULL; j++)
 	{
-	  cur = &exts[j];
 	  /* Unclear version information, skip.  */
-	  if (cur->isa_spec_class == ISA_SPEC_CLASS_NONE
-	      || cur->major_version == RISCV_UNKNOWN_VERSION
-	      || cur->minor_version == RISCV_UNKNOWN_VERSION)
+	  if (exts[j].major_version == RISCV_UNKNOWN_VERSION
+	      || exts[j].minor_version == RISCV_UNKNOWN_VERSION)
 	    continue;
 
-	  /* Same extension.  */
-	  if (prev && strcmp (prev->name, cur->name) == 0)
-	    {
-	      /* Same version, skip.  */
-	      if (prev->major_version == cur->major_version
-		  && prev->minor_version == cur->minor_version)
-		continue;
-	      /* Different version, print version with comma.  */
-	      else
-		printf (", %d.%d", cur->major_version, cur->minor_version);
-	    }
-	  /* Different extension, print extension and version with newline.  */
-	  else
-	    printf ("\n\t%-40s%d.%d", cur->name, cur->major_version,
-		    cur->minor_version);
-	  prev = &exts[j];
+	  printf ("\n\t%-40s%d.%d", exts[j].name, exts[j].major_version,
+		  exts[j].minor_version);
 	}
     }
   printf ("\n");
@@ -3931,9 +3883,9 @@ riscv_merge_arch_attr_info (bfd *ibfd, char *in_arch, char *out_arch,
   unsigned xlen_in, xlen_out;
 
   riscv_parse_subset_t riscv_rps_ld_in =
-    {&in_subsets, _bfd_error_handler, &xlen_in, NULL, false};
+    {&in_subsets, _bfd_error_handler, &xlen_in, false, false};
   riscv_parse_subset_t riscv_rps_ld_out =
-    {&out_subsets, _bfd_error_handler, &xlen_out, NULL, false};
+    {&out_subsets, _bfd_error_handler, &xlen_out, false, false};
 
   if (in_arch == NULL && out_arch == NULL)
     return NULL;
@@ -3988,7 +3940,7 @@ riscv_merge_arch_attr_info (bfd *ibfd, char *in_arch, char *out_arch,
   /* Add the implicit subsets implied by the merged subset list, then
      check if the result is conflicting.  */
   riscv_parse_subset_t riscv_rps_ld_merged =
-    {&merged_subsets, _bfd_error_handler, &xlen_in, NULL, false};
+    {&merged_subsets, _bfd_error_handler, &xlen_in, false, false};
   riscv_parse_add_implicit_subsets (&riscv_rps_ld_merged);
   if (!riscv_parse_check_conflicts (&riscv_rps_ld_merged))
     goto cleanup;

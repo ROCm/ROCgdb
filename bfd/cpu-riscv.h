@@ -1,4 +1,4 @@
-/* RISC-V spec version controlling support.
+/* RISC-V BFD support.
    Copyright (C) 2019-2026 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -17,47 +17,6 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
    MA 02110-1301, USA.  */
-
-enum riscv_spec_class
-{
-  /* ISA spec.  */
-  ISA_SPEC_CLASS_NONE = 0,
-  ISA_SPEC_CLASS_2P2,
-  ISA_SPEC_CLASS_20190608,
-  ISA_SPEC_CLASS_20191213,
-  ISA_SPEC_CLASS_DRAFT,
-};
-
-struct riscv_spec
-{
-  const char *name;
-  enum riscv_spec_class spec_class;
-};
-
-extern const struct riscv_spec riscv_isa_specs[];
-
-#define RISCV_GET_SPEC_CLASS(UTYPE, LTYPE, NAME, CLASS)			\
-  do									\
-    {									\
-      if (NAME == NULL)							\
-	break;								\
-									\
-      int i_spec = UTYPE##_SPEC_CLASS_NONE + 1;				\
-      for (; i_spec < UTYPE##_SPEC_CLASS_DRAFT; i_spec++)		\
-	{								\
-	  int j_spec = i_spec - UTYPE##_SPEC_CLASS_NONE -1;		\
-	  if (riscv_##LTYPE##_specs[j_spec].name			\
-	      && strcmp (riscv_##LTYPE##_specs[j_spec].name, NAME) == 0)\
-	  {								\
-	    CLASS = riscv_##LTYPE##_specs[j_spec].spec_class;		\
-	    break;							\
-	  }								\
-	}								\
-    }									\
-  while (0)
-
-#define RISCV_GET_ISA_SPEC_CLASS(NAME, CLASS)	\
-  RISCV_GET_SPEC_CLASS(ISA, isa, NAME, CLASS)
 
 extern bool
 riscv_elf_is_mapping_symbols (const char *);
