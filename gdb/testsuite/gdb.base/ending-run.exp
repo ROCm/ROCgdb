@@ -288,5 +288,3 @@ if {!$use_gdb_stub
 }
 
 set timeout $old_timeout
-
-#remote_exec build "rm -f ${binfile}"
