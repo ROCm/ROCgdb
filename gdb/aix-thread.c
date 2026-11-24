@@ -742,7 +742,7 @@ pdc_dealloc (pthdb_user_t user_current_pid, void *buf)
 
 /* Return a printable representation of pthread STATE.  */
 
-static char *
+static const char *
 state2str (pthdb_state_t state)
 {
   switch (state)
