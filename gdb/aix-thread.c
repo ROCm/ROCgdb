@@ -929,9 +929,9 @@ pd_update (pid_t pid)
 
   tid = get_signaled_thread (pid);
   if (tid != 0)
-    thread = find_thread ([&] (thread_info *thread)
+    thread = find_thread ([&] (thread_info *tp)
       {
-	return thread->ptid.lwp () == tid;
+	return tp->ptid.lwp () == tid;
       });
   if (!thread)
     ptid = ptid_t (pid);
