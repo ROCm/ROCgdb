@@ -198,9 +198,7 @@ standard_testfile asmsrc1.s asmsrc2.s
 set arch_inc [standard_output_file arch.inc]
 set note_inc [standard_output_file note.inc]
 
-remote_exec build "rm -f $arch_inc"
 remote_download build ${srcdir}/${subdir}/${asm-arch}.inc $arch_inc
-remote_exec build "rm -f $note_inc"
 remote_download build ${srcdir}/${subdir}/${asm-note}.inc $note_inc
 
 gdb_remote_download host $arch_inc
@@ -471,6 +469,3 @@ test_dis "disassem &staticvar, (int *) &staticvar+1" "staticvar"
 # See if we can look at a static function
 gdb_test "disassem foostatic" ".*<\\+0>:.*End of assembler dump." \
 	"look at static function"
-
-remote_exec build "rm -f $arch_inc"
-remote_exec build "rm -f $note_inc"
