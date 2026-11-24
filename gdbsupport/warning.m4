@@ -47,8 +47,9 @@ build_warnings=" \
 -Wmissing-declarations \
 -Wno-char-subscripts \
 -Wno-error=deprecated-register \
+-Wno-error=maybe-uninitialized \
 -Wno-mismatched-tags \
--Wno-sign-compare -Wno-error=maybe-uninitialized \
+-Wno-sign-compare \
 -Wno-stringop-overflow \
 -Wno-switch \
 -Wno-unused \
