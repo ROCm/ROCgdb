@@ -667,9 +667,6 @@ if {[build_executable sepdebug.exp sepdebug2 sepdebug2.c debug] != -1
 set build_id_debug_filename [build_id_debug_filename_get $binfile$EXEEXT]
 if {![string compare $build_id_debug_filename ""]} {
     unsupported "build-id is not supported by the compiler"
-
-    # Spare debug files may confuse testsuite runs in the future.
-    remote_exec build "rm -f $debugfile"
 } else {
     set build_id_debugself_filename [build_id_debug_filename_get $debugfile]
     set test "build-id support by binutils"
@@ -693,7 +690,4 @@ if {![string compare $build_id_debug_filename ""]} {
     # location as the executable file.
 
     test_different_dir multiple-dirs "/doesnotexist:[standard_output_file {}]" $xfail
-
-    # Spare debug files may confuse testsuite runs in the future.
-    remote_exec build "rm -f [standard_output_file ${build_id_debug_filename}]"
 }
