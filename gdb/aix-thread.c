@@ -1701,10 +1701,11 @@ store_regs_user_thread (const struct regcache *regcache, pthdb_pthread_t pdtid)
 				   &(vmx.__vr[i]));
 	    ctx.vmx.__vr[i] = vmx.__vr[i];
 	  }
-	if (REG_VALID == regcache->get_register_status (tdep->ppc_vrsave_regnum))
-	  ctx.vmx.__vrsave = vmx.__vrsave;
-	if (REG_VALID == regcache->get_register_status (tdep->ppc_vrsave_regnum - 1))
-	  ctx.vmx.__vscr = vmx.__vscr;
+      if (REG_VALID == regcache->get_register_status (tdep->ppc_vrsave_regnum))
+	ctx.vmx.__vrsave = vmx.__vrsave;
+      if (REG_VALID
+	  == regcache->get_register_status (tdep->ppc_vrsave_regnum - 1))
+	ctx.vmx.__vscr = vmx.__vscr;
     }
 
   /* Fill vsx registers. */
