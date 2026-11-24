@@ -1105,8 +1105,6 @@ aix_thread_target::resume (ptid_t ptid, int step, enum gdb_signal sig)
 	error (_("aix-thread resume: unknown pthread %ld"),
 	       ptid.lwp ());
 
-      aix_thread_info *priv = get_aix_thread_info (thread);
-
       tid[0] = ptid.lwp ();
       if (tid[0] == PTHDB_INVALID_TID)
 	error (_("aix-thread resume: no tid for pthread %ld"),
@@ -2025,12 +2023,8 @@ aix_thread_target::pid_to_str (ptid_t ptid)
   thread_info *thread_info = current_inferior ()->find_thread (ptid);
 
   if (thread_info != NULL && thread_info->priv != NULL)
-    {
-      aix_thread_info *priv = get_aix_thread_info (thread_info);
-
-      return string_printf (_("Thread %s (tid %s)"), pulongest (ptid.tid ()),
-			    pulongest (ptid.lwp ()));
-    }
+    return string_printf (_("Thread %s (tid %s)"), pulongest (ptid.tid ()),
+			  pulongest (ptid.lwp ()));
 
   return beneath ()->pid_to_str (ptid);
 }
