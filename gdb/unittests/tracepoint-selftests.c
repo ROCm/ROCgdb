@@ -191,8 +191,9 @@ expect_bad_tracepoint_definition (const char *line)
 			 [&] () { free_uploaded_tps (&utps); });
 }
 
-/* Test parse_tracepoint_definition, including missing-colon rejects and
-   enable-flag rejects.  */
+/* Test parse_tracepoint_definition, including missing-colon rejects,
+   enable-flag rejects, missing-comma rejects for the 'X' condition
+   field, and the 'Z' branch stale-tail cases.  */
 
 static void
 test_parse_tracepoint_definition ()
@@ -229,6 +230,22 @@ test_parse_tracepoint_definition ()
   expect_bad_tracepoint_definition ("T1:0:X:0:0");
   expect_bad_tracepoint_definition ("T1:0:E");
   expect_bad_tracepoint_definition ("T1:0:E:0");
+
+  /* Well-formed T definition with an agent-expression condition.
+     Encoded form is ...:X<len>,<hex>.  */
+  {
+    const char *good = "T1:0:E:0:0:X1,00";
+
+    parse_tracepoint_definition (good, &utps);
+    SELF_CHECK (utps != nullptr);
+    SELF_CHECK (utps->cond != nullptr
+		&& streq (utps->cond.get (), "00"));
+    free_uploaded_tps (&utps);
+  }
+
+  /* Missing comma after the X length.  */
+  expect_bad_tracepoint_definition ("T1:0:E:0:0:X1");
+  expect_bad_tracepoint_definition ("T1:0:E:0:0:X1:00");
 
   /* Well-formed Z definition: at-string hex-encodes "foo".
      Encoded form is Z<num>:<addr>:<srctype>:<start>:<len>:<hex>.  */

@@ -3479,7 +3479,7 @@ parse_tracepoint_definition (const char *line, struct uploaded_tp **utpp)
 	    {
 	      p++;
 	      p = unpack_varlen_hex (p, &xlen);
-	      p++;  /* skip a comma */
+	      p = require (p, ',');
 	      cond = make_unique_xstrndup (p, 2 * xlen);
 	      p += 2 * xlen;
 	    }
