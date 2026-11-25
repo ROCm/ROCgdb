@@ -163,6 +163,91 @@ test_parse_tsv_definition ()
   }
 }
 
+/* Assert that LINE is rejected as a malformed tracepoint definition.  */
+
+static void
+expect_bad_tracepoint_definition (const char *line)
+{
+  uploaded_tp *utps = nullptr;
+
+  expect_bad_definition ([&] () { parse_tracepoint_definition (line, &utps); },
+			 [&] () { free_uploaded_tps (&utps); });
+}
+
+/* Test parse_tracepoint_definition, including missing-colon rejects and
+   enable-flag rejects.  */
+
+static void
+test_parse_tracepoint_definition ()
+{
+  uploaded_tp *utps = nullptr;
+
+  /* Well-formed T definition: T<num>:<addr>:<E|D>:<step>:<pass>.  */
+  {
+    const char *good = "T1:0:E:0:0";
+
+    parse_tracepoint_definition (good, &utps);
+    SELF_CHECK (utps != nullptr);
+    SELF_CHECK (utps->number == 1);
+    SELF_CHECK (utps->addr == 0);
+    SELF_CHECK (utps->enabled);
+    SELF_CHECK (utps->step == 0);
+    SELF_CHECK (utps->pass == 0);
+    free_uploaded_tps (&utps);
+  }
+
+  /* Well-formed disabled T definition.  */
+  {
+    const char *good = "T1:0:D:0:0";
+
+    parse_tracepoint_definition (good, &utps);
+    SELF_CHECK (utps != nullptr);
+    SELF_CHECK (!utps->enabled);
+    free_uploaded_tps (&utps);
+  }
+
+  expect_bad_tracepoint_definition ("T1");
+  expect_bad_tracepoint_definition ("T1:0");
+  expect_bad_tracepoint_definition ("T1:0::0:0");
+  expect_bad_tracepoint_definition ("T1:0:X:0:0");
+  expect_bad_tracepoint_definition ("T1:0:E");
+  expect_bad_tracepoint_definition ("T1:0:E:0");
+
+  /* Well-formed Z definition: at-string hex-encodes "foo".
+     Encoded form is Z<num>:<addr>:<srctype>:<start>:<len>:<hex>.  */
+  {
+    const char *good = "Z1:0:at:0:3:666f6f";
+
+    parse_tracepoint_definition (good, &utps);
+    SELF_CHECK (utps != nullptr);
+    SELF_CHECK (utps->number == 1);
+    SELF_CHECK (utps->addr == 0);
+    SELF_CHECK (utps->at_string != nullptr
+		&& streq (utps->at_string.get (), "foo"));
+    free_uploaded_tps (&utps);
+  }
+
+  expect_bad_tracepoint_definition ("Z1");
+  expect_bad_tracepoint_definition ("Z1:0");
+
+  /* Short stale tail.  Too small to overflow the old alloca buffer, but
+     still missing a trailing colon, so the parser must throw.  */
+  {
+    static const char prefix[] = "Z1:0:at:0:0000";
+    std::vector<char> buf = make_stale_tail_buffer (prefix, "4444");
+    expect_bad_tracepoint_definition (buf.data ());
+  }
+
+  /* Long stale tail.  Large enough to overflow the old alloca buffer; with
+     the fix, the missing trailing colon must cause a throw instead.  */
+  {
+    static const char prefix[] = "Z1:0:at:0:0000";
+    std::vector<char> buf
+      = make_stale_tail_buffer (prefix, std::string (64, '4'));
+    expect_bad_tracepoint_definition (buf.data ());
+  }
+}
+
 } /* namespace tracepoint_tests */
 } /* namespace selftests */
 
@@ -174,4 +259,7 @@ INIT_GDB_FILE (tracepoint_selftests)
   selftests::register_test
     ("parse_tsv_definition",
      selftests::tracepoint_tests::test_parse_tsv_definition);
+  selftests::register_test
+    ("parse_tracepoint_definition",
+     selftests::tracepoint_tests::test_parse_tracepoint_definition);
 }

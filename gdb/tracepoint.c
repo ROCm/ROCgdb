@@ -3429,34 +3429,41 @@ parse_tracepoint_definition (const char *line, struct uploaded_tp **utpp)
   const char *p;
   char piece;
   ULONGEST num, addr, step, pass, orig_size, xlen, start;
-  int enabled, end;
+  int enabled;
   enum bptype type;
   const char *srctype;
-  char *buf;
   struct uploaded_tp *utp = NULL;
+
+  auto require = [&] (const char *q, char sep = ':') -> const char *
+    {
+      return trace_definition_require_char (q, sep, "tracepoint", line);
+    };
 
   p = line;
   /* Both tracepoint and action definitions start with the same number
      and address sequence.  */
   piece = *p++;
   p = unpack_varlen_hex (p, &num);
-  p++;  /* skip a colon */
+  p = require (p);
   p = unpack_varlen_hex (p, &addr);
-  p++;  /* skip a colon */
+  p = require (p);
   if (piece == 'T')
     {
       gdb::unique_xmalloc_ptr<char> cond;
 
+      if (*p != 'E' && *p != 'D')
+	bad_trace_definition ("tracepoint", line);
       enabled = (*p++ == 'E');
-      p++;  /* skip a colon */
+      p = require (p);
       p = unpack_varlen_hex (p, &step);
-      p++;  /* skip a colon */
+      p = require (p);
       p = unpack_varlen_hex (p, &pass);
       type = bp_tracepoint;
       /* Thumb through optional fields.  */
       while (*p == ':')
 	{
-	  p++;  /* skip a colon */
+	  /* Skip the colon the while loop checks for.  */
+	  p++;
 	  if (*p == 'F')
 	    {
 	      type = bp_fast_tracepoint;
@@ -3502,24 +3509,20 @@ parse_tracepoint_definition (const char *line, struct uploaded_tp **utpp)
       /* Parse a chunk of source form definition.  */
       utp = get_uploaded_tp (num, addr, utpp);
       srctype = p;
-      p = strchr (p, ':');
-      p++;  /* skip a colon */
+      p = require (strchr (p, ':'));
       p = unpack_varlen_hex (p, &start);
-      p++;  /* skip a colon */
+      p = require (p);
       p = unpack_varlen_hex (p, &xlen);
-      p++;  /* skip a colon */
+      p = require (p);
 
-      buf = (char *) alloca (strlen (line));
-
-      end = hex2bin (p, (gdb_byte *) buf, strlen (p) / 2);
-      buf[end] = '\0';
+      std::string decoded = hex2str (p);
 
       if (startswith (srctype, "at:"))
-	utp->at_string = make_unique_xstrdup (buf);
+	utp->at_string = make_unique_xstrdup (decoded.c_str ());
       else if (startswith (srctype, "cond:"))
-	utp->cond_string = make_unique_xstrdup (buf);
+	utp->cond_string = make_unique_xstrdup (decoded.c_str ());
       else if (startswith (srctype, "cmd:"))
-	utp->cmd_strings.emplace_back (xstrdup (buf));
+	utp->cmd_strings.emplace_back (xstrdup (decoded.c_str ()));
     }
   else if (piece == 'V')
     {
