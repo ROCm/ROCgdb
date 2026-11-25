@@ -2998,6 +2998,7 @@ free_uploaded_tsvs (struct uploaded_tsv **utsvp)
   while (*utsvp)
     {
       next_one = (*utsvp)->next;
+      xfree (const_cast<char *> ((*utsvp)->name));
       xfree (*utsvp);
       *utsvp = next_one;
     }
@@ -3377,6 +3378,29 @@ Status line: '%s'\n"), p, line);
     }
 }
 
+/* Report a malformed uploaded trace-related definition.  KIND is a short
+   label such as "tsv" or "tracepoint"; LINE is the full text being
+   parsed.  */
+
+[[noreturn]] static void
+bad_trace_definition (const char *kind, const char *line)
+{
+  error (_("bad %s definition: %s"), kind, line);
+}
+
+/* If P points at SEP, return the character after it.  Otherwise throw
+   via bad_trace_definition.  P may be NULL (e.g. a failed strchr),
+   which is treated as a missing separator.  */
+
+static const char *
+trace_definition_require_char (const char *p, char sep, const char *kind,
+			       const char *line)
+{
+  if (p == nullptr || *p != sep)
+    bad_trace_definition (kind, line);
+  return p + 1;
+}
+
 void
 parse_tracepoint_status (const char *p, tracepoint *tp,
 			 struct uploaded_tp *utp)
@@ -3518,27 +3542,26 @@ void
 parse_tsv_definition (const char *line, struct uploaded_tsv **utsvp)
 {
   const char *p;
-  char *buf;
   ULONGEST num, initval, builtin;
-  int end;
   struct uploaded_tsv *utsv = NULL;
 
-  buf = (char *) alloca (strlen (line));
+  auto require = [&] (const char *q, char sep = ':') -> const char *
+    {
+      return trace_definition_require_char (q, sep, "tsv", line);
+    };
 
   p = line;
   p = unpack_varlen_hex (p, &num);
-  p++; /* skip a colon */
+  p = require (p);
   p = unpack_varlen_hex (p, &initval);
-  p++; /* skip a colon */
+  p = require (p);
   p = unpack_varlen_hex (p, &builtin);
-  p++; /* skip a colon */
-  end = hex2bin (p, (gdb_byte *) buf, strlen (p) / 2);
-  buf[end] = '\0';
+  p = require (p);
 
   utsv = get_uploaded_tsv (num, utsvp);
   utsv->initial_value = initval;
   utsv->builtin = builtin;
-  utsv->name = xstrdup (buf);
+  utsv->name = xstrdup (hex2str (p).c_str ());
 }
 
 /* Given a line of text defining a static tracepoint marker, parse it

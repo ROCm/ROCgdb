@@ -20,8 +20,43 @@
 #include "gdbsupport/selftest.h"
 #include "tracepoint.h"
 
+#include <string>
+#include <vector>
+
 namespace selftests {
 namespace tracepoint_tests {
+
+/* Run PARSE and assert that it throws a gdb_exception_error.  CLEANUP
+   always runs afterward.  */
+
+template<typename Parse, typename Cleanup>
+static void
+expect_bad_definition (Parse parse, Cleanup cleanup)
+{
+  bool threw = false;
+
+  try
+    {
+      parse ();
+    }
+  catch (const gdb_exception_error &ex)
+    {
+      SELF_CHECK (ex.reason == RETURN_ERROR);
+      threw = true;
+    }
+
+  SELF_CHECK (threw);
+  cleanup ();
+}
+
+/* Like the two-argument overload, with a no-op cleanup.  */
+
+template<typename Parse>
+static void
+expect_bad_definition (Parse parse)
+{
+  expect_bad_definition (parse, [] () {});
+}
 
 static void
 test_parse_static_tracepoint_marker_definition ()
@@ -57,6 +92,77 @@ test_parse_static_tracepoint_marker_definition ()
   SELF_CHECK (end == def + strlen (def));
 }
 
+/* Build a buffer that mimics a reused RSP packet buffer (rs->buf):
+   PREFIX is a NUL-terminated definition, and STALE_HEX is appended
+   immediately after that NUL -- as leftover bytes from a previous, longer
+   reply (for example qTStatus) that a subsequent short reply overwrote.
+
+   Returns a vector with the following layout:
+
+     [ prefix bytes | NUL | stale_hex bytes | NUL ]
+
+   The final NUL keeps strlen on the stale region well-defined.  */
+
+static std::vector<char>
+make_stale_tail_buffer (const char *prefix, const std::string &stale_hex)
+{
+  std::vector<char> buf (prefix, prefix + strlen (prefix) + 1);
+  buf.insert (buf.end (), stale_hex.begin (), stale_hex.end ());
+  buf.push_back ('\0');
+  return buf;
+}
+
+/* Assert that LINE is rejected as a malformed TSV definition.  */
+
+static void
+expect_bad_tsv_definition (const char *line)
+{
+  uploaded_tsv *utsvs = nullptr;
+
+  expect_bad_definition ([&] () { parse_tsv_definition (line, &utsvs); },
+			 [&] () { free_uploaded_tsvs (&utsvs); });
+}
+
+/* Test parse_tsv_definition, including buffers with stale bytes after a
+   short definition's terminating NUL, as when reusing an RSP packet
+   buffer.  */
+
+static void
+test_parse_tsv_definition ()
+{
+  uploaded_tsv *utsvs = nullptr;
+
+  /* Well-formed definition: name hex-encodes "foo".  */
+  {
+    const char *good = "1:0:0:666f6f";
+
+    parse_tsv_definition (good, &utsvs);
+    SELF_CHECK (utsvs != nullptr);
+    SELF_CHECK (utsvs->number == 1);
+    SELF_CHECK (utsvs->initial_value == 0);
+    SELF_CHECK (utsvs->builtin == 0);
+    SELF_CHECK (utsvs->name != nullptr && streq (utsvs->name, "foo"));
+    free_uploaded_tsvs (&utsvs);
+  }
+
+  /* Short stale tail.  Too small to overflow the old alloca buffer, but
+     still missing a trailing colon, so the parser must throw.  */
+  {
+    static const char prefix[] = "1:0:0000";
+    std::vector<char> buf = make_stale_tail_buffer (prefix, "4444");
+    expect_bad_tsv_definition (buf.data ());
+  }
+
+  /* Long stale tail.  Large enough to overflow the old alloca buffer; with
+     the fix, the missing trailing colon must cause a throw instead.  */
+  {
+    static const char prefix[] = "1:0:0000";
+    std::vector<char> buf
+      = make_stale_tail_buffer (prefix, std::string (64, '4'));
+    expect_bad_tsv_definition (buf.data ());
+  }
+}
+
 } /* namespace tracepoint_tests */
 } /* namespace selftests */
 
@@ -65,4 +171,7 @@ INIT_GDB_FILE (tracepoint_selftests)
   selftests::register_test
     ("parse_static_tracepoint_marker_definition",
      selftests::tracepoint_tests::test_parse_static_tracepoint_marker_definition);
+  selftests::register_test
+    ("parse_tsv_definition",
+     selftests::tracepoint_tests::test_parse_tsv_definition);
 }
