@@ -118,4 +118,8 @@ arch_addr_space_id amdgpu_address_space_id_from_core_address (CORE_ADDR addr);
 
 CORE_ADDR amdgpu_segment_address_from_core_address (CORE_ADDR addr);
 
+/* List of "maintenance info amdgpu" subcommands.  */
+
+extern struct cmd_list_element *maintenance_info_amdgpu_list;
+
 #endif /* GDB_AMDGPU_TDEP_H */

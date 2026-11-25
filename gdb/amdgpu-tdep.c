@@ -97,7 +97,7 @@ amdgpu_get_segment_address_significant_bits (inferior *inf)
 }
 
 /* List of maint info amdgpu commands.  */
-static struct cmd_list_element *maintenance_info_amdgpu_list;
+struct cmd_list_element *maintenance_info_amdgpu_list;
 
 /* Return true if INFO is of an AMDGPU architecture.  */
 

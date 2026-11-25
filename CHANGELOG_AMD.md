@@ -28,6 +28,8 @@ Full documentation for ROCgdb is available at
   Windows (native Windows / MinGW builds).  TheRock-based builds are
   not supported in this release; support is planned for a future
   release.
+- Add a "maint info amdgpu wave-count" command that prints the number of
+  active heterogeneous waves in an inferior.
 
 ### Changed
 
