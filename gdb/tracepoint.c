@@ -3579,21 +3579,22 @@ parse_static_tracepoint_marker_definition (const char *line, const char **pp,
   const char *p, *endp;
   ULONGEST addr;
 
+  auto require = [&] (const char *q, char sep = ':') -> const char *
+    {
+      return trace_definition_require_char (q, sep, "marker", line);
+    };
+
   p = line;
   p = unpack_varlen_hex (p, &addr);
-  p++;  /* skip a colon */
+  p = require (p);
 
   marker->gdbarch = current_inferior ()->arch ();
   marker->address = (CORE_ADDR) addr;
 
+  const char *id_start = p;
   endp = strchr (p, ':');
-  if (endp == NULL)
-    error (_("bad marker definition: %s"), line);
-
-  marker->str_id = hex2str (p, (endp - p) / 2);
-
-  p = endp;
-  p++; /* skip a colon */
+  p = require (endp);
+  marker->str_id = hex2str (id_start, (endp - id_start) / 2);
 
   /* This definition may be followed by another one, separated by a comma.  */
   int hex_len;

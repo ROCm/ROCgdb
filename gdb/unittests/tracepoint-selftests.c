@@ -58,6 +58,20 @@ expect_bad_definition (Parse parse)
   expect_bad_definition (parse, [] () {});
 }
 
+/* Assert that LINE is rejected as a malformed static tracepoint marker
+   definition.  */
+
+static void
+expect_bad_static_tracepoint_marker_definition (const char *line)
+{
+  static_tracepoint_marker marker;
+
+  expect_bad_definition ([&] ()
+    {
+      parse_static_tracepoint_marker_definition (line, nullptr, &marker);
+    });
+}
+
 static void
 test_parse_static_tracepoint_marker_definition ()
 {
@@ -90,6 +104,9 @@ test_parse_static_tracepoint_marker_definition ()
   SELF_CHECK (marker.str_id == "marker3");
   SELF_CHECK (marker.extra == "morestuff");
   SELF_CHECK (end == def + strlen (def));
+
+  expect_bad_static_tracepoint_marker_definition ("1234");
+  expect_bad_static_tracepoint_marker_definition ("1234:6d61726b657231");
 }
 
 /* Build a buffer that mimics a reused RSP packet buffer (rs->buf):
