@@ -60,7 +60,7 @@ proc do_test {} {
 	    return
 	}
 
-	set hog_pid [spawn ${::binfile_hog}]
+	set hog_pid [with_rocm_sanitizer_env {spawn ${::binfile_hog}}]
 	if { $hog_pid == 0 } {
 	    fail "start hog"
 	    return

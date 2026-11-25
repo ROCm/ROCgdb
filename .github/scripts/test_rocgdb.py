@@ -2467,6 +2467,26 @@ def setup_sanitizer_environment(env_vars: Dict[str, str], testsuite_dir: Path) -
                                    silence leak reports by default. Override
                                    with ASAN_OPTIONS=detect_leaks=1 for a
                                    dedicated leak run.
+        exitcode=0               - tsan only. TSan makes the process exit
+                                   with status 66 once it has reported a
+                                   race, which fails the tests that check
+                                   the exit status of a program, and the
+                                   ROCm stack reports races of its own. The
+                                   reports are still written to the log.
+                                   Override with TSAN_OPTIONS=exitcode=66
+                                   to get the sanitizer's status back.
+        symbolize=0              - tsan only. To symbolize a report, TSan
+                                   forks and executes llvm-symbolizer. The
+                                   ROCm stack reports many races, so the
+                                   programs that the tests debug keep
+                                   creating child processes that GDB
+                                   follows or detaches from, which breaks
+                                   the fork tests, makes inferiors exit in
+                                   an unexpected order and makes watchpoint
+                                   tests miss their hits. The reports
+                                   still go to the log, with addresses in
+                                   place of some function names. Override
+                                   with TSAN_OPTIONS=symbolize=1.
         log_path=<dir>/log       - reports go to <dir>/log.<pid>; the
                                    sanitizer runtime appends .<pid> per
                                    process, so one log file is produced
@@ -2516,6 +2536,9 @@ def setup_sanitizer_environment(env_vars: Dict[str, str], testsuite_dir: Path) -
         options = ["halt_on_error=0"]
         if sanitizer == "asan":
             options.append("detect_leaks=0")
+        elif sanitizer == "tsan":
+            options.append("exitcode=0")
+            options.append("symbolize=0")
         if log_dir_ready:
             options.append(f"log_path={log_dir}/log")
 
