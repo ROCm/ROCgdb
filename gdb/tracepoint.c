@@ -3406,13 +3406,21 @@ parse_tracepoint_status (const char *p, tracepoint *tp,
 			 struct uploaded_tp *utp)
 {
   ULONGEST uval;
+  const char *line = p;
+
+  auto require = [&] (const char *q, char sep = ':') -> const char *
+    {
+      return trace_definition_require_char (q, sep, "tracepoint status",
+					    line);
+    };
 
   p = unpack_varlen_hex (p, &uval);
   if (tp)
     tp->hit_count += uval;
   else
     utp->hit_count += uval;
-  p = unpack_varlen_hex (p + 1, &uval);
+  p = require (p);
+  p = unpack_varlen_hex (p, &uval);
   if (tp)
     tp->traceframe_usage += uval;
   else

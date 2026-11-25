@@ -282,6 +282,51 @@ test_parse_tracepoint_definition ()
   }
 }
 
+/* Assert that LINE is rejected as a malformed tracepoint status.  */
+
+static void
+expect_bad_tracepoint_status (const char *line)
+{
+  uploaded_tp utp;
+
+  expect_bad_definition ([&] ()
+    {
+      parse_tracepoint_status (line, nullptr, &utp);
+    });
+}
+
+/* Test parse_tracepoint_status, including missing-colon rejects.
+   Status form is <hits>:<usage>.  */
+
+static void
+test_parse_tracepoint_status ()
+{
+  /* Well-formed status.  */
+  {
+    uploaded_tp utp;
+
+    parse_tracepoint_status ("5:a", nullptr, &utp);
+    SELF_CHECK (utp.hit_count == 5);
+    SELF_CHECK (utp.traceframe_usage == 0xa);
+  }
+
+  /* Also reachable via a V tracepoint definition piece.  */
+  {
+    uploaded_tp *utps = nullptr;
+
+    parse_tracepoint_definition ("V1:0:5:a", &utps);
+    SELF_CHECK (utps != nullptr);
+    SELF_CHECK (utps->hit_count == 5);
+    SELF_CHECK (utps->traceframe_usage == 0xa);
+    free_uploaded_tps (&utps);
+  }
+
+  expect_bad_tracepoint_status ("5");
+  expect_bad_tracepoint_status ("5a");
+  expect_bad_tracepoint_definition ("V1:0:5");
+  expect_bad_tracepoint_definition ("V1:0:5a");
+}
+
 } /* namespace tracepoint_tests */
 } /* namespace selftests */
 
@@ -296,4 +341,7 @@ INIT_GDB_FILE (tracepoint_selftests)
   selftests::register_test
     ("parse_tracepoint_definition",
      selftests::tracepoint_tests::test_parse_tracepoint_definition);
+  selftests::register_test
+    ("parse_tracepoint_status",
+     selftests::tracepoint_tests::test_parse_tracepoint_status);
 }
