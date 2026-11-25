@@ -62,7 +62,7 @@ struct string_table
 struct mod_source_files
 {
   unsigned int      files_count;
-  struct string **  `files;
+  struct string **  files;
 };
 
 struct source_files_info
