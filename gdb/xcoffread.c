@@ -369,7 +369,7 @@ xcoff_symfile_offsets (objfile *objfile, const section_addr_info &addrs)
 
 static const sym_fns xcoff_sym_fns =
 {
-  xcoff_symfile_init,		/* read initial info, setup for sym_read() */
+  xcoff_symfile_init,		/* read initial info, set up for sym_read () */
   xcoff_symfile_read,		/* read a symbol file into symtab */
   xcoff_symfile_offsets,	/* xlate offsets ext->int form */
   default_symfile_segments,	/* Get segment information from a file.  */

@@ -69,7 +69,7 @@ void wrap_ternop_intrinsic (exp_opcode opcode);
 int parse_number (struct parser_state *par_state, const char *p, int len,
 		  int parsed_float, f_exp_parser_YYSTYPE *putithere);
 
-/* Called to setup the type stack when we encounter a '(kind=N)' type
+/* Called to set up the type stack when we encounter a '(kind=N)' type
    modifier, performs some bounds checking on 'N' and then pushes this to
    the type stack followed by the 'tp_kind' marker.  */
 

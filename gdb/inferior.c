@@ -910,7 +910,7 @@ add_inferior_with_spaces (void)
   inf->pspace = pspace;
   inf->aspace = pspace->aspace;
 
-  /* Setup the inferior's initial arch, based on information obtained
+  /* Set up the inferior's initial arch, based on information obtained
      from the global "set ..." options.  */
   gdbarch_info info;
   inf->set_arch (gdbarch_find_by_info (info));

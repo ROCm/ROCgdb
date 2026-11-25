@@ -685,7 +685,7 @@ tui_redisplay_readline (void)
 }
 
 /* Readline callback to prepare the terminal.  It is called once each
-   time we enter readline.  Terminal is already setup in curses
+   time we enter readline.  Terminal is already set up in curses
    mode.  */
 static void
 tui_prep_terminal (int notused1)
@@ -836,11 +836,11 @@ tui_rl_display_match_list (char **matches, int len, int max)
   gdb_display_match_list (matches, len, max, &displayer);
 }
 
-/* Whether the IO is setup for curses (1) or non-curses (0).  */
+/* Whether the IO is set up for curses (1) or non-curses (0).  */
 
 static int tui_io_mode;
 
-/* Setup the IO for curses or non-curses mode.
+/* Set up the IO for curses or non-curses mode.
    - In non-curses mode, readline and gdb use the standard input and
    standard output/error directly.
    - In curses mode, the standard output/error is controlled by TUI
@@ -1136,7 +1136,7 @@ tui_inject_newline_into_command_window ()
 static const char *cur_seq = nullptr;
 
 /* Set CUR_SEQ to point at the current sequence to pass to readline,
-   setup to call the input handler again so we complete the sequence
+   set up to call the input handler again so we complete the sequence
    shortly, and return the first character to start the sequence.  */
 
 static int
@@ -1175,7 +1175,7 @@ tui_getc_1 (FILE *fp)
       ch = *cur_seq++;
 
       /* If we've reached the end of the string, we're done with the
-	 sequence.  Otherwise, setup to get back here again for
+	 sequence.  Otherwise, set up to get back here again for
 	 another character.  */
       if (*cur_seq == '\0')
 	cur_seq = nullptr;

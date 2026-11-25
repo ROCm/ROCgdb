@@ -59,8 +59,8 @@ gdb_breakpoint breakpt
 gdb_continue_to_breakpoint "runto breakpt function"
 
 # If we are using an extended-remote board, then an extended-remote
-# connection will have been setup when GDB initially started.  We then
-# disconnected, and setup a basic 'remote' connection above.  However,
+# connection will have been set up when GDB initially started.  We then
+# disconnected, and set up a basic 'remote' connection above.  However,
 # the 'remote' connection will now be connection 2.
 #
 # For all other boards, the 'remote' connection will be number 1.

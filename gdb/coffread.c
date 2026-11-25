@@ -658,8 +658,8 @@ coff_reader::getsymname (struct internal_syment *symbol_entry)
 
 static const struct sym_fns coff_sym_fns =
 {
-  [] (objfile *) { },		/* sym_init: read initial info, setup
-				   for sym_read() */
+  [] (objfile *) { },		/* sym_init: read initial info, set up
+				   for sym_read () */
   coff_symfile_read,		/* sym_read: read a symbol file into
 				   symtab */
   default_symfile_offsets,	/* sym_offsets: xlate external to

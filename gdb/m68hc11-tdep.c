@@ -444,7 +444,7 @@ enum m6811_seq_type
 {
   P_LAST = 0,
   P_SAVE_REG,  /* Save a register on the stack.  */
-  P_SET_FRAME, /* Setup the frame pointer.  */
+  P_SET_FRAME, /* Set up the frame pointer.  */
   P_LOCAL_1,   /* Allocate 1 byte for locals.  */
   P_LOCAL_2,   /* Allocate 2 bytes for locals.  */
   P_LOCAL_N    /* Allocate N bytes for locals.  */

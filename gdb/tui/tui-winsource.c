@@ -393,7 +393,7 @@ tui_source_window_base::show_source_content ()
 		{
 		  int reduced_width = std::max (pad_width / 2, width);
 		  if (reduced_width == pad_width)
-		    error (_("failed to setup source window"));
+		    error (_("failed to set up source window"));
 		  pad_width = reduced_width;
 		}
 	    }

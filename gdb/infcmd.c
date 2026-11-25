@@ -1021,7 +1021,7 @@ step_1 (int skip_subroutines, int single_inst, const char *count_string)
 
   clear_proceed_status (1);
 
-  /* Setup the execution command state machine to handle all the COUNT
+  /* Set up the execution command state machine to handle all the COUNT
      steps.  */
   thr = inferior_thread ();
   step_sm = new step_command_fsm (command_interp ());

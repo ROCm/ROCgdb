@@ -3018,7 +3018,7 @@ amd64_frame_cache_1 (const frame_info_ptr &this_frame,
     {
       /* We didn't find a valid frame.  If we're at the start of a
 	 function, or somewhere half-way its prologue, the function's
-	 frame probably hasn't been fully setup yet.  Try to
+	 frame probably hasn't been fully set up yet.  Try to
 	 reconstruct the base address for the stack frame by looking
 	 at the stack pointer.  For truly "frameless" functions this
 	 might work too.  */
@@ -4174,7 +4174,7 @@ amd64_supply_xsave (struct regcache *regcache, int regnum,
 
       /* If the FISEG and FOSEG registers have not been initialised yet
 	 (their CLEAR_BV bit is set) then their default values of zero will
-	 have already been setup by I387_SUPPLY_XSAVE.  */
+	 have already been set up by I387_SUPPLY_XSAVE.  */
       if (!(clear_bv & X86_XSTATE_X87))
 	{
 	  if (regnum == -1 || regnum == I387_FISEG_REGNUM (tdep))

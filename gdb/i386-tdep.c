@@ -1383,7 +1383,7 @@ i386_match_insn_block (CORE_ADDR pc, struct i386_insn *insn_patterns)
 
 /* Some special instructions that might be migrated by GCC into the
    part of the prologue that sets up the new stack frame.  Because the
-   stack frame hasn't been setup yet, no registers have been saved
+   stack frame hasn't been set up yet, no registers have been saved
    yet, and only the scratch registers %eax, %ecx and %edx can be
    touched.  */
 
@@ -1933,7 +1933,7 @@ i386_frame_cache_1 (const frame_info_ptr &this_frame,
 	 currently holds the frame pointer for our calling frame.  If
 	 we're at the start of a function, or somewhere half-way its
 	 prologue, the function's frame probably hasn't been fully
-	 setup yet.  Try to reconstruct the base address for the stack
+	 set up yet.  Try to reconstruct the base address for the stack
 	 frame by looking at the stack pointer.  For truly "frameless"
 	 functions this might work too.  */
 

@@ -1213,7 +1213,7 @@ gdb_non_printing_disassembler::null_fprintf_styled_func
 }
 
 /* A non-printing disassemble_info management class.  The disassemble_info
-   setup by this class will not print anything to the output stream (there
+   set up by this class will not print anything to the output stream (there
    is no output stream), and the instruction to be disassembled will be
    read from a buffer passed to the constructor.  */
 

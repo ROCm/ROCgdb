@@ -199,7 +199,7 @@ proc test_urls {urls pattern_re test} {
 	$test
 }
 
-# Uses the global variables DEBUGDIR and DB which are setup elsewhere
+# Uses the global variables DEBUGDIR and DB which are set up elsewhere
 # in this script.
 #
 # Start debuginfod server, and confirm that GDB can now find all the

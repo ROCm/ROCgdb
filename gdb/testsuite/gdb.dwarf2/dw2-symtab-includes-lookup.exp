@@ -15,7 +15,7 @@
 
 # Lookup a type in a partial unit with DW_AT_stmt_list.
 #
-# The test-case is setup such that the partial symtab expansion route is
+# The test-case is set up such that the partial symtab expansion route is
 # .h partial symtab -> shared partial symtab -> toplevel symtab.
 #
 # That is, the partial symtabs (as displayed by maint print objfiles) are:

@@ -3504,12 +3504,12 @@ skip_over_slash_fmt (completion_tracker &tracker, const char **args)
 
 INIT_GDB_FILE (completer)
 {
-  /* Setup some readline completion globals.  */
+  /* Set up some readline completion globals.  */
   rl_completion_word_break_hook = gdb_completion_word_break_characters;
   rl_attempted_completion_function = gdb_rl_attempted_completion_function;
   set_rl_completer_word_break_characters (default_word_break_characters ());
 
-  /* Setup readline globals relating to filename completion.  */
+  /* Set up readline globals relating to filename completion.  */
   rl_filename_quote_characters = " \t\n\\\"'";
   rl_filename_dequoting_function = gdb_completer_file_name_dequote;
   rl_filename_quoting_function = gdb_completer_file_name_quote;

@@ -41,7 +41,7 @@ gdb_test "break watch.adb:$bp_location" \
     "insert second breakpoint in watch.adb"
 
 # Continue again.  We should be stopped at the (internal) breakpoint
-# that we setup to delete the watchpoint as soon as the program leaves
+# that we set up to delete the watchpoint as soon as the program leaves
 # the watchpoint scope.
 
 gdb_test \

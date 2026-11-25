@@ -659,8 +659,8 @@ extern struct program_space *progspace_object_to_program_space (PyObject *obj);
 
 class gdbpy_initialize_file
 {
-  /* The type of a function that can be called just after GDB has setup the
-     Python interpreter.  This function will setup any additional Python
+  /* The type of a function that can be called just after GDB has set up the
+     Python interpreter.  This function will set up any additional Python
      state required by a particular subsystem.  Return 0 if the setup was
      successful, or return -1 if setup failed, in which case a Python
      exception should have been raised.  */

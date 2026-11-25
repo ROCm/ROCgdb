@@ -205,7 +205,7 @@ class frame_info_ptr;
 struct regcache;
 
 /* A struct containing pointers to all the target-dependent operations
-   performed to setup an inferior function call. */
+   performed to set up an inferior function call.  */
 
 struct ia64_infcall_ops
 {

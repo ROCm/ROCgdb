@@ -16,7 +16,7 @@
 # This test compiles two executables: crc_mismatch and crc_mismatch-2
 # and then strips them of debuginfo creating separate debug files. The test
 # then replaces crc_mismatch-2.debug with crc_mismatch.debug to trigger
-# "CRC mismatch" warning. A local debuginfod server is setup to supply
+# "CRC mismatch" warning. A local debuginfod server is set up to supply
 # the correct debug file, now when GDB looks up the debug info no warning
 # is given.
 

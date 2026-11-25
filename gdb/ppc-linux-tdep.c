@@ -2418,7 +2418,7 @@ ppc_linux_init_abi (struct gdbarch_info info,
   ppc_init_linux_record_tdep (&ppc_linux_record_tdep, 4);
   ppc_init_linux_record_tdep (&ppc64_linux_record_tdep, 8);
 
-  /* Setup displaced stepping.  */
+  /* Set up displaced stepping.  */
   set_gdbarch_displaced_step_prepare (gdbarch,
 				      ppc_linux_displaced_step_prepare);
 

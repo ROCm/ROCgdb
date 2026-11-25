@@ -500,7 +500,7 @@ require_tui_interpreter ()
 static void
 require_tui_terminal ()
 {
-  /* Don't try to setup curses (and print funny control
+  /* Don't try to set up curses (and print funny control
      characters) if we're not outputting to a terminal.  */
   if (!gdb_stderr->isatty ())
     error (_("Cannot enable the TUI when output is not a terminal"));
@@ -604,7 +604,7 @@ tui_enable (void)
 	  start_color ();
 	}
 
-      /* We must mark the tui sub-system active before trying to setup the
+      /* We must mark the tui sub-system active before trying to set up the
 	 current layout as tui windows defined by an extension language
 	 rely on this flag being true in order to know that the window
 	 they are creating is currently valid.  */

@@ -210,7 +210,7 @@ constexpr gdb_byte lm32_break_insn[4] = { OP_RAISE << 2, 0, 0, 2 };
 using lm32_breakpoint = BP_MANIPULATION (lm32_break_insn);
 
 
-/* Setup registers and stack for faking a call to a function in the
+/* Set up registers and stack for faking a call to a function in the
    inferior.  */
 
 static CORE_ADDR
@@ -238,7 +238,7 @@ lm32_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
       sp -= 4;
     }
 
-  /* Setup parameters.  */
+  /* Set up parameters.  */
   for (i = 0; i < nargs; i++)
     {
       struct value *arg = args[i];

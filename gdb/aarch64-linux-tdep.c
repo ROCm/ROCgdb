@@ -99,7 +99,7 @@
       +------------+
 
   On signal delivery, the kernel will create a signal handler stack
-  frame and setup the return address in LR to point at restorer stub.
+  frame and set up the return address in LR to point at restorer stub.
   The signal stack frame is defined by:
 
   struct rt_sigframe
@@ -1618,7 +1618,7 @@ aarch64_linux_iterate_over_regset_sections (struct gdbarch *gdbarch,
 
   if (tdep->has_sme ())
     {
-      /* Setup the register set information for a ZA register set core
+      /* Set up the register set information for a ZA register set core
 	 dump.  */
 
       /* Create this on the fly in order to handle the ZA register size.  */

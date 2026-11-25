@@ -4249,7 +4249,7 @@ info_sources_filter::info_sources_filter (match_on match_type,
   : m_match_type (match_type),
     m_regexp (regexp)
 {
-  /* Setup the compiled regular expression M_C_REGEXP based on M_REGEXP.  */
+  /* Set up the compiled regular expression M_C_REGEXP based on M_REGEXP.  */
   if (m_regexp != nullptr && *m_regexp != '\0')
     {
       gdb_assert (m_regexp != nullptr);

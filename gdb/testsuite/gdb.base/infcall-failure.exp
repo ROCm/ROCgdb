@@ -49,7 +49,7 @@ proc start_gdb_and_runto_main { target_async target_non_stop } {
     return 0
 }
 
-# Start GDB according to ASYNC_P and NON_STOP_P, then setup a
+# Start GDB according to ASYNC_P and NON_STOP_P, then set up a
 # conditional breakpoint.  The breakpoint condition includes an
 # inferior function call that will itself hit a breakpoint.  Check how
 # GDB reports this to the user.
@@ -106,7 +106,7 @@ proc_with_prefix run_call_hits_breakpoint_test { async_p non_stop_p } {
 	     "When the function is done executing, GDB will silently stop\\."]
 }
 
-# Start GDB according to ASYNC_P and NON_STOP_P, then setup a
+# Start GDB according to ASYNC_P and NON_STOP_P, then set up a
 # conditional breakpoint.  The breakpoint condition includes an
 # inferior function call that segfaults.  Check how GDB reports this
 # to the user.

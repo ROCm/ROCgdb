@@ -360,7 +360,7 @@ core_target::core_target (gdb_bfd_ref_ptr cbfd_ref)
   : m_core_bfd (std::move (cbfd_ref))
 {
   /* Find a first arch based on the BFD.  We need the initial gdbarch so
-     we can setup the hooks to find a target description.  */
+     we can set up the hooks to find a target description.  */
   m_core_gdbarch = gdbarch_from_bfd (this->core_bfd ());
 
   /* If the arch is able to read a target description from the core, it
@@ -2041,11 +2041,11 @@ mapped_file_info::add (const char *soname,
       gdb_assert (inserted);
     }
 
-  /* Setup the reverse build-id to file name map.  */
+  /* Set up the reverse build-id to file name map.  */
   if (actual_filename != nullptr)
     m_build_id_to_filename_map.emplace (build_id, actual_filename);
 
-  /* Setup the list of memory range to build-id objects.  */
+  /* Set up the list of memory range to build-id objects.  */
   for (mem_range &r : ranges)
     m_address_to_build_id_list.emplace_back (std::move (r), build_id);
 

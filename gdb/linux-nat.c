@@ -4682,7 +4682,7 @@ maintenance_info_lwps (const char *arg, int from_tty)
   for (lwp_info &lp : all_lwps ())
     ptid_width = std::max (ptid_width, lp.ptid.to_string ().size ());
 
-  /* Setup the table headers.  */
+  /* Set up the table headers.  */
   struct ui_out *uiout = current_uiout;
   ui_out_emit_table table_emitter (uiout, 2, -1, "linux-lwps");
   uiout->table_header (ptid_width, ui_left, "lwp-ptid", _("LWP Ptid"));

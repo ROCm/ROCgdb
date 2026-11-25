@@ -1650,7 +1650,7 @@ linespec_parse_line_offset (const char *string)
 
 /* In completion mode, if the user is still typing the number, there's
    no possible completion to offer.  But if there's already input past
-   the number, setup to expect NEXT.  */
+   the number, set up to expect NEXT.  */
 
 static void
 set_completion_after_number (linespec_parser *parser,
@@ -2638,7 +2638,7 @@ parse_linespec (linespec_parser *parser, const char *arg,
     unexpected_linespec_error (parser);
   else if (token.type == LSTOKEN_KEYWORD)
     {
-      /* Setup the completion word past the keyword.  Lexing never
+      /* Set up the completion word past the keyword.  Lexing never
 	 advances past a keyword automatically, so skip it
 	 manually.  */
       parser->completion_word

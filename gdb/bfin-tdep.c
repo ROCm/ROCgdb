@@ -549,7 +549,7 @@ bfin_push_dummy_call (struct gdbarch *gdbarch,
     regcache_cooked_write_unsigned (regcache, BFIN_P0_REGNUM, struct_addr);
 
   /* Set the dummy return value to bp_addr.
-     A dummy breakpoint will be setup to execute the call.  */
+     A dummy breakpoint will be set up to execute the call.  */
 
   regcache_cooked_write_unsigned (regcache, BFIN_RETS_REGNUM, bp_addr);
 

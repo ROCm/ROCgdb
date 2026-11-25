@@ -4067,7 +4067,7 @@ namespace selftests {
 static void
 test_memory_tagging_functions (void)
 {
-  /* Setup testing.  */
+  /* Set up testing.  */
   gdb::char_vector packet;
   gdb::byte_vector tags, bv;
   std::string expected;

@@ -722,7 +722,7 @@ call_thread_fsm::should_notify_stop ()
    during an inferior call.  */
 struct infcall_timer_controller
 {
-  /* Setup an event-loop timer that will interrupt PTID if the inferior
+  /* Set up an event-loop timer that will interrupt PTID if the inferior
      call takes too long.  DIRECT_CALL_P is true when this inferior call is
      a result of the user using a 'print' or 'call' command, and false when
      this inferior call is a result of e.g. a conditional breakpoint
@@ -863,7 +863,7 @@ run_inferior_call (std::unique_ptr<call_thread_fsm> sm,
       infrun_debug_show_threads ("non-exited threads after proceed for inferior-call",
 				 all_non_exited_threads ());
 
-      /* Setup a timer (if possible, and if the settings allow) to prevent
+      /* Set up a timer (if possible, and if the settings allow) to prevent
 	 the inferior call running forever.  */
       bool direct_call_p = !call_thread->control.in_cond_eval;
       infcall_timer_controller infcall_timer (call_thread, direct_call_p);
@@ -1563,7 +1563,7 @@ call_function_by_hand_dummy (struct value *function,
 
   /* The stopped_by_random_signal variable is global.  If we are here
      as part of a breakpoint condition check then the global will have
-     already been setup as part of the original breakpoint stop.  By
+     already been set up as part of the original breakpoint stop.  By
      making the inferior call the global will be changed when GDB
      handles the stop after the inferior call.  Avoid confusion by
      restoring the current value after the inferior call.  */

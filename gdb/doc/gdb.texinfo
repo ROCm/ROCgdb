@@ -22642,7 +22642,7 @@ colons:
 @end smallexample
 
 This makes it possible to have a system root that mirrors a target
-with more than one drive.  E.g., you may want to setup your local
+with more than one drive.  E.g., you may want to set up your local
 copies of the target system shared libraries like so (note @samp{c} vs
 @samp{z}):
 

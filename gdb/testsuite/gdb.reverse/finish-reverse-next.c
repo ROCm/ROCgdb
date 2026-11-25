@@ -28,7 +28,7 @@
    PowerPC supports two entry points to a function.  The normal entry point
    is called the local entry point (LEP).  The alternate entry point is called
    the global entry point (GEP).  The GEP is only used if the table of
-   contents (TOC) value stored in register r2 needs to be setup prior to
+   contents (TOC) value stored in register r2 needs to be set up prior to
    execution starting at the LEP.  A function call via a function pointer
    will entry via the GEP.  A normal function call will enter via the LEP.
 

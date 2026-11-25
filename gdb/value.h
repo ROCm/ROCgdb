@@ -1009,11 +1009,11 @@ struct lval_funcs
 
 extern struct value *coerce_ref_if_computed (const struct value *arg);
 
-/* Setup a new value type and enclosing value type for dereferenced value VALUE.
-   ENC_TYPE is the new enclosing type that should be set.  ORIGINAL_TYPE and
-   ORIGINAL_VAL are the type and value of the original reference or
-   pointer.  ORIGINAL_VALUE_ADDRESS is the address within VALUE, that is
-   the address that was dereferenced.
+/* Set up a new value type and enclosing value type for dereferenced value
+   VALUE.  ENC_TYPE is the new enclosing type that should be set.
+   ORIGINAL_TYPE and ORIGINAL_VAL are the type and value of the original
+   reference or pointer.  ORIGINAL_VALUE_ADDRESS is the address within VALUE,
+   that is the address that was dereferenced.
 
    Note, that VALUE is modified by this function.
 

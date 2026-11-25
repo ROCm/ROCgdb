@@ -220,7 +220,7 @@ record_minimal_symbol (minimal_symbol_reader &reader,
       = unrelocated_addr (gdbarch_addr_bits_remove (gdbarch,
 						    CORE_ADDR (address)));
 
-  /* We only setup section information for allocatable sections.  Usually
+  /* We only set up section information for allocatable sections.  Usually
      we'd only expect to find msymbols for allocatable sections, but if the
      ELF is malformed then this might not be the case.  In that case don't
      create an msymbol that references an uninitialised section object.  */
@@ -1337,7 +1337,7 @@ static const struct sym_probe_fns elf_probe_fns =
 
 static const struct sym_fns elf_sym_fns =
 {
-  elf_symfile_init,		/* read initial info, setup for sym_read() */
+  elf_symfile_init,		/* read initial info, set up for sym_read () */
   elf_symfile_read,		/* read a symbol file into symtab */
   default_symfile_offsets,	/* Translate ext. to int. relocation */
   elf_symfile_segments,		/* Get segment information from a file.  */

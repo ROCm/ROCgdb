@@ -211,7 +211,7 @@ xstormy16_frame_align (struct gdbarch *gdbarch, CORE_ADDR addr)
 }
 
 /* Function: xstormy16_push_dummy_call
-   Setup the function arguments for GDB to call a function in the inferior.
+   Set up the function arguments for GDB to call a function in the inferior.
    Called only in the context of a target function call from the debugger.
    Returns the value of the SP register after the args are pushed.  */
 

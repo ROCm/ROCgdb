@@ -821,7 +821,7 @@ sh_frame_align (struct gdbarch *ignore, CORE_ADDR sp)
 }
 
 /* Function: push_dummy_call (formerly push_arguments)
-   Setup the function arguments for calling a function in the inferior.
+   Set up the function arguments for calling a function in the inferior.
 
    On the Renesas SH architecture, there are four registers (R4 to R7)
    which are dedicated for passing function arguments.  Up to the first
@@ -1891,7 +1891,7 @@ sh_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 	 currently holds the frame pointer for our calling frame.  If
 	 we're at the start of a function, or somewhere half-way its
 	 prologue, the function's frame probably hasn't been fully
-	 setup yet.  Try to reconstruct the base address for the stack
+	 set up yet.  Try to reconstruct the base address for the stack
 	 frame by looking at the stack pointer.  For truly "frameless"
 	 functions this might work too.  */
       cache->base = get_frame_register_unsigned

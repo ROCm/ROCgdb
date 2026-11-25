@@ -34,7 +34,7 @@ gdb_test "watch -location pck.global_var" \
     ".*atchpoint ${::decimal}: -location pck.global_var"
 
 # Continue again.  We should be stopped at the (internal) breakpoint
-# that we setup to delete the watchpoint as soon as the program leaves
+# that we set up to delete the watchpoint as soon as the program leaves
 # the watchpoint scope.
 
 gdb_test "continue" \

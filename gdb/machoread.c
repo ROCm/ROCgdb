@@ -919,7 +919,7 @@ macho_symfile_offsets (struct objfile *objfile,
 }
 
 static const struct sym_fns macho_sym_fns = {
-  macho_symfile_init,           /* read initial info, setup for sym_read() */
+  macho_symfile_init,		/* read initial info, set up for sym_read () */
   macho_symfile_read,           /* read a symbol file into symtab */
   macho_symfile_offsets,        /* xlate external to internal form */
   default_symfile_segments,	/* Get segment information from a file.  */

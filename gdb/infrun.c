@@ -2413,7 +2413,7 @@ set_schedlock_func (const char *args, int from_tty, struct cmd_list_element *c)
    process.  */
 bool sched_multi = false;
 
-/* Try to setup for software single stepping.  Return true if target_resume()
+/* Try to set up for software single stepping.  Return true if target_resume()
    should use hardware single step.
 
    GDBARCH the current gdbarch.  */

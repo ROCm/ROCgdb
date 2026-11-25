@@ -352,7 +352,7 @@ both of which the current user can ssh to without a password.
 These users will be used by board files that simulate remote targets
 by switching to a different user on the same machine.  These users
 will have random files copied into their $HOME directories, so it is a
-good idea to setup new users just for this purpose.
+good idea to set up new users just for this purpose.
 
 Testing All Simple Boards
 *************************
@@ -375,7 +375,7 @@ The 'remote-target' and 'remote-host' can be replaced with any user
 names on the local machine, the only requirements are that the current
 user must be able to ssh to these users without a password, and these
 users must be happy to have arbitrary files copied into their $HOME
-directory.  Ideally, these users would be setup just for GDB testing.
+directory.  Ideally, these users would be set up just for GDB testing.
 
 The check-all-boards target requires that TESTS be defined, though it
 is fine to include multiple tests.

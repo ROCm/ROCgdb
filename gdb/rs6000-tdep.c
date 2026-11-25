@@ -8441,7 +8441,7 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Frame handling.  */
   dwarf2_frame_set_init_reg (gdbarch, ppc_dwarf2_frame_init_reg);
 
-  /* Setup displaced stepping.  */
+  /* Set up displaced stepping.  */
   set_gdbarch_displaced_step_copy_insn (gdbarch,
 					ppc_displaced_step_copy_insn);
   set_gdbarch_displaced_step_hw_singlestep (gdbarch,

@@ -308,7 +308,7 @@ struct py_send_packet_callbacks : public send_remote_packet_callbacks
   /* Return the resulting Python object.  It is invalid to call this
      before sending a packet to the remote and processing the reply.
 
-     The result value is setup in the RECEIVED call above.  */
+     The result value is set up in the RECEIVED call above.  */
 
   gdbpy_ref<> &&result ()
   {

@@ -115,7 +115,7 @@ aarch64_notify_debug_reg_change (ptid_t ptid,
    KERNEL_SUPPORTS_ANY_CONTIGUOUS_RANGE transitions to false.  Note we
    don't try to support combining watchpoints with matching (and thus
    shared) masks, as it's too late when we get here.  On buggy
-   kernels, GDB will try to first setup the perfect matching ranges,
+   kernels, GDB will try to first set up the perfect matching ranges,
    which will run out of registers before this function can merge
    them.  It doesn't look like worth the effort to improve that, given
    eventually buggy kernels will be phased out.  */

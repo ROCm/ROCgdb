@@ -1223,7 +1223,7 @@ pop_stack_item (struct avr_stack_item *si)
   return si;
 }
 
-/* Setup the function arguments for calling a function in the inferior.
+/* Set up the function arguments for calling a function in the inferior.
 
    On the AVR architecture, there are 18 registers (R25 to R8) which are
    dedicated for passing function arguments.  Up to the first 18 arguments

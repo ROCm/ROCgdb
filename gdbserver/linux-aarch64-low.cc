@@ -3250,7 +3250,7 @@ aarch64_emit_void_call_2 (CORE_ADDR fn, int arg1)
   /* Push x0 on the stack.  */
   aarch64_emit_stack_flush ();
 
-  /* Setup arguments for the function call:
+  /* Set up arguments for the function call:
 
      x0: arg1
      x1: top of the stack

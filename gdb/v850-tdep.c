@@ -791,7 +791,7 @@ v850_analyze_prologue (struct gdbarch *gdbarch,
 
   prologue_end = pc;
 
-  /* Now, search the prologue looking for instructions that setup fp, save
+  /* Now, search the prologue looking for instructions that set up fp, save
      rp, adjust sp and such.  We also record the frame offset of any saved
      registers.  */
 
@@ -996,7 +996,7 @@ v850_frame_align (struct gdbarch *ignore, CORE_ADDR sp)
   return sp & ~3;
 }
 
-/* Setup arguments and LP for a call to the target.  First four args
+/* Set up arguments and LP for a call to the target.  First four args
    go in R6->R9, subsequent args go into sp + 16 -> sp + ...  Structs
    are passed by reference.  64 bit quantities (doubles and long longs)
    may be split between the regs and the stack.  When calling a function
@@ -1266,7 +1266,7 @@ v850_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 	 currently holds the frame pointer for our calling frame.  If
 	 we're at the start of a function, or somewhere half-way its
 	 prologue, the function's frame probably hasn't been fully
-	 setup yet.  Try to reconstruct the base address for the stack
+	 set up yet.  Try to reconstruct the base address for the stack
 	 frame by looking at the stack pointer.  For truly "frameless"
 	 functions this might work too.  */
       cache->base = get_frame_register_unsigned (this_frame, E_SP_REGNUM);

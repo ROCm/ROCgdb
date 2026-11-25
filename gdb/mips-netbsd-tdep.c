@@ -242,7 +242,7 @@ static const unsigned char sigtramp_retcode_mipseb[RETCODE_SIZE] =
 #endif
 
 /* Figure out where the longjmp will land.  We expect that we have
-   just entered longjmp and haven't yet setup the stack frame, so the
+   just entered longjmp and haven't yet set up the stack frame, so the
    args are still in the argument regs.  MIPS_A0_REGNUM points at the
    jmp_buf structure from which we extract the PC that we will land
    at.  The PC is copied into *pc.  This routine returns true on

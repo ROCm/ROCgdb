@@ -1142,7 +1142,7 @@ proc command_to_message { command } {
 # }
 #
 # Within action elements you can also make use of the variable
-# gdb_test_name.  This variable is setup automatically by
+# gdb_test_name.  This variable is set up automatically by
 # gdb_test_multiple, and contains the value of MESSAGE.  You can then
 # write this, which is equivalent to the above:
 #

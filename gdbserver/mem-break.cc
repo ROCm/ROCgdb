@@ -102,7 +102,7 @@ struct raw_breakpoint
      others may use more than one.  E.g., on ARM, we need to use different
      breakpoint instructions on Thumb, Thumb-2, and ARM code.  Likewise for
      hardware breakpoints -- some architectures (including ARM) need to
-     setup debug registers differently depending on mode.  */
+     set up debug registers differently depending on mode.  */
   int kind;
 
   /* The breakpoint's shadow memory.  */

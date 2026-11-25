@@ -35,7 +35,7 @@ extern void tui_puts (const char *, WINDOW * = nullptr);
    curses command window.  */
 extern void tui_write (const char *buf, size_t length);
 
-/* Setup the IO for curses or non-curses mode.  */
+/* Set up the IO for curses or non-curses mode.  */
 extern void tui_setup_io (int mode);
 
 /* Initialize the IO for gdb in curses mode.  */

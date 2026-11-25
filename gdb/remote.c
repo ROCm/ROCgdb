@@ -4197,7 +4197,7 @@ remote_target::remote_threadlist_iterator (rmt_thread_action stepfunction,
 	break;
       /* Clear for later iterations.  */
       startflag = 0;
-      /* Setup to resume next batch of thread references, set nextthread.  */
+      /* Set up to resume next batch of thread references, set nextthread.  */
       if (result_count >= 1)
 	copy_threadref (&rs->nextthread,
 			&rs->resultthreadlist[result_count - 1]);
@@ -5223,7 +5223,7 @@ remote_target::process_initial_stop_replies (int from_tty)
       }
 
       /* If all threads of an inferior were already stopped, we
-	 haven't setup the inferior yet.  */
+	 haven't set up the inferior yet.  */
       for (inferior *inf : all_non_exited_inferiors (this))
 	{
 	  if (inf->needs_setup)
@@ -5344,7 +5344,7 @@ get_semicolon_delimited_hex_as_string (const char **ptr)
 remote_exec_and_args_info
 remote_target::fetch_remote_executable_and_arguments ()
 {
-  /* Setup some constants.  This helps keep the return lines shorter in the
+  /* Set up some constants.  This helps keep the return lines shorter in the
      rest of this function.  */
   constexpr remote_exec_and_args_info::state UNKNOWN
     = remote_exec_and_args_info::state::UNKNOWN;
@@ -16507,7 +16507,7 @@ test_memory_tagging_functions ()
   config->support = PACKET_ENABLE;
   SELF_CHECK (remote.supports_memory_tagging () == true);
 
-  /* Setup testing.  */
+  /* Set up testing.  */
   gdb::char_vector packet;
   gdb::byte_vector tags, bv;
   std::string expected, reply;

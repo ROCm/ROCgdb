@@ -1090,7 +1090,7 @@ riscv_fpreg_d_type (struct gdbarch *gdbarch)
 }
 
 /* Implement the register_type gdbarch method.  This is installed as an
-   for the override setup by TDESC_USE_REGISTERS, for most registers we
+   for the override set up by TDESC_USE_REGISTERS, for most registers we
    delegate the type choice to the target description, but for a few
    registers we try to improve the types if the target description has
    taken a simplistic approach.  */
@@ -3579,7 +3579,7 @@ riscv_push_dummy_call (struct gdbarch *gdbarch,
     }
 
   /* Set the dummy return value to bp_addr.
-     A dummy breakpoint will be setup to execute the call.  */
+     A dummy breakpoint will be set up to execute the call.  */
 
   riscv_infcall_debug_printf ("writing $ra = %s",
 			      core_addr_to_string (bp_addr));
@@ -4399,12 +4399,12 @@ riscv_gdbarch_init (struct gdbarch_info info,
 
   set_gdbarch_num_pseudo_regs (gdbarch, num_pseudo_regs);
 
-  /* Override the register type callback setup by the target description
+  /* Override the register type callback set up by the target description
      mechanism.  This allows us to provide special type for floating point
      registers.  */
   set_gdbarch_register_type (gdbarch, riscv_register_type);
 
-  /* Override the register name callback setup by the target description
+  /* Override the register name callback set up by the target description
      mechanism.  This allows us to force our preferred names for the
      registers, no matter what the target description called them.  */
   set_gdbarch_register_name (gdbarch, riscv_register_name);
@@ -4412,7 +4412,7 @@ riscv_gdbarch_init (struct gdbarch_info info,
   /* Tell GDB which RISC-V registers are read-only. */
   set_gdbarch_cannot_store_register (gdbarch, riscv_cannot_store_register);
 
-  /* Override the register group callback setup by the target description
+  /* Override the register group callback set up by the target description
      mechanism.  This allows us to force registers into the groups we
      want, ignoring what the target tells us.  */
   set_gdbarch_register_reggroup_p (gdbarch, riscv_register_reggroup_p);

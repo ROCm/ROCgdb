@@ -1732,7 +1732,7 @@ ppc_target::install_fast_tracepoint_jump_pad (CORE_ADDR tpoint,
   p += GEN_STORE (p, 3, 1, min_frame + 36 * rsz, is_64);
 
 
-  /* Setup arguments to collector.  */
+  /* Set up arguments to collector.  */
   /* Set r4 to collected registers.  */
   p += GEN_ADDI (p, 4, 1, min_frame);
   /* Set r3 to TPOINT.  */
@@ -2372,7 +2372,7 @@ ppc_emit_int_call_1 (CORE_ADDR fn, int arg1)
   uint32_t buf[15];
   uint32_t *p = buf;
 
-  /* Setup argument.  arg1 is a 16-bit value.  */
+  /* Set up argument.  arg1 is a 16-bit value.  */
   p += gen_limm (p, 3, (uint32_t) arg1, 0);
   p += gen_call (p, fn, 0, 0);
 
@@ -2402,7 +2402,7 @@ ppc_emit_void_call_2 (CORE_ADDR fn, int arg1)
   p += GEN_STW (p, 3, 30, 0);
   p += GEN_STW (p, 4, 30, 4);
 
-  /* Setup argument.  arg1 is a 16-bit value.  */
+  /* Set up argument.  arg1 is a 16-bit value.  */
   if (__BYTE_ORDER == __LITTLE_ENDIAN)
     {
        p += GEN_MR (p, 5, 4);
@@ -3129,7 +3129,7 @@ ppc64v1_emit_int_call_1 (CORE_ADDR fn, int arg1)
   uint32_t buf[13];
   uint32_t *p = buf;
 
-  /* Setup argument.  arg1 is a 16-bit value.  */
+  /* Set up argument.  arg1 is a 16-bit value.  */
   p += gen_limm (p, 3, arg1, 1);
   p += GEN_STD (p, 2, 1, 40);	/* Save TOC.  */
   p += gen_call (p, fn, 1, 1);
@@ -3147,7 +3147,7 @@ ppc64v2_emit_int_call_1 (CORE_ADDR fn, int arg1)
   uint32_t buf[10];
   uint32_t *p = buf;
 
-  /* Setup argument.  arg1 is a 16-bit value.  */
+  /* Set up argument.  arg1 is a 16-bit value.  */
   p += gen_limm (p, 3, arg1, 1);
   p += GEN_STD (p, 2, 1, 24);	/* Save TOC.  */
   p += gen_call (p, fn, 1, 0);
@@ -3171,7 +3171,7 @@ ppc64v1_emit_void_call_2 (CORE_ADDR fn, int arg1)
   /* Save TOP.  0(30) is next-empty.  */
   p += GEN_STD (p, 3, 30, 0);
 
-  /* Setup argument.  arg1 is a 16-bit value.  */
+  /* Set up argument.  arg1 is a 16-bit value.  */
   p += GEN_MR (p, 4, 3);		/* mr	r4, r3 */
   p += gen_limm (p, 3, arg1, 1);
   p += GEN_STD (p, 2, 1, 40);	/* Save TOC.  */
@@ -3196,7 +3196,7 @@ ppc64v2_emit_void_call_2 (CORE_ADDR fn, int arg1)
   /* Save TOP.  0(30) is next-empty.  */
   p += GEN_STD (p, 3, 30, 0);
 
-  /* Setup argument.  arg1 is a 16-bit value.  */
+  /* Set up argument.  arg1 is a 16-bit value.  */
   p += GEN_MR (p, 4, 3);		/* mr	r4, r3 */
   p += gen_limm (p, 3, arg1, 1);
   p += GEN_STD (p, 2, 1, 24);	/* Save TOC.  */
