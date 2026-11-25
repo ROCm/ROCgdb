@@ -115,7 +115,7 @@ read_addrmap_from_aranges (dwarf2_per_objfile *per_objfile,
       if (per_cu_it == debug_info_offset_to_per_cu.cend ())
 	{
 	  warn->warn (_("Section .debug_aranges in %ps entry at offset %s "
-			"debug_info_offset %s does not exists, "
+			"debug_info_offset %s does not exist, "
 			"ignoring .debug_aranges."),
 		      styled_string (file_name_style.style (),
 				     objfile_name (objfile)),

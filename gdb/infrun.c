@@ -2994,7 +2994,7 @@ resume_1 (enum gdb_signal sig)
 	 where we should _always_ single-step, even if we have a
 	 step-resume breakpoint, like when a software watchpoint is
 	 set.  Assuming single-stepping and delivering a signal at the
-	 same time would takes us to the signal handler, then we could
+	 same time would take us to the signal handler, then we could
 	 have removed the breakpoint at PC to step over it.  However,
 	 some hardware step targets (like e.g., Mac OS) can't step
 	 into signal handlers, and for those, we need to leave the

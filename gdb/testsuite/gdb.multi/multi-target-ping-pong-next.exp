@@ -45,7 +45,7 @@ proc test_ping_pong_next {} {
 
     # Set two breakpoints, one for each of inferior 1 and 2.  Inferior
     # 1 is running on the native target, and inferior 2 is running on
-    # extended-gdbserver.  Run to breakpoint 1 to gets things started.
+    # extended-gdbserver.  Run to breakpoint 1 to get things started.
     set line1 [gdb_get_line_number "set break 1 here"]
     set line2 [gdb_get_line_number "set break 2 here"]
 

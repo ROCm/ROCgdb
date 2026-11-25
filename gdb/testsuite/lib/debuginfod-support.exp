@@ -116,7 +116,7 @@ proc with_debuginfod_env { cache body } {
 
 # Start a debuginfod server.  DB is the directory to use for the server's
 # database cache, while DEBUGDIR is a directory containing all the debug
-# information that the server should server.
+# information that the server should serve.
 #
 # This proc will try to find an available port to start the server on, will
 # start the server, and check that the server has started correctly.

@@ -327,7 +327,7 @@ thread_to_lwp (ptid_t thread_id, int default_lwp)
 }
 
 /* Convert an LWP ID into a POSIX or Solaris thread ID.  If LWP_ID
-   doesn't exists, that's an error.
+   doesn't exist, that's an error.
 
    NOTE: This function probably shouldn't call error().  */
 

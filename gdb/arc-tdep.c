@@ -1972,7 +1972,7 @@ arc_arch_features_create (const bfd *abfd, const unsigned long mach)
 
   /* Try to guess the features parameters by looking at the binary to be
      executed.  If the user is providing a binary that does not match the
-     target, then tough luck.  This is the last effort to makes sense of
+     target, then tough luck.  This is the last effort to make sense of
      what's going on.  */
   if (abfd != nullptr && bfd_get_flavour (abfd) == bfd_target_elf_flavour)
     {
