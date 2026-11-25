@@ -93,7 +93,7 @@ m32r_elf_do_10_pcrel_reloc (bfd *abfd,
 			    bfd_vma symbol_value,
 			    bfd_vma addend)
 {
-  bfd_signed_vma relocation;
+  bfd_vma relocation;
   unsigned long x;
   bfd_reloc_status_type status;
 
@@ -109,7 +109,7 @@ m32r_elf_do_10_pcrel_reloc (bfd *abfd,
      before doing pcrel calculations.  */
   relocation -= (offset & -(bfd_vma) 4);
 
-  if (relocation < -0x200 || relocation > 0x1ff)
+  if (relocation + 0x200 > 0x3ff)
     status = bfd_reloc_overflow;
   else
     status = bfd_reloc_ok;
