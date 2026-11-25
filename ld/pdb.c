@@ -61,8 +61,8 @@ struct string_table
 
 struct mod_source_files
 {
-  uint16_t files_count;
-  struct string **files;
+  unsigned int      files_count;
+  struct string **  `files;
 };
 
 struct source_files_info
@@ -617,25 +617,41 @@ get_arch_number (bfd *abfd)
 }
 
 /* Validate the DEBUG_S_FILECHKSMS entry within a module's .debug$S
-   section, and copy it to the module's symbol stream.  */
+   section, and copy it from DATA to the module's symbol stream OUT.
+
+   Also update the MOD_SOURCE table with pointers to entries in STRINGS
+   (if provided) for each file referenced, or NULLs if the names cannot
+   be found.  Uses STRING_TABLE to get the file names.
+   
+   Returns TRUE upon success, sets bfd_error and returns FALSE otherwise.  */
+
 static bool
-copy_filechksms (uint8_t *data, uint32_t size, char *string_table,
-		 struct string_table *strings, uint8_t *out,
-		 struct mod_source_files *mod_source)
+copy_filechksms (uint8_t *                  data,
+		 uint32_t                   size,
+		 char *                     string_table,
+		 unsigned int               string_table_len,
+		 struct string_table *      strings,
+		 uint8_t *                  out,
+		 unsigned int               out_len,
+		 struct mod_source_files *  mod_source)
 {
-  uint8_t *orig_data = data;
-  uint32_t orig_size = size;
-  uint16_t num_files = 0;
-  struct string **strptr;
+  uint8_t *         orig_data = data;
+  uint32_t          orig_size = size;
+  unsigned int      num_files = 0;
+  struct string **  strptr;
 
-  bfd_putl32 (DEBUG_S_FILECHKSMS, out);
-  out += sizeof (uint32_t);
 
-  bfd_putl32 (size, out);
-  out += sizeof (uint32_t);
-
+  /* These should not happen, but paranoia never hurts.  */
+  if (data == NULL
+      || out == NULL
+      || out_len < size
+      || mod_source == NULL)
+    {
+      bfd_set_error (bfd_error_bad_value);
+      return false;
+    }
+  
   /* Calculate the number of files, and check for any overflows.  */
-
   while (size > 0)
     {
       struct file_checksum *fc = (struct file_checksum *) data;
@@ -670,19 +686,32 @@ copy_filechksms (uint8_t *data, uint32_t size, char *string_table,
 	  return false;
 	}
 
+      /* There should never be more than 2^16 checksums.  */
+      if (num_files > 0xffff)
+	{
+	  bfd_set_error (bfd_error_bad_value);
+	  return false;
+	}
       num_files++;
 
       data += padding;
       size -= padding;
     }
 
+  /* Write the header.  */
+  /* FIXME: If num_files == 0, do we actually want to do this ?  */
+  bfd_putl32 (DEBUG_S_FILECHKSMS, out);
+  out += sizeof (uint32_t);
+
+  bfd_putl32 (orig_size, out);
+  out += sizeof (uint32_t);
+
   /* Add the files to mod_source, so that they'll appear in the source
      info substream.  */
-
   strptr = NULL;
   if (num_files > 0)
     {
-      uint16_t new_count = num_files + mod_source->files_count;
+      unsigned int new_count = num_files + mod_source->files_count;
 
       mod_source->files = xrealloc (mod_source->files,
 				    sizeof (struct string *) * new_count);
@@ -716,12 +745,12 @@ copy_filechksms (uint8_t *data, uint32_t size, char *string_table,
       /* Remap the "file ID", i.e. the offset in the module's string table,
 	 so it points to the right place in the main string table.  */
 
-      if (string_table)
+      if (string_table && string_off < string_table_len)
 	{
-	  char *fn = string_table + string_off;
-	  size_t fn_len = strlen (fn);
-	  uint32_t hash = calc_hash (fn, fn_len);
-	  void **slot;
+	  char *    fn = string_table + string_off;
+	  size_t    fn_len = strlen (fn);
+	  uint32_t  hash = calc_hash (fn, fn_len);
+	  void **   slot;
 
 	  slot = htab_find_slot_with_hash (strings->hashmap, fn, hash,
 					   NO_INSERT);
@@ -810,9 +839,11 @@ eq_string_table_entry (const void *a, const void *b)
 }
 
 /* Parse the string table within the .debug$S section.  */
+
 static void
-parse_string_table (bfd_byte *data, size_t size,
-		    struct string_table *strings)
+parse_string_table (char *                 data,
+		    size_t                 size,
+		    struct string_table *  strings)
 {
   while (true)
     {
@@ -975,14 +1006,21 @@ extended_value_len (uint16_t type)
 
 /* Parse the symbols in a .debug$S section, and copy them to the module's
    symbol stream.  */
+
 static bool
-parse_symbols (uint8_t *data, uint32_t size, uint8_t **buf,
-	       struct type_entry **map, uint32_t num_types,
-	       bfd *sym_rec_stream, struct globals *glob, uint16_t mod_num)
+parse_symbols (uint8_t *             data,
+	       uint32_t              size,
+	       uint8_t **            symbuf,
+	       unsigned int *        symbuf_len,
+	       struct type_entry **  map,
+	       unsigned int          num_types,
+	       bfd *                 sym_rec_stream,
+	       struct globals *      glob,
+	       uint16_t              mod_num)
 {
-  uint8_t *orig_buf = *buf;
-  unsigned int scope_level = 0;
-  uint8_t *scope = NULL;
+  uint8_t *     orig_buf = *symbuf;
+  unsigned int  scope_level = 0;
+  uint8_t *     scope = NULL;
 
   while (size >= sizeof (uint16_t))
     {
@@ -1020,7 +1058,7 @@ parse_symbols (uint8_t *data, uint32_t size, uint8_t **buf,
 	      {
 		uint16_t section = bfd_getl16 (&d->section);
 
-		if (section == 0) /* GC'd, ignore */
+		if (section == 0) /* GC'd, ignore.  */
 		  break;
 	      }
 
@@ -1046,8 +1084,14 @@ parse_symbols (uint8_t *data, uint32_t size, uint8_t **buf,
 
 	    if (type == S_LDATA32 || type == S_LTHREAD32)
 	      {
-		memcpy (*buf, d, len);
-		*buf += len;
+		if (len > *symbuf_len)
+		  {
+		    bfd_set_error (bfd_error_bad_value);
+		    return false;
+		  }
+		memcpy (*symbuf, d, len);
+		*symbuf += len;
+		*symbuf_len -= len;
 	      }
 
 	    /* S_LDATA32 and S_LTHREAD32 only go in globals if
@@ -1193,7 +1237,7 @@ parse_symbols (uint8_t *data, uint32_t size, uint8_t **buf,
 		  }
 	      }
 
-	    end = *buf - orig_buf + sizeof (uint32_t) + endptr - data;
+	    end = *symbuf - orig_buf + sizeof (uint32_t) + endptr - data;
 	    bfd_putl32 (end, &proc->end);
 
 	    /* Add S_PROCREF / S_LPROCREF to globals stream.  */
@@ -1211,7 +1255,7 @@ parse_symbols (uint8_t *data, uint32_t size, uint8_t **buf,
 	    bfd_putl16 (type == S_GPROC32 || type == S_GPROC32_ID ?
 			S_PROCREF : S_LPROCREF, &ref->kind);
 	    bfd_putl32 (0, &ref->sum_name);
-	    bfd_putl32 (*buf - orig_buf + sizeof (uint32_t),
+	    bfd_putl32 (*symbuf - orig_buf + sizeof (uint32_t),
 			&ref->symbol_offset);
 	    bfd_putl16 (mod_num + 1, &ref->mod);
 
@@ -1228,10 +1272,13 @@ parse_symbols (uint8_t *data, uint32_t size, uint8_t **buf,
 
 	    free (ref);
 
-	    scope = *buf;
+	    scope = *symbuf;
 
-	    memcpy (*buf, proc, len);
-	    *buf += len;
+	    if (len > *symbuf_len)
+	      return false;
+	    memcpy (*symbuf, proc, len);
+	    *symbuf += len;
+	    *symbuf_len -= len;
 
 	    scope_level++;
 
@@ -1278,8 +1325,13 @@ parse_symbols (uint8_t *data, uint32_t size, uint8_t **buf,
 	      }
 	    else
 	      {
-		memcpy (*buf, udt, len);
-		*buf += len;
+		if (len > *symbuf_len)
+		  {
+		    return false;
+		  }
+		memcpy (*symbuf, udt, len);
+		*symbuf += len;
+		*symbuf_len -= len;
 	      }
 
 	    break;
@@ -1347,10 +1399,12 @@ parse_symbols (uint8_t *data, uint32_t size, uint8_t **buf,
 	case S_END:
 	case S_INLINESITE_END:
 	case S_PROC_ID_END:
-	  memcpy (*buf, data, len);
+	  if (len > *symbuf_len)
+	    return false;
+	  memcpy (*symbuf, data, len);
 
-	  if (type == S_PROC_ID_END) /* transform to S_END */
-	    bfd_putl16 (S_END, *buf + sizeof (uint16_t));
+	  if (type == S_PROC_ID_END) /* Transform to S_END.  */
+	    bfd_putl16 (S_END, *symbuf + sizeof (uint16_t));
 
 	  /* Reset scope variable back to the address of the previous
 	     scope start.  */
@@ -1396,7 +1450,8 @@ parse_symbols (uint8_t *data, uint32_t size, uint8_t **buf,
 		scope = orig_buf + parent - sizeof (uint32_t);
 	    }
 
-	  *buf += len;
+	  *symbuf += len;
+	  *symbuf_len -= len;
 	  scope_level--;
 	  break;
 
@@ -1418,8 +1473,11 @@ parse_symbols (uint8_t *data, uint32_t size, uint8_t **buf,
 		return false;
 	      }
 
-	    memcpy (*buf, data, len);
-	    *buf += len;
+	    if (len > *symbuf_len)
+	      return false;
+	    memcpy (*symbuf, data, len);
+	    *symbuf += len;
+	    *symbuf_len = len;
 
 	    break;
 	  }
@@ -1450,13 +1508,16 @@ parse_symbols (uint8_t *data, uint32_t size, uint8_t **buf,
 		return false;
 	      }
 
-	    end = *buf - orig_buf + sizeof (uint32_t) + endptr - data;
+	    end = *symbuf - orig_buf + sizeof (uint32_t) + endptr - data;
 	    bfd_putl32 (end, &bl->end);
 
-	    scope = *buf;
+	    scope = *symbuf;
 
-	    memcpy (*buf, data, len);
-	    *buf += len;
+	    if (len > *symbuf_len)
+	      return false;
+	    memcpy (*symbuf, data, len);
+	    *symbuf += len;
+	    *symbuf_len -= len;
 
 	    scope_level++;
 
@@ -1481,8 +1542,11 @@ parse_symbols (uint8_t *data, uint32_t size, uint8_t **buf,
 		return false;
 	      }
 
-	    memcpy (*buf, data, len);
-	    *buf += len;
+	    if (len > *symbuf_len)
+	      return false;
+	    memcpy (*symbuf, data, len);
+	    *symbuf += len;
+	    *symbuf_len -= len;
 
 	    break;
 	  }
@@ -1505,8 +1569,11 @@ parse_symbols (uint8_t *data, uint32_t size, uint8_t **buf,
 		return false;
 	      }
 
-	    memcpy (*buf, data, len);
-	    *buf += len;
+	    if (len > *symbuf_len)
+	      return false;
+	    memcpy (*symbuf, data, len);
+	    *symbuf += len;
+	    *symbuf_len -= len;
 
 	    break;
 	  }
@@ -1529,8 +1596,11 @@ parse_symbols (uint8_t *data, uint32_t size, uint8_t **buf,
 		return false;
 	      }
 
-	    memcpy (*buf, data, len);
-	    *buf += len;
+	    if (len > *symbuf_len)
+	      return false;
+	    memcpy (*symbuf, data, len);
+	    *symbuf += len;
+	    *symbuf_len -= len;
 
 	    break;
 	  }
@@ -1553,8 +1623,11 @@ parse_symbols (uint8_t *data, uint32_t size, uint8_t **buf,
 		return false;
 	      }
 
-	    memcpy (*buf, data, len);
-	    *buf += len;
+	    if (len > *symbuf_len)
+	      return false;
+	    memcpy (*symbuf, data, len);
+	    *symbuf += len;
+	    *symbuf_len -= len;
 
 	    break;
 	  }
@@ -1585,7 +1658,7 @@ parse_symbols (uint8_t *data, uint32_t size, uint8_t **buf,
 		return false;
 	      }
 
-	    end = *buf - orig_buf + sizeof (uint32_t) + endptr - data;
+	    end = *symbuf - orig_buf + sizeof (uint32_t) + endptr - data;
 	    bfd_putl32 (end, &is->end);
 
 	    if (!remap_symbol_type (&is->inlinee, map, num_types))
@@ -1594,10 +1667,13 @@ parse_symbols (uint8_t *data, uint32_t size, uint8_t **buf,
 		return false;
 	      }
 
-	    scope = *buf;
+	    scope = *symbuf;
 
-	    memcpy (*buf, data, len);
-	    *buf += len;
+	    if (len > *symbuf_len)
+	      return false;
+	    memcpy (*symbuf, data, len);
+	    *symbuf += len;
+	    *symbuf_len -= len;
 
 	    scope_level++;
 
@@ -1630,13 +1706,16 @@ parse_symbols (uint8_t *data, uint32_t size, uint8_t **buf,
 		return false;
 	      }
 
-	    end = *buf - orig_buf + sizeof (uint32_t) + endptr - data;
+	    end = *symbuf - orig_buf + sizeof (uint32_t) + endptr - data;
 	    bfd_putl32 (end, &th->end);
 
-	    scope = *buf;
+	    scope = *symbuf;
 
-	    memcpy (*buf, data, len);
-	    *buf += len;
+	    if (len > *symbuf_len)
+	      return false;
+	    memcpy (*symbuf, data, len);
+	    *symbuf += len;
+	    *symbuf_len -= len;
 
 	    scope_level++;
 
@@ -1661,8 +1740,11 @@ parse_symbols (uint8_t *data, uint32_t size, uint8_t **buf,
 		return false;
 	      }
 
-	    memcpy (*buf, data, len);
-	    *buf += len;
+	    if (len > *symbuf_len)
+	      return false;
+	    memcpy (*symbuf, data, len);
+	    *symbuf += len;
+	    *symbuf_len -= len;
 
 	    break;
 	  }
@@ -1678,8 +1760,11 @@ parse_symbols (uint8_t *data, uint32_t size, uint8_t **buf,
 	case S_DEFRANGE_SUBFIELD_REGISTER:
 	case S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE:
 	case S_DEFRANGE_REGISTER:
-	  memcpy (*buf, data, len);
-	  *buf += len;
+	  if (len > *symbuf_len)
+	    return false;
+	  memcpy (*symbuf, data, len);
+	  *symbuf += len;
+	  *symbuf_len -= len;
 	  break;
 
 	default:
@@ -1841,15 +1926,23 @@ calculate_symbols_size (uint8_t *data, uint32_t size, uint32_t *sym_size)
 /* Parse the DEBUG_S_INLINEELINES data, which records the line numbers that
    correspond to inlined functions.  This is similar to DEBUG_S_LINES (see
    handle_debugs_section), but rather than just copying we also need to remap
-   the numbers of the referenced LF_FUNC_ID types.  */
+   the numbers of the referenced LF_FUNC_ID types.
+
+   Moves *BUFPTR along as it writes, updating *BUFPTR_LEN as it does so.
+
+   Returns TRUE upon success, FALSE upon failure.  */
 
 static bool
-parse_inlinee_lines (uint8_t *data, uint32_t size, uint8_t **bufptr,
-		     struct type_entry **map, uint32_t num_types)
+parse_inlinee_lines (uint8_t *             data,
+		     uint32_t              size,
+		     uint8_t **            bufptr,
+		     unsigned int *        bufptr_len,
+		     struct type_entry **  map,
+		     unsigned int          num_types)
 {
-  uint32_t version;
-  uint8_t *ptr;
-  unsigned int num_entries;
+  uint32_t      version;
+  uint8_t *     ptr;
+  unsigned int  num_entries;
 
   bfd_putl32 (DEBUG_S_INLINEELINES, *bufptr);
   *bufptr += sizeof (uint32_t);
@@ -1870,8 +1963,7 @@ parse_inlinee_lines (uint8_t *data, uint32_t size, uint8_t **bufptr,
      (see InlineeSourceLine in cvinfo.h)
 
      We're only interested here in the function_id, as we need to remap its
-     type number.
-  */
+     type number.  */
 
   if (size < sizeof (uint32_t))
     {
@@ -1879,6 +1971,12 @@ parse_inlinee_lines (uint8_t *data, uint32_t size, uint8_t **bufptr,
       return false;
     }
 
+  if (*bufptr_len < size)
+    {
+      einfo (_("%P: warning: excessively sized DEBUG_S_INLINEELINES data\n"));
+      return false;
+    }
+  
   version = bfd_getl32 (data);
   if (version != CV_INLINEE_SOURCE_LINE_SIGNATURE)
     {
@@ -1890,6 +1988,7 @@ parse_inlinee_lines (uint8_t *data, uint32_t size, uint8_t **bufptr,
   memcpy (*bufptr, data, size);
   ptr = *bufptr + sizeof (uint32_t);
   *bufptr += size;
+  *bufptr_len -= size;
 
   num_entries = (size - sizeof (uint32_t)) / (3 * sizeof (uint32_t));
 
@@ -1923,6 +2022,7 @@ handle_debugs_section (asection *s, bfd *mod, struct string_table *strings,
   uint32_t c13_size = 0;
   char *string_table = NULL;
   uint8_t *buf, *bufptr, *symbuf, *symbufptr;
+  unsigned int bufptr_len, symbufptr_len, string_table_len = 0;
   uint32_t sym_size = 0;
 
   if (!bfd_get_full_section_contents (mod, s, &data))
@@ -2022,10 +2122,9 @@ handle_debugs_section (asection *s, bfd *mod, struct string_table *strings,
 	  break;
 
 	case DEBUG_S_STRINGTABLE:
-	  parse_string_table (data + off, size, strings);
-
 	  string_table = (char *) data + off;
-
+	  string_table_len = size;
+	  parse_string_table (string_table, string_table_len, strings);
 	  break;
 
 	case DEBUG_S_LINES:
@@ -2080,23 +2179,25 @@ handle_debugs_section (asection *s, bfd *mod, struct string_table *strings,
       return true;
     }
 
-  /* copy data */
+  /* Copy data.  */
 
   buf = NULL;
   if (c13_size != 0)
     buf = xmalloc (c13_size);
   bufptr = buf;
-
+  bufptr_len = c13_size;
+  
   symbuf = NULL;
   if (sym_size != 0)
     symbuf = xmalloc (sym_size);
   symbufptr = symbuf;
+  symbufptr_len = sym_size;
 
   off = sizeof (uint32_t);
 
   while (off + sizeof (uint32_t) <= s->size)
     {
-      uint32_t type, size;
+      uint32_t type, size, len;
 
       type = bfd_getl32 (data + off);
       off += sizeof (uint32_t);
@@ -2107,15 +2208,18 @@ handle_debugs_section (asection *s, bfd *mod, struct string_table *strings,
       switch (type)
 	{
 	case DEBUG_S_FILECHKSMS:
-	  if (!copy_filechksms (data + off, size, string_table,
-				strings, bufptr, mod_source))
+	  len = sizeof (uint32_t) + sizeof (uint32_t) + size;
+	  if (!copy_filechksms (data + off, size,
+				string_table, string_table_len, strings,
+				bufptr, bufptr_len, mod_source))
 	    {
 	      free (data);
 	      free (symbuf);
 	      return false;
 	    }
 
-	  bufptr += sizeof (uint32_t) + sizeof (uint32_t) + size;
+	  bufptr += len;
+	  bufptr_len -= len;
 
 	  break;
 
@@ -2130,19 +2234,24 @@ handle_debugs_section (asection *s, bfd *mod, struct string_table *strings,
 	      {
 		bfd_putl32 (type, bufptr);
 		bufptr += sizeof (uint32_t);
+		bufptr_len -= sizeof (uint32_t);
 
 		bfd_putl32 (size, bufptr);
 		bufptr += sizeof (uint32_t);
+		bufptr_len -= sizeof (uint32_t);
 
 		memcpy (bufptr, data + off, size);
 		bufptr += size;
+		bufptr_len -= size;
 	      }
 
 	    break;
 	  }
 
 	case DEBUG_S_SYMBOLS:
-	  if (!parse_symbols (data + off, size, &symbufptr, map, num_types,
+	  if (!parse_symbols (data + off, size,
+			      &symbufptr, &symbufptr_len,
+			      map, num_types,
 			      sym_rec_stream, glob, mod_num))
 	    {
 	      free (data);
@@ -2153,7 +2262,9 @@ handle_debugs_section (asection *s, bfd *mod, struct string_table *strings,
 	  break;
 
 	case DEBUG_S_INLINEELINES:
-	  if (!parse_inlinee_lines (data + off, size, &bufptr, map, num_types))
+	  if (!parse_inlinee_lines (data + off, size,
+				    &bufptr, &bufptr_len,
+				    map, num_types))
 	    {
 	      free (data);
 	      free (symbuf);
