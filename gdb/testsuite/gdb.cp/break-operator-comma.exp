@@ -1,0 +1,52 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Set a breakpoint on a user-defined comma operator with
+# "break T::operator,".  The linespec lexer asks the C++ ABI's
+# is_operator_name whether the text starting at "operator" names an
+# operator; if it does not, the token ends at the ',' and GDB looks
+# for "T::operator" instead.  The answer must not depend on the C++
+# ABI, so check under each ABI, on the same program.
+
+require allow_cplus_tests
+
+standard_testfile .cc
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
+	 {debug c++}]} {
+    return
+}
+
+if {![runto_main]} {
+    return
+}
+
+set comma_line [gdb_get_line_number "operator-comma-body"]
+
+foreach_with_prefix abi {gnu-v3 msvc} {
+    gdb_test_no_output "set cp-abi $abi"
+    delete_breakpoints
+    gdb_test "break T::operator," \
+	"Breakpoint $decimal at $hex: file .*[string_to_regexp $srcfile], line $comma_line\\."
+}
+
+gdb_test_no_output "set cp-abi auto"
+
+gdb_test "continue" \
+    "Breakpoint $decimal, .*\r\n$comma_line\[ \t\]+T r;\[^\r\n\]*operator-comma-body.*" \
+    "continue to operator,"
+
+gdb_test "print this->t" " = 1"
+gdb_test "print o.t" " = 2"

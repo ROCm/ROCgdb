@@ -1,0 +1,74 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Call through pointers to member functions of classes that use the
+# multiple and the virtual inheritance model of the MSVC C++ ABI, and
+# check that GDB passes the same "this" as the program does.
+
+require allow_cplus_tests
+
+standard_testfile .cc
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug c++}]} {
+    return
+}
+
+if {![runto_main]} {
+    return
+}
+
+gdb_breakpoint [gdb_get_line_number "Stop here."]
+gdb_continue_to_breakpoint "stop here"
+
+set cp_abi ""
+gdb_test_multiple "show cp-abi" "" {
+    -re -wrap "\\(currently \"(\[^\"\]*)\"\\)\\." {
+	set cp_abi $expect_out(1,string)
+	pass $gdb_test_name
+    }
+    -re -wrap "" {
+	pass $gdb_test_name
+    }
+}
+
+if {$cp_abi != "msvc"} {
+    unsupported "the program does not use the MSVC C++ ABI"
+    return
+}
+
+# Each pair: the call GDB makes, and the variable holding the value the
+# program computed with the same pointer.  The values differ per class
+# so that a wrong "this" shows up as a wrong number.
+foreach {expr computed expected} {
+    "(m.*pm_a) ()"   r_pm_a   11
+    "(m.*pm_b) ()"   r_pm_b   12
+    "(m.*pm_nv) ()"  r_pm_nv  121
+    "(v.*pv_own) ()" r_pv_own 22
+    "(w.*pw_b) ()"   r_pw_b   12
+    "(w.*pw_own) ()" r_pw_own 23
+    "(d.*pd_x) ()"   r_pd_x   13
+    "(d.*pd_w5) ()"  r_pd_w5  24
+    "(d.*pd_own) ()" r_pd_own 25
+} {
+    gdb_test "print $computed" " = $expected"
+    gdb_test "print $expr" " = $expected"
+}
+
+# Null pointers: all zeros in the multiple inheritance model, but the
+# virtual inheritance model stores -1 in the vbtable index.
+gdb_test "print r_pm_null" " = true"
+gdb_test "print r_pv_null" " = true"
+gdb_test "print pm_null" " = NULL"
+gdb_test "print pv_null" " = NULL"
