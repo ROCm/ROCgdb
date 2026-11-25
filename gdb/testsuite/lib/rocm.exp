@@ -839,8 +839,16 @@ proc rocm_core_find_1 {coredir binfile arg output_file \
     # procedure in "lib/gdb.exp" does not like that.  It expects
     # only one hit for the glob pattern "core.*".  Without this
     # pattern, there will be 2 hits: core.<pid> and core.<pid>.gpu
-    save_vars { ::env(HSA_COREDUMP_PATTERN) } {
+    #
+    # core_find_1 sets "ulimit -c unlimited", and the runtime then aborts
+    # on a device fault whatever HIP_SKIP_ABORT_ON_GPU_ERROR says.  Set it
+    # to 0 anyway, so that the host core does not depend on the runtime
+    # default (the variable is the only abort trigger for some errors,
+    # e.g., out-of-memory).
+    save_vars { ::env(HSA_COREDUMP_PATTERN) \
+		::env(HIP_SKIP_ABORT_ON_GPU_ERROR) } {
 	set ::env(HSA_COREDUMP_PATTERN) $coredump_pattern
+	set ::env(HIP_SKIP_ABORT_ON_GPU_ERROR) 0
 	set destcore [core_find_1 $coredir $binfile $arg $output_file]
     }
     set gpucore "$binfile.gpucore"
