@@ -547,9 +547,12 @@ linux_nat_target::follow_fork (inferior *child_inf, ptid_t child_ptid,
 
 	  /* Note that we consult the parent's architecture instead of
 	     the child's because there's no inferior for the child at
-	     this point.  */
-	  if (!gdbarch_get_next_pcs_p (target_thread_architecture
-				       (parent_ptid)))
+	     this point.  Ask whether the architecture hardware-steps
+	     rather than whether it has get_next_pcs: some architectures
+	     with hardware single-step also have get_next_pcs, to run
+	     code that must not be single-stepped as one unit.  */
+	  if (gdbarch_displaced_step_hw_singlestep (target_thread_architecture
+						    (parent_ptid)))
 	    {
 	      int status;
 

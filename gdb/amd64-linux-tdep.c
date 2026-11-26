@@ -21,6 +21,7 @@
 #include "arch-utils.h"
 #include "extract-store-integer.h"
 #include "frame.h"
+#include "memrange.h"
 #include "gdbcore.h"
 #include "regcache.h"
 #include "osabi.h"
@@ -2116,6 +2117,47 @@ amd64_linux_should_show_inline_frame (struct gdbarch *gdbarch,
   return startswith (name, "__clang_trap_msg$");
 }
 
+/* Implement the "get_next_pcs" gdbarch method.
+
+   The vdso time functions read the kernel's time data under a sequence
+   counter and retry if the kernel updated it during the read.
+   Single-stepping one pass takes longer than a timer tick, so the read
+   would retry forever.  Run a vdso function as one unit instead: return
+   its caller's resume address, so that the thread runs freely until it
+   returns.  Outside the vdso, return nothing, so a hardware single-step
+   is used.  */
+
+static std::vector<CORE_ADDR>
+amd64_linux_get_next_pcs (struct regcache *regcache)
+{
+  struct gdbarch *gdbarch = regcache->arch ();
+  CORE_ADDR pc = regcache_read_pc (regcache);
+  struct mem_range vdso;
+
+  if (!gdbarch_vsyscall_range (gdbarch, &vdso) || !vdso.contains (pc))
+    return {};
+
+  /* Record full must see every instruction to record it.  */
+  if (record_full_is_used ())
+    return {};
+
+  frame_info_ptr frame = get_current_frame ();
+  if (!frame_id_p (frame_unwind_caller_id (frame)))
+    return {};
+
+  return { frame_unwind_caller_pc (frame) };
+}
+
+/* Implement the "displaced_step_hw_singlestep" gdbarch method.  Displaced
+   steps still use hardware single-step, even though get_next_pcs is
+   set.  */
+
+static bool
+amd64_linux_displaced_step_hw_singlestep (struct gdbarch *gdbarch)
+{
+  return true;
+}
+
 static void
 amd64_linux_init_abi_common (struct gdbarch_info info, struct gdbarch *gdbarch,
 			     int num_disp_step_buffers)
@@ -2137,6 +2179,11 @@ amd64_linux_init_abi_common (struct gdbarch_info info, struct gdbarch *gdbarch,
   set_gdbarch_write_pc (gdbarch, amd64_linux_write_pc);
 
   tdep->register_reggroup_p = amd64_linux_register_reggroup_p;
+
+  /* Run vdso functions as one unit instead of single-stepping them.  */
+  set_gdbarch_get_next_pcs (gdbarch, amd64_linux_get_next_pcs);
+  set_gdbarch_displaced_step_hw_singlestep
+    (gdbarch, amd64_linux_displaced_step_hw_singlestep);
 
   /* Functions for 'catch syscall'.  */
   set_xml_syscall_file_name (gdbarch, XML_SYSCALL_FILENAME_AMD64);
