@@ -11180,10 +11180,20 @@ elfcore_grok_amdgpu_note (bfd *abfd, Elf_Internal_Note *note)
       return elfcore_make_note_pseudosection (abfd,
 					      ".note.amdgpu.core_state",
 					      note);
-    case NT_AMDGPU_CORE_TARGET_PID:
-      return elfcore_make_note_pseudosection (abfd,
-					      ".note.amdgpu.core_target_pid",
-					      note);
+    case NT_AMDGPU_CORE_EXT_INFO:
+      /* Note descriptor (in byte order):
+	 uint32_t version; -> note version (currently 1).
+	 uint32_t pid;     -> PID of the core dump.  */
+      if (elf_tdata (abfd)->core->pid == 0
+	  && note->descsz >= 8
+	  && bfd_get_32 (abfd, note->descdata) >= 1)
+	{
+	  int pid = bfd_get_32 (abfd, note->descdata + 4);
+
+	  if (pid > 0)
+	    elf_tdata (abfd)->core->pid = pid;
+	}
+      return true;
     default:
       return true;
     }

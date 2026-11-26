@@ -257,9 +257,10 @@ gather_load_segments (bfd *ibfd, Elf_Internal_Phdr *phdr,
 	  return 0;
 	}
 
-      /* Check if new segment is included in current segment and skip
-	 to avoid duplication.  */
-      if (head->iphdr->p_filesz > 0
+      /* Check if new segment is included in current segment and has no
+	 more data, and skip to avoid duplication.  */
+      if (head->iphdr->p_filesz >= phdr->p_filesz
+	  && phdr->p_memsz > 0
 	  && phdr_contains (head->iphdr, phdr->p_vaddr)
 	  && phdr_contains (head->iphdr, phdr->p_vaddr + phdr->p_memsz - 1))
 	{

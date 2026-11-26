@@ -21886,6 +21886,8 @@ get_amdgpu_elf_note_type (unsigned int e_type)
       return _("NT_AMDGPU_METADATA (code object metadata)");
     case NT_AMDGPU_CORE_STATE:
       return _("NT_AMDGPU_CORE_STATE (core state)");
+    case NT_AMDGPU_CORE_EXT_INFO:
+      return _("NT_AMDGPU_CORE_EXT_INFO (core extended info)");
     default:
       {
 	static char buf[64];
