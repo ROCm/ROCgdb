@@ -242,7 +242,10 @@ if [istarget "riscv*-*-*"] {
 	    "-march=rv64i -mabi=lp64" {weakref64.s} \
 	    {{objdump -d weakref64.d}} "weakref64"]]
 
-    # Zcmt (jump table) tests.
+    # Most Zcmt tests assemble RV64 inputs.  The RV32 and explicit-endian
+    # tests select their own emulation in their .d files.
+    set saved_ldflags $LDFLAGS
+    append LDFLAGS " -m[riscv_choose_lp64_emul]"
     run_dump_test "table-jump-jalt"
     run_dump_test "table-jump-jt"
     run_dump_test "table-jump-dump-unknown"
@@ -353,6 +356,7 @@ if [istarget "riscv*-*-*"] {
 
     # The following tests require shared library support.
     if ![check_shared_lib_support] {
+	set LDFLAGS $saved_ldflags
 	return
     }
 
@@ -363,6 +367,7 @@ if [istarget "riscv*-*-*"] {
     run_dump_test "table-jump-shared-text"
     run_dump_test "table-jump-shared-symbol"
     run_dump_test "table-jump-shared-relocs"
+    set LDFLAGS $saved_ldflags
 
     run_dump_test "relro-relax-lui"
     run_dump_test "relro-relax-pcrel"

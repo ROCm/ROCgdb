@@ -1,6 +1,6 @@
 #source: table-jump-weak-base.s
 #as: -march=rv32ic_zcmt -mabi=ilp32 --defsym SITES=3
-#ld: -melf32lriscv -Ttable-jump-weak-base.ld --relax-tbljal
+#ld: -m[riscv_choose_ilp32_emul] -Ttable-jump-weak-base.ld --relax-tbljal
 #objdump: -d
 
 #...

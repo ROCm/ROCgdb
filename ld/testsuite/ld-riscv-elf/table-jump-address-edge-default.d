@@ -1,6 +1,6 @@
 #source: table-jump-address-edge.s
 #as: -march=rv64ic_zcmt -mabi=lp64
-#ld: -melf64lriscv --no-warn-rwx-segments -Ttable-jump-address-edge.ld
+#ld: -m[riscv_choose_lp64_emul] --no-warn-rwx-segments -Ttable-jump-address-edge.ld
 #objdump: -d -M no-aliases -j .text
 
 #...

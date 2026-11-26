@@ -1,7 +1,7 @@
 #source: table-jump.s
 #as: -march=rv64ic_zcmt --defsym TEST_CM_JALT=1
 #ld: -Ttable-jump-vma-lma.ld --relax-tbljal
-#objdump: -d
+#objdump: -dz
 
 #...
 Disassembly of section .riscv.jvt:

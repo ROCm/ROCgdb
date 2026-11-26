@@ -1,6 +1,6 @@
 #source: table-jump-page.s
 #as: -march=rv64ic_zcmt -mabi=lp64
-#ld: -melf64lriscv --no-warn-rwx-segments --defsym=page_size=0x1000 -Ttable-jump-page.ld --relax-tbljal
+#ld: -m[riscv_choose_lp64_emul] --no-warn-rwx-segments --defsym=page_size=0x1000 -Ttable-jump-page.ld --relax-tbljal
 #objdump: -d -M no-aliases -j .text -j .fillers
 
 #...
