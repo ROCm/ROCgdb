@@ -2768,9 +2768,11 @@ display_enum (enum_constant *ec, int nb_tab)
 }
 
 static enum_constant *
-get_or_create_enum_constant (enum_type *et, uint64_t die_offset)
+get_or_create_enum_constant (uint64_t die_offset)
 {
-  assert (et != NULL);
+  enum_type *et = enum_type_list.tail;
+  if (et == NULL)
+    return NULL;
   if (et->enum_const_tail == NULL
       || et->enum_const_tail->die_offset != die_offset)
     {
@@ -2851,9 +2853,11 @@ display_subrange_type (subrange_type *st)
 }
 
 static subrange_type *
-get_or_create_subrange_type (tab_type *tt, uint64_t die_offset)
+get_or_create_subrange_type (uint64_t die_offset)
 {
-  assert (tt != NULL);
+  tab_type *tt = tab_type_list.tail;
+  if (tt == NULL)
+    return NULL;
   if (tt->subrange_tail == NULL
       || tt->subrange_tail->die_offset != die_offset)
     {
@@ -3240,13 +3244,12 @@ insert_element_in_list (enum dwarf_tag dw_tag,
 	base_type *bt = get_or_create_base_type (die_offset);
 	if (dw_attr == DW_AT_byte_size)
 	  {
-	    assert (uvalue != NULL || svalue != NULL);
 	    if (uvalue != NULL)
 	      {
 		bt->size.usize = *uvalue;
 		bt->size_type = UNSIGNED_S;
 	      }
-	    else
+	    else if (svalue != NULL)
 	      {
 		bt->size.ssize = *svalue;
 		bt->size_type = SIGNED_S;
@@ -3254,11 +3257,10 @@ insert_element_in_list (enum dwarf_tag dw_tag,
 	  }
 	else if (dw_attr == DW_AT_name)
 	  {
-	    assert (uvalue != NULL || data != NULL);
 	    if (data != NULL)
-	      bt->name = (const char *) data;
+	      bt->name = data;
 	    else if (uvalue != NULL)
-	      bt->name = (const char *) fetch_indirect_string (*uvalue);
+	      bt->name = fetch_indirect_string (*uvalue);
 	  }
       }
       break;
@@ -3267,35 +3269,34 @@ insert_element_in_list (enum dwarf_tag dw_tag,
 	type_def *td = get_or_create_type_def (die_offset);
 	if (dw_attr == DW_AT_type)
 	  {
-	    assert (uvalue != NULL);
-	    td->ptr_die_offset = *uvalue;
+	    if (uvalue != NULL)
+	      td->ptr_die_offset = *uvalue;
 	  }
 	else if (dw_attr == DW_AT_name)
 	  {
-	    assert (uvalue != NULL || data != NULL);
 	    if (data != NULL)
-	      td->name = (const char *) data;
+	      td->name = data;
 	    else if (uvalue != NULL)
-	      td->name = (const char *) fetch_indirect_string (*uvalue);
+	      td->name = fetch_indirect_string (*uvalue);
 	  }
       }
       break;
     case DW_TAG_enumerator:
       {
-	enum_constant *ec = get_or_create_enum_constant (enum_type_list.tail,
-							 die_offset);
+	enum_constant *ec = get_or_create_enum_constant (die_offset);
+	if (ec == NULL)
+	  break;
 	if (dw_attr == DW_AT_name)
 	  {
-	    assert (data != NULL || uvalue != NULL);
 	    if (data != NULL)
-	      ec->name = (const char *) data;
+	      ec->name = data;
 	    else if (uvalue != NULL)
-	      ec->name = (const char *) fetch_indirect_string (*uvalue);
+	      ec->name = fetch_indirect_string (*uvalue);
 	  }
 	else if (dw_attr == DW_AT_const_value)
 	  {
-	    assert (uvalue != NULL);
-	    ec->value = *uvalue;
+	    if (uvalue != NULL)
+	      ec->value = *uvalue;
 	  }
       }
       break;
@@ -3304,21 +3305,19 @@ insert_element_in_list (enum dwarf_tag dw_tag,
 	enum_type *et = get_or_create_enum_type (die_offset);
 	if (dw_attr == DW_AT_name)
 	  {
-	    assert (uvalue != NULL || data != NULL);
 	    if (data != NULL)
-	      et->name = (const char *) data;
+	      et->name = data;
 	    else if (uvalue != NULL)
-	      et->name = (const char *) fetch_indirect_string (*uvalue);
+	      et->name = fetch_indirect_string (*uvalue);
 	  }
 	else if (dw_attr == DW_AT_byte_size)
 	  {
-	    assert (uvalue != NULL || svalue != NULL);
 	    if (uvalue != NULL)
 	      {
 		et->size.usize = *uvalue;
 		et->size_type = UNSIGNED_S;
 	      }
-	    else
+	    else if (svalue != NULL)
 	      {
 		et->size.ssize = *svalue;
 		et->size_type = SIGNED_S;
@@ -3328,48 +3327,42 @@ insert_element_in_list (enum dwarf_tag dw_tag,
       break;
     case DW_TAG_subrange_type:
       {
-	subrange_type *st = get_or_create_subrange_type (tab_type_list.tail,
-							 die_offset);
-	if (dw_attr == DW_AT_upper_bound || dw_attr == DW_AT_count)
+	subrange_type *st = get_or_create_subrange_type (die_offset);
+	if (st == NULL)
+	  break;
+	if (dw_attr == DW_AT_upper_bound)
 	  {
-	    assert (uvalue != NULL || svalue != NULL);
-	    if (dw_attr == DW_AT_upper_bound)
+	    if (uvalue != NULL)
 	      {
-		if (uvalue != NULL)
-		  {
-		    st->size.usize = *uvalue + 1;
-		    st->size_type = UNSIGNED_S;
-		  }
-		else
-		  {
-		    st->size.ssize = *svalue + 1;
-		    st->size_type = SIGNED_S;
-		  }
+		st->size.usize = *uvalue + 1;
+		st->size_type = UNSIGNED_S;
 	      }
-	    else if (dw_attr == DW_AT_count)
+	    else if (svalue != NULL)
 	      {
-		if (uvalue != NULL)
-		  {
-		    st->size.usize = *uvalue;
-		    st->size_type = UNSIGNED_S;
-		  }
-		else
-		  {
-		    st->size.ssize = *svalue;
-		    st->size_type = SIGNED_S;
-		  }
+		st->size.ssize = *svalue + 1;
+		st->size_type = SIGNED_S;
 	      }
-	}
+	  }
+	else if (dw_attr == DW_AT_count)
+	  {
+	    if (uvalue != NULL)
+	      {
+		st->size.usize = *uvalue;
+		st->size_type = UNSIGNED_S;
+	      }
+	    else if (svalue != NULL)
+	      {
+		st->size.ssize = *svalue;
+		st->size_type = SIGNED_S;
+	      }
+	  }
       }
       break;
     case DW_TAG_array_type:
       {
 	tab_type *tt = get_or_create_tab_type (die_offset);
-	if (dw_attr == DW_AT_type)
-	  {
-	    assert (uvalue != NULL);
-	    tt->ptr_die_offset = *uvalue;
-	  }
+	if (dw_attr == DW_AT_type && uvalue != NULL)
+	  tt->ptr_die_offset = *uvalue;
       }
       break;
     case DW_TAG_member:
@@ -3384,20 +3377,18 @@ insert_element_in_list (enum dwarf_tag dw_tag,
 
 	if (dw_attr == DW_AT_name)
 	  {
-	    assert (uvalue != NULL || data != NULL);
 	    if (data != NULL)
-	      mt->name = (const char *) data;
+	      mt->name = data;
 	    else if (uvalue != NULL)
-	      mt->name = (const char *) fetch_indirect_string (*uvalue);
+	      mt->name = fetch_indirect_string (*uvalue);
 	  }
 	else if (dw_attr == DW_AT_type)
 	  {
-	    assert (uvalue != NULL);
-	    mt->ptr_die_offset = *uvalue;
+	    if (uvalue != NULL)
+	      mt->ptr_die_offset = *uvalue;
 	  }
 	else if (dw_attr == DW_AT_data_member_location)
 	  {
-	    assert (svalue != NULL || uvalue != NULL);
 	    if (svalue != NULL)
 	      mt->member_offset = *svalue;
 	    else if (uvalue != NULL)
@@ -3418,21 +3409,19 @@ insert_element_in_list (enum dwarf_tag dw_tag,
 	  }
 	if (dw_attr == DW_AT_name)
 	  {
-	    assert (uvalue != NULL || data != NULL);
 	    if (data != NULL)
-	      mp->name = (const char *) data;
+	      mp->name = data;
 	    else if (uvalue != NULL)
-	      mp->name = (const char *) fetch_indirect_string (*uvalue);
+	      mp->name = fetch_indirect_string (*uvalue);
 	  }
 	else if (dw_attr == DW_AT_byte_size)
 	  {
-	    assert (uvalue != NULL || svalue != NULL);
 	   if (uvalue != NULL)
 	      {
 		mp->size.usize = *uvalue;
 		mp->size_type = UNSIGNED_S;
 	      }
-	    else
+	    else if (svalue != NULL)
 	      {
 		mp->size.ssize = *svalue;
 		mp->size_type = SIGNED_S;
@@ -3447,18 +3436,17 @@ insert_element_in_list (enum dwarf_tag dw_tag,
 	type_ptr* pt = get_or_create_type_ptr (die_offset);
 	if (dw_attr == DW_AT_type)
 	  {
-	    assert (uvalue != NULL);
-	    pt->ptr_die_offset = *uvalue;
+	    if (uvalue != NULL)
+	      pt->ptr_die_offset = *uvalue;
 	  }
 	if (dw_attr == DW_AT_byte_size)
 	  {
-	    assert (uvalue != NULL || svalue != NULL);
 	    if (uvalue != NULL)
 	      {
 		pt->size.usize = *uvalue;
 		pt->size_type = UNSIGNED_S;
 	      }
-	    else
+	    else if (svalue != NULL)
 	      {
 		pt->size.ssize = *svalue;
 		pt->size_type = SIGNED_S;
@@ -3482,8 +3470,8 @@ insert_element_in_list (enum dwarf_tag dw_tag,
 	  }
 	if (dw_attr == DW_AT_type)
 	  {
-	    assert (uvalue != NULL);
-	    tr->ptr_die_offset = *uvalue;
+	    if (uvalue != NULL)
+	      tr->ptr_die_offset = *uvalue;
 	  }
       }
       break;
@@ -3492,22 +3480,20 @@ insert_element_in_list (enum dwarf_tag dw_tag,
 	variable_type *vt = get_or_create_variable_type (die_offset);
 	if (dw_attr == DW_AT_name)
 	  {
-	    assert (uvalue != NULL || data != NULL);
 	    if (data != NULL)
-	      vt->name = (const char *) data;
+	      vt->name = data;
 	    else if (uvalue != NULL)
-	      vt->name = (const char *) fetch_indirect_string (*uvalue);
+	      vt->name = fetch_indirect_string (*uvalue);
 	  }
 	else if (dw_attr == DW_AT_type)
 	  {
-	    assert (uvalue != NULL);
-	    if (!vt->is_specification && !vt->is_abstract_origin)
+	    if (uvalue != NULL
+		&& !vt->is_specification && !vt->is_abstract_origin)
 	      vt->ptr_die_offset = *uvalue;
 	  }
 	else if (dw_attr == DW_AT_specification)
 	  {
-	    assert (uvalue != NULL);
-	    if (!vt->is_abstract_origin)
+	    if (uvalue != NULL && !vt->is_abstract_origin)
 	      {
 		vt->ptr_die_offset = *uvalue;
 		vt->is_specification = true;
@@ -3515,8 +3501,7 @@ insert_element_in_list (enum dwarf_tag dw_tag,
 	  }
 	else if (dw_attr == DW_AT_abstract_origin)
 	  {
-	    assert (uvalue != NULL);
-	    if (!vt->is_specification)
+	    if (uvalue != NULL && !vt->is_specification)
 	      {
 		vt->ptr_die_offset = *uvalue;
 		vt->is_abstract_origin = true;
