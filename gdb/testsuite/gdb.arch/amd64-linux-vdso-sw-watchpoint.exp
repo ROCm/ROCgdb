@@ -1,0 +1,48 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that a software watchpoint triggers when the inferior calls
+# vdso time functions before the watched store.
+#
+# The vdso clock_gettime reads the kernel's time data under a sequence
+# counter and retries if the kernel updated the data during the read.
+# A software watchpoint makes GDB single-step every instruction, so one
+# pass of that loop took longer than a timer tick, every pass retried,
+# and the watched store was never reached.  GDB now runs vdso functions
+# freely while single-stepping.
+
+require {istarget "x86_64-*-linux*"} is_x86_64_m64_target
+
+standard_testfile
+
+if { [prepare_for_testing "failed to prepare" $testfile $srcfile \
+	  {debug pthreads}] } {
+    return
+}
+
+if { ![runto marker] } {
+    return
+}
+
+gdb_test_no_output "set can-use-hw-watchpoints 0"
+gdb_test "watch watched_global" "Watchpoint $decimal: watched_global"
+
+# Without the fix, the inferior never leaves clock_gettime and this
+# times out.
+with_timeout_factor 6 {
+    gdb_test "continue" \
+	"Watchpoint $decimal: watched_global.*Old value = 0.*New value = 1.*" \
+	"continue to watchpoint"
+}
