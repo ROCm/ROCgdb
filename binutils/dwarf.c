@@ -6855,24 +6855,32 @@ display_debug_lines_decoded (struct dwarf_section *  section,
 		      state_machine_regs.view = 0;
 		      break;
 		    case DW_LNE_define_file:
-		      file_table = (File_Entry *) xrealloc
-			(file_table, (n_files + 1) * sizeof (File_Entry));
+		      {
+			unsigned char *name_end = memchr
+			  (op_code_data, '\0', op_code_end - op_code_data);
 
-		      ++state_machine_regs.last_file_entry;
-		      /* Source file name.  */
-		      file_table[n_files].name = (char *) op_code_data;
-		      op_code_data += strlen ((char *) op_code_data) + 1;
-		      /* Directory index.  */
-		      READ_ULEB (file_table[n_files].directory_index,
-				 op_code_data, op_code_end);
-		      /* Last modification time.  */
-		      READ_ULEB (file_table[n_files].modification_date,
-				 op_code_data, op_code_end);
-		      /* File length.  */
-		      READ_ULEB (file_table[n_files].length,
-				 op_code_data, op_code_end);
-		      n_files++;
-		      break;
+			if (name_end == NULL)
+			  {
+			    warn (_("DW_LNE_define_file: unterminated file name\n"));
+			    break;
+			  }
+
+			file_table = xrealloc
+			  (file_table, (n_files + 1) * sizeof (*file_table));
+
+			++state_machine_regs.last_file_entry;
+			file_table[n_files].name = (char *) op_code_data;
+			op_code_data = name_end + 1;
+
+			READ_ULEB (file_table[n_files].directory_index,
+				   op_code_data, op_code_end);
+			READ_ULEB (file_table[n_files].modification_date,
+				   op_code_data, op_code_end);
+			READ_ULEB (file_table[n_files].length,
+				   op_code_data, op_code_end);
+			n_files++;
+			break;
+		      }
 
 		    case DW_LNE_set_discriminator:
 		    case DW_LNE_HP_set_sequence:
