@@ -2049,6 +2049,9 @@ _bfd_elf_x86_size_relative_relocs (struct bfd_link_info *info,
 	  /* Remove the empty .relr.dyn sections now.  */
 	  if (!bfd_is_abs_section (htab->elf.srelrdyn->output_section))
 	    {
+	      /* Exclude it too, so that elf_modify_segment_map drops it
+		 from a segment map set up by PHDRS in a linker script.  */
+	      htab->elf.srelrdyn->output_section->flags |= SEC_EXCLUDE;
 	      bfd_section_list_remove
 		(info->output_bfd, htab->elf.srelrdyn->output_section);
 	      info->output_bfd->section_count--;
