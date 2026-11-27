@@ -1,0 +1,173 @@
+# Expect script for AIX after-allocation handling of foreign inputs and
+# retargeted outputs.
+#
+# Copyright (C) 2026 Free Software Foundation, Inc.
+#
+# This file is part of the GNU Binutils.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
+# MA 02110-1301, USA.
+
+# Skip on remote host configurations as objects are generated in the
+# local tmpdir.
+if { [is_remote host] } {
+    return
+}
+
+# Find supported AIX emulations by querying ld directly.
+proc aix_retarget_supported_emuls {} {
+    global ld
+    set out [lindex [remote_exec host $ld "-V"] 1]
+    set supported {}
+    foreach emul {aix5ppc aix5rs6 aixppc aixrs6} {
+	if { [regexp "$emul\[\n\r\]" $out] } {
+	    lappend supported $emul
+	}
+    }
+    return $supported
+}
+
+set supported_emuls [aix_retarget_supported_emuls]
+if { [llength $supported_emuls] == 0 } {
+    return
+}
+
+set tmpdir tmpdir
+
+# A valid, self-contained x86-64 relocatable object (752 bytes).
+# Assembled from:
+#   .globl _start
+#   _start:
+#     nop
+# with: as -o sc.o sc.s
+# Linking it with an AIX emulation produces the architecture mismatch
+# that leaves the XCOFF magic sections unset.  Embedding the object
+# avoids requiring an x86 assembler on cross-only build environments.
+set aix_obj_hex {
+    7f454c4602010100000000000000000001003e00010000000000000000000000
+    0000000000000000f00000000000000000000000400000000000400008000700
+    9000000000000000040000002000000005000000474e5500020001c004000000
+    0100000000000000010001c00400000001000000000000000000000000000000
+    0000000000000000000000000000000001000000120001000000000000000000
+    0100000000000000005f737461727400002e73796d746162002e737472746162
+    002e7368737472746162002e74657874002e64617461002e627373002e6e6f74
+    652e676e752e70726f7065727479000000000000000000000000000000000000
+    0000000000000000000000000000000000000000000000000000000000000000
+    000000000000000000000000000000001b000000010000000600000000000000
+    0000000000000000400000000000000001000000000000000000000000000000
+    0100000000000000000000000000000021000000010000000300000000000000
+    0000000000000000410000000000000000000000000000000000000000000000
+    0100000000000000000000000000000027000000080000000300000000000000
+    0000000000000000410000000000000000000000000000000000000000000000
+    010000000000000000000000000000002c000000070000000200000000000000
+    0000000000000000480000000000000030000000000000000000000000000000
+    0800000000000000000000000000000001000000020000000000000000000000
+    0000000000000000780000000000000030000000000000000600000001000000
+    0800000000000000180000000000000009000000030000000000000000000000
+    0000000000000000a80000000000000008000000000000000000000000000000
+    0100000000000000000000000000000011000000030000000000000000000000
+    0000000000000000b0000000000000003f000000000000000000000000000000
+    01000000000000000000000000000000
+}
+
+regsub -all {\s+} $aix_obj_hex "" clean_aix_obj_hex
+
+proc aix_retarget_write_hex { path hex } {
+    set f [open $path "wb"]
+    fconfigure $f -translation binary
+    puts -nonewline $f [binary format H* $hex]
+    close $f
+}
+
+# run_host_cmd in ld-lib.exp discards exit status, so run remote_exec directly.
+# The shell reports 128 + signal number when the linker dies.
+proc aix_retarget_run_ld { ld opts obj outfile } {
+    set cmd "$ld $opts -o $outfile $obj 2>&1; echo AIX_EXIT:\$?"
+    set out [lindex [remote_exec host [concat sh -c [list $cmd]]] 1]
+    set status -1
+    if { [regexp {AIX_EXIT:(\d+)} $out -> status] } {
+	regsub {AIX_EXIT:\d+\s*$} $out "" out
+    }
+    return [list $status $out]
+}
+
+# Signal kills return exit 128 + SIG, which fails status == 1.
+# Only AddressSanitizer exits 1 by default on error and needs pattern match.
+proc aix_retarget_crashed { out } {
+    return [string match "*AddressSanitizer*" $out]
+}
+
+set aix_obj "$tmpdir/aix-retarget.o"
+aix_retarget_write_hex $aix_obj $clean_aix_obj_hex
+
+set script "$tmpdir/aix-retarget.t"
+set f [open $script w]
+puts $f "OUTPUT_FORMAT(\"elf32-little\")"
+puts $f "SECTIONS"
+puts $f "{"
+puts $f "  .text : { *(.text) }"
+puts $f "}"
+close $f
+
+# Check once which of the formats used here ld supports.  An ld
+# configured for AIX alone cannot read the x86-64 object at all, so it
+# stops with "file format not recognized" before after_allocation.
+set ld_help [lindex [remote_exec host $ld "--help"] 1]
+set has_elf64_little [regexp {supported targets:.*elf64-little} $ld_help]
+set has_elf32_little [regexp {supported targets:.*elf32-little} $ld_help]
+
+# Run a link test and assert that it fails cleanly with exit status 1,
+# creates no output file, does not crash, and reports architecture mismatch.
+proc aix_retarget_test_link { test opts } {
+    global ld tmpdir aix_obj
+    set outfile "$tmpdir/aix-retarget.out"
+    file delete -force $outfile
+    set result [aix_retarget_run_ld $ld $opts $aix_obj $outfile]
+    set status [lindex $result 0]
+    set out [lindex $result 1]
+    set mismatch [string match \
+		      "*architecture of input file*is incompatible with*" \
+		      $out]
+    if { $status == 1
+	 && ![file exists $outfile]
+	 && ![aix_retarget_crashed $out]
+	 && $mismatch } {
+	pass $test
+    } else {
+	fail $test
+	verbose -log "status $status"
+	verbose -log "output file exists: [file exists $outfile]"
+	verbose -log "output was: $out"
+    }
+    file delete -force $outfile
+}
+
+foreach emul $supported_emuls {
+    set test "$emul foreign object"
+    if { !$has_elf64_little } {
+	unsupported $test
+    } else {
+	aix_retarget_test_link $test "-m$emul"
+    }
+
+    set test "$emul retargeted output"
+    if { !$has_elf64_little || !$has_elf32_little } {
+	unsupported $test
+    } else {
+	aix_retarget_test_link $test "-m$emul -T $script"
+    }
+}
+
+file delete -force $aix_obj $script
