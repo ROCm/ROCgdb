@@ -1,0 +1,69 @@
+# Expect script for RISC-V ELF linker relaxation range tests.
+# Copyright (C) 2026 Free Software Foundation, Inc.
+#
+# This file is part of the GNU Binutils.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <http://www.gnu.org/licenses/>.
+
+# Valid control case:
+# Encodes ELF32 RISC-V object with .text (24 bytes: six 4B nops),
+# .rela.text (R_RISCV_ALIGN at offset 8 with addend 6), .symtab,
+# .strtab, and .shstrtab.
+# With .text at 0x10000, offset 8 is already 8-byte aligned, so
+# relaxation deletes all 6 bytes of padding via
+# _riscv_relax_delete_bytes(addr=8, count=6, toaddr=24).
+# Range check validates offs <= limit, count <= limit - offs,
+# and limit <= sec->size.
+# .text shrinks from 24 bytes (0x18) to 18 bytes (0x12).
+set ctrl_valid_hex {
+    7f454c460101010000000000000000000100f300010000000000000000000000
+    a400000000000000340000000000280005000400130000001300000013000000
+    130000001300000013000000080000002b000000060000000000000000000000
+    000000000000000024000000000000000000000012000100002e74657874002e
+    72656c612e74657874002e73796d746162002e7368737472746162005f737461
+    7274000000000000000000000000000000000000000000000000000000000000
+    0000000000000000000000000100000001000000060000000000000034000000
+    1800000000000000000000000400000000000000070000000400000040000000
+    000000004c0000000c0000000300000001000000040000000c00000012000000
+    0200000000000000000000005800000020000000040000000100000004000000
+    100000001a000000030000000000000000000000780000002b00000000000000
+    000000000100000000000000
+}
+
+# Malformed test case:
+# Encodes ELF32 RISC-V object with .text (24 bytes), with
+# R_RISCV_ALIGN at offset 22 (0x16) and addend 6.
+# At .text 0x10000 + 22 (0x10016), alignment to 8 bytes requires
+# 2 NOPs, so relaxation attempts deletion of 4 bytes at offs=24 (0x18)
+# with limit=24.
+# Since count (4) > limit - offs (0), the range check rejects the
+# deletion.
+set underflow_hex {
+    7f454c460101010000000000000000000100f300010000000000000000000000
+    a400000000000000340000000000280005000400130000001300000013000000
+    130000001300000013000000160000002b000000060000000000000000000000
+    000000000000000024000000000000000000000012000100002e74657874002e
+    72656c612e74657874002e73796d746162002e7368737472746162005f737461
+    7274000000000000000000000000000000000000000000000000000000000000
+    0000000000000000000000000100000001000000060000000000000034000000
+    1800000000000000000000000400000000000000070000000400000040000000
+    000000004c0000000c0000000300000001000000040000000c00000012000000
+    0200000000000000000000005800000020000000040000000100000004000000
+    100000001a000000030000000000000000000000780000002b00000000000000
+    000000000100000000000000
+}
+
+ld_relax_underflow_test "elf32lriscv" \
+    "-m elf32lriscv --relax -Ttext 0x10000 -e _start" "RISC-V" \
+    $ctrl_valid_hex "12" $underflow_hex

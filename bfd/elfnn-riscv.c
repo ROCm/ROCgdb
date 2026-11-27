@@ -5352,7 +5352,12 @@ _riscv_relax_delete_bytes (bfd *abfd,
   unsigned int sec_shndx = _bfd_elf_section_from_bfd_section (abfd, sec);
   struct bfd_elf_section_data *data = elf_section_data (sec);
   bfd_byte *contents = data->this_hdr.contents;
-  size_t bytes_to_move = toaddr - addr - count;
+  size_t bytes_to_move;
+
+  if (! _bfd_elf_relax_delete_range_ok (abfd, sec, addr, count, toaddr))
+    return false;
+
+  bytes_to_move = toaddr - addr - count;
 
   /* Actually delete the bytes.  */
   sec->size -= count;
@@ -6503,12 +6508,14 @@ _bfd_riscv_relax_tlsdesc (bfd *abfd,
   switch (ELFNN_R_TYPE (rel->r_info)) {
     case R_RISCV_TLSDESC_HI20:
       *again = true;
-      riscv_relax_delete_bytes (abfd, sec, rel->r_offset, 4, link_info,
-				pcgp_relocs, rel, false);
+      if (! riscv_relax_delete_bytes (abfd, sec, rel->r_offset, 4, link_info,
+				      pcgp_relocs, rel, false))
+	return false;
       break;
     case R_RISCV_TLSDESC_LOAD_LO12:
-      riscv_relax_delete_bytes (abfd, sec, rel->r_offset, 4, link_info,
-				pcgp_relocs, rel, false);
+      if (! riscv_relax_delete_bytes (abfd, sec, rel->r_offset, 4, link_info,
+				      pcgp_relocs, rel, false))
+	return false;
       break;
     case R_RISCV_TLSDESC_ADD_LO12:
       if (local_exec)
@@ -6746,9 +6753,9 @@ _bfd_riscv_relax_pc (bfd *abfd ATTRIBUTE_UNUSED,
 				      undefined_weak);
 	  /* Delete unnecessary AUIPC and reuse the reloc.  */
 	  *again = true;
-	  riscv_relax_delete_bytes (abfd, sec, rel->r_offset, 4, link_info,
-				    pcgp_relocs, rel, false);
-	  return true;
+	  return riscv_relax_delete_bytes (abfd, sec, rel->r_offset, 4,
+					   link_info, pcgp_relocs, rel,
+					   false);
 
 	default:
 	  abort ();
