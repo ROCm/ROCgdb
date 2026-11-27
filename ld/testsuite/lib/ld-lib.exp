@@ -1779,3 +1779,108 @@ proc skip_sframe_tests { } {
 
     return 1
 }
+
+# Write binary object file from a hex string representation.
+proc ld_write_hex_object { filename hexdata } {
+    regsub -all {\s+} $hexdata "" compact
+    set f [open $filename w]
+    fconfigure $f -translation binary
+    puts -nonewline $f [binary format H* $compact]
+    close $f
+}
+
+# Run ld with the given options, input object, and output file.
+# Returns a list containing the exit status and combined output.
+proc ld_relax_run_capture { ld opts obj outfile } {
+    set cmd "$ld $opts -o $outfile $obj 2>&1; echo LD_RELAX_EXIT:\$?"
+    set out [lindex [remote_exec host [concat sh -c [list $cmd]]] 1]
+    set status -1
+    if { [regexp {LD_RELAX_EXIT:(\d+)} $out -> status] } {
+	regsub {LD_RELAX_EXIT:\d+\s*$} $out "" out
+    }
+    return [list $status $out]
+}
+
+# Test that linking a valid object with relaxation succeeds (status 0)
+# and shrinks the .text section to the expected size.
+proc ld_test_relax_valid { ld opts obj bin testname exp_size } {
+    global objdump
+    file delete -force $bin
+    set result [ld_relax_run_capture $ld $opts $obj $bin]
+    set status [lindex $result 0]
+    set out [lindex $result 1]
+    if { $status != 0 } {
+	fail "$testname: expected status 0: $out"
+    } else {
+	set od_cmd [list "$objdump -h $bin"]
+	set od_out [lindex [remote_exec host [concat sh -c $od_cmd]] 1]
+	if { [regexp "\\.text\\s+0*${exp_size}\\s" $od_out] } {
+	    pass "$testname: linked and shrunk cleanly"
+	} else {
+	    fail "$testname: relaxation did not shrink section: $od_out"
+	}
+    }
+    file delete -force $bin
+    file delete -force $obj
+}
+
+# Test that linking a malformed object with relaxation is rejected cleanly
+# with exit status exactly 1 and a "relax: cannot delete" diagnostic.
+proc ld_test_relax_underflow { ld opts obj bin testname } {
+    file delete -force $bin
+    set result [ld_relax_run_capture $ld $opts $obj $bin]
+    set status [lindex $result 0]
+    set out [lindex $result 1]
+    if { $status == 1 && [string match "*relax: cannot delete*" $out] } {
+	pass "$testname: rejected cleanly"
+    } else {
+	fail "$testname: expected rejection with status 1: $out"
+    }
+    file delete -force $bin
+    file delete -force $obj
+}
+
+# Run relaxation tests for EMUL: one valid control case (expecting .text
+# shrinkage to EXP_SIZE) and one or more malformed underflow cases
+# (expecting rejection with exit status 1 and "relax: cannot delete" diag).
+# ARGS is either a single UNDERFLOW_HEX, or alternating SUFFIX HEX pairs.
+proc ld_relax_underflow_test { emul opts prefix ctrl_hex exp_size args } {
+    global ld
+
+    if { [is_remote host] } {
+	return
+    }
+
+    if { ![ld_supports_emul $emul] } {
+	return
+    }
+
+    set tmpdir tmpdir
+    set tag [string tolower $prefix]
+
+    # Valid control case.
+    set ctrl_obj "$tmpdir/ctrl-$tag-valid.o"
+    set ctrl_bin "$tmpdir/ctrl-$tag-valid"
+    ld_write_hex_object $ctrl_obj $ctrl_hex
+    ld_test_relax_valid $ld $opts $ctrl_obj $ctrl_bin \
+	"$prefix relax valid relaxation" $exp_size
+
+    # Malformed underflow cases.
+    if { [llength $args] == 1 } {
+	set hex [lindex $args 0]
+	set title "$prefix relax underflow rejection"
+	set u_obj "$tmpdir/oob-$tag-underflow.o"
+	set u_bin "$tmpdir/oob-$tag-underflow"
+	ld_write_hex_object $u_obj $hex
+	ld_test_relax_underflow $ld $opts $u_obj $u_bin $title
+    } else {
+	foreach {label hex} $args {
+	    set title "$prefix relax underflow rejection ($label)"
+	    regsub -all {[^a-zA-Z0-9_]} $label "-" safe_label
+	    set u_obj "$tmpdir/oob-$tag-underflow-$safe_label.o"
+	    set u_bin "$tmpdir/oob-$tag-underflow-$safe_label"
+	    ld_write_hex_object $u_obj $hex
+	    ld_test_relax_underflow $ld $opts $u_obj $u_bin $title
+	}
+    }
+}

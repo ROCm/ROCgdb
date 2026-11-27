@@ -789,6 +789,9 @@ ip2k_elf_relax_delete_bytes (bfd *abfd,
   bfd_byte *contents = elf_section_data (sec)->this_hdr.contents;
   bfd_vma endaddr = sec->size;
 
+  if (! _bfd_elf_relax_delete_range_ok (abfd, sec, addr, count, endaddr))
+    return false;
+
   /* Actually delete the bytes.  */
   memmove (contents + addr, contents + addr + count,
 	   endaddr - addr - count);

@@ -871,6 +871,9 @@ sh_elf_relax_delete_bytes (bfd *abfd, asection *sec, bfd_vma addr,
 	}
     }
 
+  if (! _bfd_elf_relax_delete_range_ok (abfd, sec, addr, count, toaddr))
+    return false;
+
   /* Actually delete the bytes.  */
   memmove (contents + addr, contents + addr + count,
 	   (size_t) (toaddr - addr - count));

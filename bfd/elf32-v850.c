@@ -3225,6 +3225,10 @@ v850_elf_relax_delete_bytes (bfd *abfd,
   fprintf (stderr, "relax_delete: contents: sec: %s  %p .. %p %x\n",
 	   sec->name, addr, toaddr, count );
 #endif
+
+  if (! _bfd_elf_relax_delete_range_ok (abfd, sec, addr, count, toaddr))
+    return false;
+
   memmove (contents + addr, contents + addr + count,
 	   toaddr - addr - count);
   memset (contents + toaddr-count, 0, count);

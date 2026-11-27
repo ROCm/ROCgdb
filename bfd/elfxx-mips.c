@@ -13705,6 +13705,9 @@ mips_elf_relax_delete_bytes (bfd *abfd,
   irel = elf_section_data (sec)->relocs;
   irelend = irel + sec->reloc_count;
 
+  if (! _bfd_elf_relax_delete_range_ok (abfd, sec, addr, count, sec->size))
+    return false;
+
   /* Actually delete the bytes.  */
   memmove (contents + addr, contents + addr + count,
 	   (size_t) (sec->size - addr - count));
