@@ -713,7 +713,7 @@ static bool
 pdb_write_contents (bfd *abfd)
 {
   char tmp[sizeof (uint32_t)];
-  const uint32_t block_size = 0x400;
+  const uint32_t block_size = 0x1000;
   uint32_t block_map_addr;
   uint32_t num_blocks;
   uint32_t num_files = 0;
