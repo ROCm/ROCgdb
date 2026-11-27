@@ -197,30 +197,60 @@ inline bool var_type_uses<ui_file_style::color> (var_types t)
   return t == var_color;
 }
 
+/* A helper template to decide if the type T for getter and setter
+   should be a by-copy or by-reference type.
+
+   is_scalar=true		      is_scalar=false
+   --------------------		      ---------------------------
+   T get (...)			      const T &get (...)
+   void set (...T v...)		      void set (...const T &v...)
+*/
+
 template<bool is_scalar, typename T> struct setting_func_types_1;
 
 template<typename T>
 struct setting_func_types_1<true, T>
 {
   using type = T;
-  using set = void (*) (type);
-  using get = type (*) ();
 };
 
 template<typename T>
 struct setting_func_types_1<false, T>
 {
   using type = const T &;
-  using set = void (*) (type);
-  using get = type (*) ();
+};
+
+/* Another helper template, this one to determine if the getter and
+   setter need a context or not.
+
+   with_context=true		      with_context=false
+   -----------------------	      ------------------
+   ... get (void *ctx)		      ... get ()
+   void set (void *ctx...)	      void set (...)
+*/
+
+template<bool with_context, typename T> struct setting_func_types_2;
+
+template<typename T>
+struct setting_func_types_2<true, T>
+{
+  using set = void (*) (void *, T);
+  using get = T (*) (void *);
 };
 
 template<typename T>
+struct setting_func_types_2<false, T>
+{
+  using set = void (*) (T);
+  using get = T (*) ();
+};
+
+template<typename T, bool with_context = false>
 struct setting_func_types
 {
   using type = typename setting_func_types_1<std::is_scalar<T>::value, T>::type;
-  using set = typename setting_func_types_1<std::is_scalar<T>::value, T>::set;
-  using get = typename setting_func_types_1<std::is_scalar<T>::value, T>::get;
+  using set = typename setting_func_types_2<with_context, type>::set;
+  using get = typename setting_func_types_2<with_context, type>::get;
 };
 
 /* Generic/type-erased function pointer.  */
@@ -253,27 +283,52 @@ struct setting
     void *var;
     erased_func setter;
     erased_func getter;
+
+    /* For setter/getter that may need a context.  */
+    std::optional<void *> context;
   };
 
   template<typename T>
-  static erased_args erase_args (var_types var_type,
-				 T *var,
-				 typename setting_func_types<T>::set set_setting_func,
-				 typename setting_func_types<T>::get get_setting_func)
+  static erased_args erase_args
+    (var_types var_type,
+     T *var,
+     typename setting_func_types<T, false>::set set_setting_func,
+     typename setting_func_types<T, false>::get get_setting_func)
   {
     gdb_assert (var_type_uses<T> (var_type));
-  /* The getter and the setter must be both provided or both omitted.  */
+
+    /* The getter and the setter must be both provided or both omitted.  */
     gdb_assert
       ((set_setting_func == nullptr) == (get_setting_func == nullptr));
 
-  /* The caller must provide a pointer to a variable or get/set functions, but
-     not both.  */
+    /* The caller must provide a pointer to a variable or get/set functions,
+       but not both.  */
     gdb_assert ((set_setting_func == nullptr) != (var == nullptr));
 
     return {
 	var,
 	reinterpret_cast<erased_func> (set_setting_func),
 	reinterpret_cast<erased_func> (get_setting_func)
+    };
+  }
+
+  /* Same as above, but for set/get functions that need a context.  */
+
+  template<typename T>
+  static erased_args erase_args
+    (var_types var_type,
+     typename setting_func_types<T, true>::set set_setting_func,
+     typename setting_func_types<T, true>::get get_setting_func,
+     void *context)
+  {
+    gdb_assert (var_type_uses<T> (var_type));
+    gdb_assert (set_setting_func != nullptr && get_setting_func != nullptr);
+
+    return {
+	nullptr,
+	reinterpret_cast<erased_func> (set_setting_func),
+	reinterpret_cast<erased_func> (get_setting_func),
+	context
     };
   }
 
@@ -286,7 +341,8 @@ struct setting
       m_var (args.var),
       m_extra_literals (extra_literals),
       m_getter (args.getter),
-      m_setter (args.setter)
+      m_setter (args.setter),
+      m_context (args.context)
   {
   }
 
@@ -319,6 +375,11 @@ struct setting
   const literal_def *extra_literals () const
   { return m_extra_literals; }
 
+  /* Access the context in its optional form.  If it does exist,
+     it will be needed by the getter, setter and show callbacks.  */
+  std::optional<void *> context () const
+  { return m_context; }
+
   /* Return the current value.
 
      The template parameter T is the type of the variable used to store the
@@ -331,8 +392,7 @@ struct setting
     if (m_var == nullptr)
       {
 	gdb_assert (m_getter != nullptr);
-	auto getter = reinterpret_cast<typename setting_func_types<T>::get> (m_getter);
-	return getter ();
+	return do_get<T> (m_getter);
       }
     else
       return *static_cast<const T *> (m_var);
@@ -361,8 +421,20 @@ struct setting
     if (m_var == nullptr)
       {
 	gdb_assert (m_setter != nullptr);
-	auto setter = reinterpret_cast<typename setting_func_types<T>::set> (m_setter);
-	setter (v);
+	if (m_context.has_value ())
+	  {
+	    auto setter
+	      = reinterpret_cast<typename setting_func_types<T, true>::set>
+		  (m_setter);
+	    setter (*m_context, v);
+	  }
+	else
+	  {
+	    auto setter
+	      = reinterpret_cast<typename setting_func_types<T, false>::set>
+		  (m_setter);
+	    setter (v);
+	  }
       }
     else
       *static_cast<T *> (m_var) = v;
@@ -371,9 +443,22 @@ struct setting
   }
 
   template<typename T>
-  void set_effective_value_getter (typename setting_func_types<T>::get getter)
+  void set_effective_value_getter
+    (typename setting_func_types<T, false>::get getter)
   {
     gdb_assert (var_type_uses<T> (m_var_type));
+    gdb_assert (!m_context.has_value ());
+    m_effective_getter = reinterpret_cast<erased_func> (getter);
+  }
+
+  /* Same as above but with a context-aware GETTER.  */
+
+  template<typename T>
+  void set_effective_value_getter
+    (typename setting_func_types<T, true>::get getter)
+  {
+    gdb_assert (var_type_uses<T> (m_var_type));
+    gdb_assert (m_context.has_value ());
     m_effective_getter = reinterpret_cast<erased_func> (getter);
   }
 
@@ -384,13 +469,30 @@ struct setting
       return {};
 
     gdb_assert (var_type_uses<T> (m_var_type));
-    auto getter =
-      reinterpret_cast<typename setting_func_types<T>::get>
-	(m_effective_getter);
-    return getter ();
+    return do_get<T> (m_effective_getter);
   }
 
 private:
+
+  /* Restore the GETTER type based on context availability and
+     then invoke it accordingly.  */
+
+  template<typename T>
+  typename setting_func_types<T>::type do_get (erased_func getter) const
+  {
+    if (m_context.has_value ())
+      {
+	auto func
+	  = reinterpret_cast<typename setting_func_types<T, true>::get>
+	      (getter);
+	return func (*m_context);
+      }
+
+    auto func
+      = reinterpret_cast<typename setting_func_types<T, false>::get> (getter);
+    return func ();
+  }
+
   /* The type of the variable M_VAR is pointing to, or that M_GETTER / M_SETTER
      get or set.  */
   var_types m_var_type;
@@ -412,6 +514,9 @@ private:
 
   /* Pointer to a user provided effective value getter.  */
   erased_func m_effective_getter = nullptr;
+
+  /* For getter/setter that may need a context.  */
+  std::optional<void *> m_context;
 };
 
 /* This structure records one command'd definition.  */
@@ -756,6 +861,14 @@ extern set_show_commands add_setshow_boolean_cmd
    setting_func_types<bool>::set set_func,
    setting_func_types<bool>::get get_func, show_value_ftype *show_func,
    cmd_list_element **set_list, cmd_list_element **show_list);
+
+extern set_show_commands add_setshow_boolean_cmd
+  (const char *name, command_classes theclass, const char *set_doc,
+   const char *show_doc, const char *help_doc,
+   setting_func_types<bool, true>::set set_func,
+   setting_func_types<bool, true>::get get_func, void *context,
+   show_value_ftype *show_func, cmd_list_element **set_list,
+   cmd_list_element **show_list);
 
 extern set_show_commands add_setshow_filename_cmd
   (const char *name, command_classes theclass, std::string *var, const char *set_doc,

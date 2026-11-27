@@ -685,6 +685,41 @@ add_setshow_cmd_full (const char *name,
 			       set_func, show_func, set_list, show_list);
 }
 
+/* Same as above, but SET_SETTING_FUNC and GET_SETTING_FUNC receive
+   CONTEXT on every call.  */
+
+template<typename T>
+static set_show_commands
+add_setshow_cmd_full
+  (const char *name,
+   command_classes theclass,
+   var_types var_type,
+   const char *set_doc,
+   const char *show_doc,
+   const char *help_doc,
+   typename setting_func_types<T, true>::set set_setting_func,
+   typename setting_func_types<T, true>::get get_setting_func,
+   void *context,
+   cmd_func_ftype *set_func,
+   show_value_ftype *show_func,
+   struct cmd_list_element **set_list,
+   struct cmd_list_element **show_list)
+{
+  auto erased_args
+    = setting::erase_args<T> (var_type, set_setting_func, get_setting_func,
+			      context);
+  return add_setshow_cmd_full_erased (name,
+				      theclass,
+				      var_type, nullptr,
+				      erased_args,
+				      set_doc, show_doc,
+				      help_doc,
+				      set_func,
+				      show_func,
+				      set_list,
+				      show_list);
+}
+
 /* Add element named NAME to command list LIST (the list for set or
    some sublist thereof).  THECLASS is as in add_cmd.  ENUMLIST is a list
    of strings which may follow NAME.  VAR is address of the variable
@@ -919,8 +954,8 @@ set_show_commands
 add_setshow_boolean_cmd (const char *name, command_classes theclass,
 			 const char *set_doc, const char *show_doc,
 			 const char *help_doc,
-			 setting_func_types<bool>::set set_func,
-			 setting_func_types<bool>::get get_func,
+			 setting_func_types<bool, false>::set set_func,
+			 setting_func_types<bool, false>::get get_func,
 			 show_value_ftype *show_func,
 			 cmd_list_element **set_list,
 			 cmd_list_element **show_list)
@@ -928,6 +963,29 @@ add_setshow_boolean_cmd (const char *name, command_classes theclass,
   auto cmds = add_setshow_cmd_full<bool> (name, theclass, var_boolean, nullptr,
 					  set_doc, show_doc, help_doc,
 					  set_func, get_func, nullptr,
+					  show_func, set_list, show_list);
+
+  cmds.set->enums = boolean_enums;
+
+  return cmds;
+}
+
+/* Same as above but with context-aware SET_FUNC and GET_FUNC.  */
+
+set_show_commands
+add_setshow_boolean_cmd (const char *name, command_classes theclass,
+			 const char *set_doc, const char *show_doc,
+			 const char *help_doc,
+			 setting_func_types<bool, true>::set set_func,
+			 setting_func_types<bool, true>::get get_func,
+			 void *context,
+			 show_value_ftype *show_func,
+			 cmd_list_element **set_list,
+			 cmd_list_element **show_list)
+{
+  auto cmds = add_setshow_cmd_full<bool> (name, theclass, var_boolean,
+					  set_doc, show_doc, help_doc,
+					  set_func, get_func, context, nullptr,
 					  show_func, set_list, show_list);
 
   cmds.set->enums = boolean_enums;
