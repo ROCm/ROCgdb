@@ -28,6 +28,19 @@ Full documentation for ROCgdb is available at
   Windows (native Windows / MinGW builds).  TheRock-based builds are
   not supported in this release; support is planned for a future
   release.
+- `rocgdb-emulate`, a wrapper that runs ROCgdb against a mirage-emulated
+  GPU (MI300X, MI350X, MI450X), auto-detecting the target from `--profile`,
+  `ROCGDB_EMULATE_PROFILE`, the program's offload bundle, or the ROCm tree's
+  build configuration, in that order.
+- ROCgdb now prints a warning the first time a new thread of a process is
+  held stopped because scheduler-locking is in effect.  For example, with
+  `set scheduler-locking on`, restarting a HIP program with `run` appears
+  to hang, because the HIP runtime waits for threads that are held
+  stopped.  The warning names the thread that is held stopped and shows
+  the current scheduler-locking setting.  Scheduler-locking also holds new
+  GPU waves, but ROCgdb doesn't warn about them, so a program that only
+  waits for GPU work, for example in `hipDeviceSynchronize`, can still
+  appear to hang without a warning.
 
 ### Changed
 
@@ -42,15 +55,15 @@ Full documentation for ROCgdb is available at
   error.  Related to that, bugs involving casting and assignment of
   pointer variables and `#`-specified address-space addresses
   (e.g. `local#0x1234`) are fixed.
+- Fixed expressions using `decltype`, such as
+  `print alignof(decltype(threadIdx))`, failing with a syntax error when a
+  loaded library with debug information, such as a debug build of the ROCm
+  runtime, contains the `std::nullptr_t` type.
 
 ## ROCgdb-16.3 for ROCm-10.2
 
 ### Added
 
-- `rocgdb-emulate`, a wrapper that runs ROCgdb against a mirage-emulated
-  GPU (MI300X, MI350X, MI450X), auto-detecting the target from `--profile`,
-  `ROCGDB_EMULATE_PROFILE`, the program's offload bundle, or the ROCm tree's
-  build configuration, in that order.
 - Support for the following architectures:
   - `gfx1170`
   - `gfx1171`
@@ -60,22 +73,9 @@ Full documentation for ROCgdb is available at
 - Support for workgroup clusters.  GDB now includes cluster coordinates
   in the target id of a GPU thread, if the dispatch is running in cluster
   mode.  Also, the "info dispatch" command shows cluster dimensions.
-- ROCgdb now prints a warning the first time a new thread of a process is
-  held stopped because scheduler-locking is in effect.  For example, with
-  `set scheduler-locking on`, restarting a HIP program with `run` appears
-  to hang, because the HIP runtime waits for threads that are held
-  stopped.  The warning names the thread that is held stopped and shows
-  the current scheduler-locking setting.  Scheduler-locking also holds new
-  GPU waves, but ROCgdb doesn't warn about them, so a program that only
-  waits for GPU work, for example in `hipDeviceSynchronize`, can still
-  appear to hang without a warning.
 
 ### Resolved issues
 
-- Fixed expressions using `decltype`, such as
-  `print alignof(decltype(threadIdx))`, failing with a syntax error when a
-  loaded library with debug information, such as a debug build of the ROCm
-  runtime, contains the `std::nullptr_t` type.
 - If a GPU thread caused SIGSEGV, which is by default reported imprecisely,
   but also hit a breakpoint, ROCgdb would hide SIGSEGV and show the
   breakpoint hit.  This is fixed to prioritize and show SIGSEGV instead.
