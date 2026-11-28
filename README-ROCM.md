@@ -89,6 +89,24 @@ cd build
 make
 ````
 
+### MSVC Symbol Demangling (optional)
+
+ROCgdb, binutils and bfd can demangle Microsoft Visual C++ (`?`-mangled)
+symbols when built against the in-tree `libdemangle-msvc` library.  This
+is controlled by `--with-msvc-demangler` on the top-level `configure`:
+
+- `--with-msvc-demangler` (or `=yes`) — force enable.
+- `--with-msvc-demangler=no` — disable (and skip building libdemangle-msvc).
+- omitted — enabled automatically when a Windows/PE target is configured
+  (`*-*-mingw*`, `*-*-cygwin*`, `*-*-windows*`, `*-*-pe*`, or
+  `--enable-targets=all`); disabled otherwise.
+
+The top-level resolves the value once and forwards an explicit `yes`/`no`
+to every subdirectory so bfd, binutils, gdb and libdemangle-msvc agree.
+When enabled, `objdump`, `nm`, `readelf`, `addr2line`, `c++filt` and GDB
+will demangle MSVC symbols transparently.  `c++filt -M`/`--msvc-full`
+preserves MSVC keywords (`__cdecl`, `__fastcall`, ...) in the output.
+
 If the AMD Debugger API Library (ROCdbgapi) is not installed in the system
 default location, specify ``PKG_CONFIG_PATH`` so ``pkg-config` can gather the
 correct build configuration.  If ROCdbgapi is installed in

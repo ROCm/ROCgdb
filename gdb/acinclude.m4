@@ -269,8 +269,12 @@ AC_DEFUN([GDB_AC_CHECK_BFD], [
   LDFLAGS="-L../bfd -L../libiberty $LDFLAGS"
   # LTLIBINTL because we use libtool as CC below.
   intl="$(echo "$LTLIBINTL" | sed 's,\$[[{(]top_builddir[)}]]/,,')"
-  LIBS="-lbfd -liberty $intl $LIBS"
+  LIBS="-lbfd $LIBDEMANGLE_MSVC -liberty $intl $LIBS"
   CC="./libtool --quiet --mode=link $CC"
+  # libbfd refers to libdemangle-msvc, a C++ library, when it is enabled.
+  if test -n "$LIBDEMANGLE_MSVC"; then
+    CC="./libtool --quiet --tag=CXX --mode=link $CXX"
+  fi
   AC_CACHE_CHECK(
     [$1],
     [$2],

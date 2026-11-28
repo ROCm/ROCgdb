@@ -135,7 +135,7 @@ build_tools="build-texinfo build-flex build-bison build-m4 build-fixincludes"
 
 # these libraries are used by various programs built for the host environment
 #f
-host_libs="gettext libiberty opcodes bfd readline tcl tk itcl libgui zlib libbacktrace libcpp libcody libdecnumber gmp mpfr mpc isl libiconv libctf libsframe libgrust "
+host_libs="gettext libiberty opcodes bfd readline tcl tk itcl libgui zlib libbacktrace libcpp libcody libdecnumber gmp mpfr mpc isl libiconv libctf libsframe libgrust libdemangle-msvc "
 
 # these tools are built for the host environment
 # Note, the powerpc-eabi build depends on sim occurring before gdb in order to
@@ -257,6 +257,36 @@ fi
 if test x$with_system_readline = xyes ; then
   noconfigdirs="$noconfigdirs readline"
 fi
+
+# MSVC demangler.  Resolve yes/no once here, then force the explicit
+# value down into every subdir's configure so that bfd / binutils /
+# gdb / libdemangle-msvc all agree.
+#
+#   --with-msvc-demangler        -> yes
+#   --with-msvc-demangler=no     -> no
+#   (omitted)                    -> yes when a Windows/PE target is
+#                                   enabled, no otherwise.
+AC_ARG_WITH(msvc-demangler,
+[AS_HELP_STRING([--with-msvc-demangler],
+		[MSVC symbol demangling (default: enabled for Windows/PE targets)])],
+		[],
+		[with_msvc_demangler=
+		 for targ in $target `echo $enable_targets | sed 's/,/ /g'`; do
+		   case $targ in
+		     *-*-mingw* | *-*-cygwin* | *-*-windows* | *-*-pe | *-*-pe-* | all)
+		       with_msvc_demangler=yes
+		       break ;;
+		   esac
+		 done
+		 test -z "$with_msvc_demangler" && with_msvc_demangler=no])
+
+# Build decision: build libdemangle-msvc unless disabled.
+if test x$with_msvc_demangler = xno ; then
+  noconfigdirs="$noconfigdirs libdemangle-msvc"
+fi
+
+# Force subdirs to receive the resolved explicit value.
+ac_configure_args="$ac_configure_args --with-msvc-demangler=$with_msvc_demangler"
 
 AC_ARG_WITH(zstd,
 [AS_HELP_STRING([--with-zstd], [Support zstd compressed debug sections (default=auto)])])

@@ -156,6 +156,211 @@ proc test_gnuv3_style_demangling {} {
 	"List<VHDLEntity>::next(List<VHDLEntity>::Pix&&) const"
 }
 
+#
+# Test MSVC name demangling.
+#
+# These exercise libiberty's cplus_demangle dispatching to msvc_demangle,
+# which is registered by bfd_init when GDB is built with the MSVC
+# demangler enabled (auto-enabled for Windows/PE targets).  Symbols
+# starting with '?' are unambiguously MSVC-mangled.
+#
+
+proc test_msvc_demangling {} {
+    if {![gdb_msvc_demangler_built]} {
+	unsupported "MSVC demangler not built in"
+	return
+    }
+
+    # Switch to auto style so that '?'-prefixed names are dispatched
+    # to the MSVC handler.
+    with_test_prefix "msvc-auto" {
+	set_demangling_style "auto"
+
+	# Basic free function and template.
+	gdb_test_exact "demangle ?foo@@YAXXZ" "foo()"
+	gdb_test_exact "demangle ?bar@@YAHDH@Z" "bar(char, int)"
+	gdb_test_exact "demangle ??\$func@H@@YAHH@Z" "func<int>(int)"
+	gdb_test_exact "demangle ?v_int_typedef@@3HA" "v_int_typedef"
+
+	# Member function on class.
+	gdb_test_exact "demangle ?m1@C@@QAEXXZ" "C::m1()"
+
+	# Calling-convention variant (default formatting omits __stdcall).
+	gdb_test_exact "demangle ?stdcallFunc@@YGXXZ" "stdcallFunc()"
+
+	# Function-pointer parameter.
+	gdb_test_exact "demangle ?callback@Cb@@QEAAXP6AXH@Z@Z" \
+	    "Cb::callback(void (*)(int))"
+
+	# MSVC's sized integer types are the builtin types; size_t is
+	# unsigned __int64.
+	gdb_test_exact "demangle ?f@@YAX_J@Z" "f(long long)"
+	gdb_test_exact "demangle ?f@@YAX_K@Z" "f(unsigned long long)"
+	gdb_test_exact "demangle ?f@@YAXH_J@Z" "f(int, long long)"
+	gdb_test_exact "demangle ?g@@YAXPEB_J@Z" "g(long long const *)"
+	gdb_test_exact \
+	    "demangle ??A?\$basic_string@DU?\$char_traits@D@std@@V?\$allocator@D@2@@std@@QEAAAEAD_K@Z" \
+	    "std::basic_string<char, std::char_traits<char>, std::allocator<char>>::operator\[\](unsigned long long)"
+
+	# Dropping class/struct/enum leaves no space after the bracket.
+	gdb_test_exact "demangle ?f@@YAXAEBVA@@@Z" "f(A const &)"
+	gdb_test_exact "demangle ?f@@YAXW4E@@@Z" "f(E)"
+	gdb_test_exact "demangle ?f@@YAXPEAU?\$X@US@@@@@Z" "f(X<S> *)"
+
+	# Anonymous namespace, in GDB's spelling.
+	gdb_test_exact "demangle ?xx@?A0x965E6BB6@A@@3HA" \
+	    "A::(anonymous namespace)::xx"
+
+	# A vcall thunk, alone and as a member-pointer template argument.
+	gdb_test_exact "demangle ??_9A@@\$BA@AA" "\[thunk\]: A::`vcall'{0, {flat}}"
+	gdb_test_exact \
+	    "demangle ??\$As@_K@?\$LazyOffsetPtr@VB@@_K\$H??_9A@@\$BDA@AAA@@@QEBAAEA_K_N@Z" \
+	    "LazyOffsetPtr<B, unsigned long long, {\[thunk\]: A::`vcall'{48, {flat}}, 0}>::As<unsigned long long>(bool) const"
+
+	# A conversion operator template instance, in GDB's spelling.
+	gdb_test_exact "demangle ??\$?BH@conv@@QEBAPEAHXZ" \
+	    "conv::operator int *<int>() const"
+
+	# A compiler-added suffix, as for Itanium names.
+	gdb_test_exact "demangle ?split_fn@@YAHH@Z.cold.1" \
+	    "split_fn(int) \[clone .cold.1\]"
+
+	# An operator< template instance is not operator<<.
+	gdb_test_exact \
+	    "demangle ??\$?MV?\$Empty@H@@@@YAHAEAV?\$Empty@H@@0@Z" \
+	    "operator< <Empty<int>>(Empty<int> &, Empty<int> &)"
+
+	# Structors of a class template instance are named without the
+	# class's template arguments; a constructor template keeps its own.
+	gdb_test_exact "demangle ??0?\$tpl@HM@@QEAA@XZ" "tpl<int, float>::tpl()"
+	gdb_test_exact "demangle ??1?\$tpl@HM@@QEAA@XZ" \
+	    "tpl<int, float>::~tpl()"
+	gdb_test_exact "demangle ??\$?0H@T@@QEAA@H@Z" "T::T<int>(int)"
+
+	# A parameter's top-level const is not part of the signature.
+	gdb_test_exact "demangle ?f@@YAXQEAD@Z" "f(char *)"
+
+	# Only the symbol's own return type is left out, not those of the
+	# function types in its parameters.
+	gdb_test_exact "demangle ?hairyfunc5@@YAHP6AP6AHJ@ZPEAD@Z@Z" \
+	    "hairyfunc5(int (* (*)(char *))(long))"
+
+	# A function's static local is named "FUNCTION::NAME".
+	gdb_test_exact \
+	    "demangle ?s_var@?1??inline_method@S@@QEAAXXZ@4HA" \
+	    "S::inline_method()::s_var"
+	gdb_test_exact "demangle ?x@?BA@??f@@YAHH@Z@4HA" "f(int)::x"
+
+	# The function of a static local is spelled as the function's own
+	# demangled name.
+	foreach {func demangled} {
+	    {??$?BH@conv@@QEBAPEAHXZ} {conv::operator int *<int>() const}
+	    {??$?MV?$Empty@H@@@@YAHAEAV?$Empty@H@@0@Z}
+	    {operator< <Empty<int>>(Empty<int> &, Empty<int> &)}
+	    {??0?$tpl@HM@@QEAA@XZ} {tpl<int, float>::tpl()}
+	    {??1?$tpl@HM@@QEAA@XZ} {tpl<int, float>::~tpl()}
+	    {??$?0H@T@@QEAA@H@Z} {T::T<int>(int)}
+	    {?f@@YAXQEAD@Z} {f(char *)}
+	    {?hairyfunc5@@YAHP6AP6AHJ@ZPEAD@Z@Z}
+	    {hairyfunc5(int (* (*)(char *))(long))}
+	    {?f@@YAP6AHH@ZXZ} {f()}
+	    {?g@?A0x965E6BB6@A@@YAXXZ} {A::(anonymous namespace)::g()}
+	    {?h@@YAX_J@Z} {h(long long)}
+	    {?f@@YAXXZ} {f()}
+	    {?m@S@@QEBAXXZ} {S::m() const}
+	    {?sm@S@@SAXXZ} {S::sm()}
+	    {?vm@S@@UEAAXXZ} {S::vm()}
+	    {??$tf@H@@YAXH@Z} {tf<int>(int)}
+	    {?f@N@@YAXXZ} {N::f()}
+	    {?v@@YAXHZZ} {v(int, ...)}
+	    {??HA@@QEAAHH@Z} {A::operator+(int)}
+	    {?f@@YAXPEBD@Z} {f(char const *)}
+	    {?f@@YAXAEAH@Z} {f(int &)}
+	} {
+	    gdb_test_exact "demangle $func" $demangled "function $func"
+	    gdb_test_exact "demangle ?x@?1?$func@4HA" "${demangled}::x" \
+		"static local in $func"
+	}
+
+	# A local class: a static local of its method, and its static member.
+	gdb_test_exact "demangle ?x@?1??m@L@?1??f@@YAXXZ@QEAAXXZ@4HA" \
+	    "f()::L::m()::x"
+	gdb_test_exact "demangle ?y@L@?1??f@@YAXXZ@2HA" "f()::L::y"
+
+	# A static local of pointer type.
+	gdb_test_exact "demangle ?p@?1??f@@YAXXZ@4PEAHEA" "f()::p"
+
+	# Local classes nested in member functions of local classes, as
+	# clang emits them; each level is a local scope of its own.
+	gdb_test_exact "demangle ?h@L@?2??g@@YAHXZ@SAHXZ" "g()::L::h()"
+	gdb_test_exact "demangle ?z@?1??h@L@?1??g@@YAHXZ@SAHXZ@4HA" \
+	    "g()::L::h()::z"
+	gdb_test_exact "demangle ?k@M@?1??h@L@?2??g@@YAHXZ@SAHXZ@SAHXZ" \
+	    "g()::L::h()::M::k()"
+	gdb_test_exact \
+	    "demangle ?q@?1??k@M@?1??h@L@?1??g@@YAHXZ@SAHXZ@SAHXZ@4HA" \
+	    "g()::L::h()::M::k()::q"
+
+	# A static local as a template argument.
+	gdb_test_exact "demangle ??\$tf@\$1?a@?2??two@@YAHXZ@4HA@@YAHXZ" \
+	    "tf<&two()::a>()"
+
+	# A local scope whose spelling has quotes of its own, scope number
+	# zero, and a variable as the scope.
+	gdb_test_exact "demangle ?x@?1???__Ev@@YAXXZ@4HA" \
+	    "`dynamic initializer for 'v''()::x"
+	gdb_test_exact "demangle ?x@?@??f@@YAXXZ@4HA" "f()::x"
+	gdb_test_exact "demangle ?x@?1??v@@3HA@4HA" "v::x"
+    }
+
+    # Explicit "msvc" style: cplus_demangle passes DMGL_MSVC to the
+    # handler, which preserves MSVC-specific decorations (calling
+    # conventions, etc.) instead of stripping them.
+    with_test_prefix "msvc-style" {
+	set_demangling_style "msvc"
+
+	# __cdecl preserved on free functions.
+	gdb_test_exact "demangle ?foo@@YAXXZ" "void __cdecl foo(void)"
+	gdb_test_exact "demangle ?bar@@YAHDH@Z" \
+	    "int __cdecl bar(char, int)"
+	gdb_test_exact "demangle ??\$func@H@@YAHH@Z" \
+	    "int __cdecl func<int>(int)"
+	gdb_test_exact "demangle ?v_int_typedef@@3HA" "int v_int_typedef"
+
+	# __stdcall preserved on YG-encoded functions.
+	gdb_test_exact "demangle ?stdcallFunc@@YGXXZ" \
+	    "void __stdcall stdcallFunc(void)"
+
+	# __thiscall preserved on QAE member functions.
+	gdb_test_exact "demangle ?m1@C@@QAEXXZ" \
+	    "public: void __thiscall C::m1(void)"
+
+	# Sized integer types keep their MSVC spelling.
+	gdb_test_exact "demangle ?f@@YAX_K@Z" \
+	    "void __cdecl f(unsigned __int64)"
+
+	# Anonymous namespace, in MSVC's spelling.
+	gdb_test_exact "demangle ?xx@?A0x965E6BB6@A@@3HA" \
+	    "int A::`anonymous namespace'::xx"
+
+	# A vcall thunk keeps its calling convention.
+	gdb_test_exact "demangle ??_9A@@\$BA@AA" \
+	    "\[thunk\]: __cdecl A::`vcall'{0, {flat}}"
+
+	# A conversion operator template instance, in MSVC's spelling.
+	gdb_test_exact "demangle ??\$?BH@conv@@QEBAPEAHXZ" \
+	    "public: int * __cdecl conv::operator<int> int *(void) const"
+
+	# Static locals keep MSVC's "`FUNCTION'::`SCOPE'::" spelling.
+	gdb_test_exact "demangle ?x@?1??f@@YAXXZ@4HA" \
+	    "int `void __cdecl f(void)'::`2'::x"
+	gdb_test_exact "demangle ?x@?1??m@L@?1??f@@YAXXZ@QEAAXXZ@4HA" \
+	    "int `public: void __cdecl `void __cdecl f(void)'::`2'::L::m(void)'::`2'::x"
+	gdb_test_exact "demangle ?x@?1??g@?A0x965E6BB6@A@@YAXXZ@4HA" \
+	    "int `void __cdecl A::`anonymous namespace'::g(void)'::`2'::x"
+    }
+}
+
 proc catch_demangling_errors {command} {
     if {[catch {$command} result]} {
 	puts "ERROR: demangle.exp: while running $command: $result"
@@ -184,6 +389,7 @@ proc do_tests {} {
     # the functions raises a Tcl error, then it'll get reported, and
     # the rest of the functions will still run.
     catch_demangling_errors test_gnuv3_style_demangling
+    catch_demangling_errors test_msvc_demangling
 
     # Verify specifying demangle language.
     gdb_test_no_output "set language unknown"

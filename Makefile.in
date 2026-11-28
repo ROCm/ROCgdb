@@ -1122,6 +1122,7 @@ configure-host:  \
     maybe-configure-zlib \
     maybe-configure-gnulib \
     maybe-configure-gdbsupport \
+    maybe-configure-libdemangle-msvc \
     maybe-configure-gdbserver \
     maybe-configure-gdb \
     maybe-configure-expect \
@@ -1299,6 +1300,9 @@ all-host: maybe-all-zlib
 @endif zlib-no-bootstrap
 all-host: maybe-all-gnulib
 all-host: maybe-all-gdbsupport
+@if libdemangle-msvc-no-bootstrap
+all-host: maybe-all-libdemangle-msvc
+@endif libdemangle-msvc-no-bootstrap
 all-host: maybe-all-gdbserver
 all-host: maybe-all-gdb
 all-host: maybe-all-expect
@@ -1424,6 +1428,7 @@ info-host: maybe-info-texinfo
 info-host: maybe-info-zlib
 info-host: maybe-info-gnulib
 info-host: maybe-info-gdbsupport
+info-host: maybe-info-libdemangle-msvc
 info-host: maybe-info-gdbserver
 info-host: maybe-info-gdb
 info-host: maybe-info-expect
@@ -1518,6 +1523,7 @@ dvi-host: maybe-dvi-texinfo
 dvi-host: maybe-dvi-zlib
 dvi-host: maybe-dvi-gnulib
 dvi-host: maybe-dvi-gdbsupport
+dvi-host: maybe-dvi-libdemangle-msvc
 dvi-host: maybe-dvi-gdbserver
 dvi-host: maybe-dvi-gdb
 dvi-host: maybe-dvi-expect
@@ -1612,6 +1618,7 @@ pdf-host: maybe-pdf-texinfo
 pdf-host: maybe-pdf-zlib
 pdf-host: maybe-pdf-gnulib
 pdf-host: maybe-pdf-gdbsupport
+pdf-host: maybe-pdf-libdemangle-msvc
 pdf-host: maybe-pdf-gdbserver
 pdf-host: maybe-pdf-gdb
 pdf-host: maybe-pdf-expect
@@ -1706,6 +1713,7 @@ html-host: maybe-html-texinfo
 html-host: maybe-html-zlib
 html-host: maybe-html-gnulib
 html-host: maybe-html-gdbsupport
+html-host: maybe-html-libdemangle-msvc
 html-host: maybe-html-gdbserver
 html-host: maybe-html-gdb
 html-host: maybe-html-expect
@@ -1800,6 +1808,7 @@ TAGS-host: maybe-TAGS-texinfo
 TAGS-host: maybe-TAGS-zlib
 TAGS-host: maybe-TAGS-gnulib
 TAGS-host: maybe-TAGS-gdbsupport
+TAGS-host: maybe-TAGS-libdemangle-msvc
 TAGS-host: maybe-TAGS-gdbserver
 TAGS-host: maybe-TAGS-gdb
 TAGS-host: maybe-TAGS-expect
@@ -1894,6 +1903,7 @@ install-info-host: maybe-install-info-texinfo
 install-info-host: maybe-install-info-zlib
 install-info-host: maybe-install-info-gnulib
 install-info-host: maybe-install-info-gdbsupport
+install-info-host: maybe-install-info-libdemangle-msvc
 install-info-host: maybe-install-info-gdbserver
 install-info-host: maybe-install-info-gdb
 install-info-host: maybe-install-info-expect
@@ -1988,6 +1998,7 @@ install-dvi-host: maybe-install-dvi-texinfo
 install-dvi-host: maybe-install-dvi-zlib
 install-dvi-host: maybe-install-dvi-gnulib
 install-dvi-host: maybe-install-dvi-gdbsupport
+install-dvi-host: maybe-install-dvi-libdemangle-msvc
 install-dvi-host: maybe-install-dvi-gdbserver
 install-dvi-host: maybe-install-dvi-gdb
 install-dvi-host: maybe-install-dvi-expect
@@ -2082,6 +2093,7 @@ install-pdf-host: maybe-install-pdf-texinfo
 install-pdf-host: maybe-install-pdf-zlib
 install-pdf-host: maybe-install-pdf-gnulib
 install-pdf-host: maybe-install-pdf-gdbsupport
+install-pdf-host: maybe-install-pdf-libdemangle-msvc
 install-pdf-host: maybe-install-pdf-gdbserver
 install-pdf-host: maybe-install-pdf-gdb
 install-pdf-host: maybe-install-pdf-expect
@@ -2176,6 +2188,7 @@ install-html-host: maybe-install-html-texinfo
 install-html-host: maybe-install-html-zlib
 install-html-host: maybe-install-html-gnulib
 install-html-host: maybe-install-html-gdbsupport
+install-html-host: maybe-install-html-libdemangle-msvc
 install-html-host: maybe-install-html-gdbserver
 install-html-host: maybe-install-html-gdb
 install-html-host: maybe-install-html-expect
@@ -2270,6 +2283,7 @@ installcheck-host: maybe-installcheck-texinfo
 installcheck-host: maybe-installcheck-zlib
 installcheck-host: maybe-installcheck-gnulib
 installcheck-host: maybe-installcheck-gdbsupport
+installcheck-host: maybe-installcheck-libdemangle-msvc
 installcheck-host: maybe-installcheck-gdbserver
 installcheck-host: maybe-installcheck-gdb
 installcheck-host: maybe-installcheck-expect
@@ -2364,6 +2378,7 @@ mostlyclean-host: maybe-mostlyclean-texinfo
 mostlyclean-host: maybe-mostlyclean-zlib
 mostlyclean-host: maybe-mostlyclean-gnulib
 mostlyclean-host: maybe-mostlyclean-gdbsupport
+mostlyclean-host: maybe-mostlyclean-libdemangle-msvc
 mostlyclean-host: maybe-mostlyclean-gdbserver
 mostlyclean-host: maybe-mostlyclean-gdb
 mostlyclean-host: maybe-mostlyclean-expect
@@ -2458,6 +2473,7 @@ clean-host: maybe-clean-texinfo
 clean-host: maybe-clean-zlib
 clean-host: maybe-clean-gnulib
 clean-host: maybe-clean-gdbsupport
+clean-host: maybe-clean-libdemangle-msvc
 clean-host: maybe-clean-gdbserver
 clean-host: maybe-clean-gdb
 clean-host: maybe-clean-expect
@@ -2552,6 +2568,7 @@ distclean-host: maybe-distclean-texinfo
 distclean-host: maybe-distclean-zlib
 distclean-host: maybe-distclean-gnulib
 distclean-host: maybe-distclean-gdbsupport
+distclean-host: maybe-distclean-libdemangle-msvc
 distclean-host: maybe-distclean-gdbserver
 distclean-host: maybe-distclean-gdb
 distclean-host: maybe-distclean-expect
@@ -2646,6 +2663,7 @@ maintainer-clean-host: maybe-maintainer-clean-texinfo
 maintainer-clean-host: maybe-maintainer-clean-zlib
 maintainer-clean-host: maybe-maintainer-clean-gnulib
 maintainer-clean-host: maybe-maintainer-clean-gdbsupport
+maintainer-clean-host: maybe-maintainer-clean-libdemangle-msvc
 maintainer-clean-host: maybe-maintainer-clean-gdbserver
 maintainer-clean-host: maybe-maintainer-clean-gdb
 maintainer-clean-host: maybe-maintainer-clean-expect
@@ -2798,6 +2816,7 @@ check-host:  \
     maybe-check-zlib \
     maybe-check-gnulib \
     maybe-check-gdbsupport \
+    maybe-check-libdemangle-msvc \
     maybe-check-gdbserver \
     maybe-check-gdb \
     maybe-check-expect \
@@ -2939,6 +2958,7 @@ install-host-nogcc:  \
     maybe-install-zlib \
     maybe-install-gnulib \
     maybe-install-gdbsupport \
+    maybe-install-libdemangle-msvc \
     maybe-install-gdbserver \
     maybe-install-gdb \
     maybe-install-expect \
@@ -2996,6 +3016,7 @@ install-host:  \
     maybe-install-zlib \
     maybe-install-gnulib \
     maybe-install-gdbsupport \
+    maybe-install-libdemangle-msvc \
     maybe-install-gdbserver \
     maybe-install-gdb \
     maybe-install-expect \
@@ -3110,6 +3131,7 @@ install-strip-host:  \
     maybe-install-strip-zlib \
     maybe-install-strip-gnulib \
     maybe-install-strip-gdbsupport \
+    maybe-install-strip-libdemangle-msvc \
     maybe-install-strip-gdbserver \
     maybe-install-strip-gdb \
     maybe-install-strip-expect \
@@ -35519,6 +35541,1146 @@ maintainer-clean-gdbsupport:
 
 
 
+.PHONY: configure-libdemangle-msvc maybe-configure-libdemangle-msvc
+maybe-configure-libdemangle-msvc:
+@if gcc-bootstrap
+configure-libdemangle-msvc: stage_current
+@endif gcc-bootstrap
+@if libdemangle-msvc
+maybe-configure-libdemangle-msvc: configure-libdemangle-msvc
+configure-libdemangle-msvc: 
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	test ! -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile || exit 0; \
+	$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc; \
+	$(HOST_EXPORTS)  \
+	echo Configuring in $(HOST_SUBDIR)/libdemangle-msvc; \
+	cd "$(HOST_SUBDIR)/libdemangle-msvc" || exit 1; \
+	case $(srcdir) in \
+	  /* | [A-Za-z]:[\\/]*) topdir=$(srcdir) ;; \
+	  *) topdir=`echo $(HOST_SUBDIR)/libdemangle-msvc/ | \
+		sed -e 's,\./,,g' -e 's,[^/]*/,../,g' `$(srcdir) ;; \
+	esac; \
+	module_srcdir=libdemangle-msvc; \
+	$(SHELL) \
+	  $$s/$$module_srcdir/configure \
+	  --srcdir=$${topdir}/$$module_srcdir \
+	  $(HOST_CONFIGARGS) --build=${build_alias} --host=${host_alias} \
+	  --target=${target_alias}  \
+	  || exit 1
+@endif libdemangle-msvc
+
+
+
+.PHONY: configure-stage1-libdemangle-msvc maybe-configure-stage1-libdemangle-msvc
+maybe-configure-stage1-libdemangle-msvc:
+@if libdemangle-msvc-bootstrap
+maybe-configure-stage1-libdemangle-msvc: configure-stage1-libdemangle-msvc
+configure-stage1-libdemangle-msvc:
+	@[ $(current_stage) = stage1 ] || $(MAKE) stage1-start
+	@$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	TFLAGS="$(STAGE1_TFLAGS)"; \
+	test ! -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile || exit 0; \
+	$(HOST_EXPORTS) \
+	CFLAGS="$(STAGE1_CFLAGS)"; export CFLAGS; \
+	CXXFLAGS="$(STAGE1_CXXFLAGS)"; export CXXFLAGS; \
+	LIBCFLAGS="$(LIBCFLAGS)"; export LIBCFLAGS;  \
+	echo Configuring stage 1 in $(HOST_SUBDIR)/libdemangle-msvc; \
+	$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc; \
+	cd $(HOST_SUBDIR)/libdemangle-msvc || exit 1; \
+	case $(srcdir) in \
+	  /* | [A-Za-z]:[\\/]*) topdir=$(srcdir) ;; \
+	  *) topdir=`echo $(HOST_SUBDIR)/libdemangle-msvc/ | \
+		sed -e 's,\./,,g' -e 's,[^/]*/,../,g' `$(srcdir) ;; \
+	esac; \
+	module_srcdir=libdemangle-msvc; \
+	$(SHELL) $$s/$$module_srcdir/configure \
+	  --srcdir=$${topdir}/$$module_srcdir \
+	  $(HOST_CONFIGARGS) --build=${build_alias} --host=${host_alias} \
+	  --target=${target_alias} \
+	   \
+	  $(STAGE1_CONFIGURE_FLAGS)
+@endif libdemangle-msvc-bootstrap
+
+.PHONY: configure-stage2-libdemangle-msvc maybe-configure-stage2-libdemangle-msvc
+maybe-configure-stage2-libdemangle-msvc:
+@if libdemangle-msvc-bootstrap
+maybe-configure-stage2-libdemangle-msvc: configure-stage2-libdemangle-msvc
+configure-stage2-libdemangle-msvc:
+	@[ $(current_stage) = stage2 ] || $(MAKE) stage2-start
+	@$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	TFLAGS="$(STAGE2_TFLAGS)"; \
+	test ! -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile || exit 0; \
+	$(HOST_EXPORTS) \
+	$(POSTSTAGE1_HOST_EXPORTS) \
+	CFLAGS="$(STAGE2_CFLAGS)"; export CFLAGS; \
+	CXXFLAGS="$(STAGE2_CXXFLAGS)"; export CXXFLAGS; \
+	LIBCFLAGS="$(STAGE2_CFLAGS)"; export LIBCFLAGS;  \
+	echo Configuring stage 2 in $(HOST_SUBDIR)/libdemangle-msvc; \
+	$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc; \
+	cd $(HOST_SUBDIR)/libdemangle-msvc || exit 1; \
+	case $(srcdir) in \
+	  /* | [A-Za-z]:[\\/]*) topdir=$(srcdir) ;; \
+	  *) topdir=`echo $(HOST_SUBDIR)/libdemangle-msvc/ | \
+		sed -e 's,\./,,g' -e 's,[^/]*/,../,g' `$(srcdir) ;; \
+	esac; \
+	module_srcdir=libdemangle-msvc; \
+	$(SHELL) $$s/$$module_srcdir/configure \
+	  --srcdir=$${topdir}/$$module_srcdir \
+	  $(HOST_CONFIGARGS) --build=${build_alias} --host=${host_alias} \
+	  --target=${target_alias} \
+	  --with-build-libsubdir=$(HOST_SUBDIR) \
+	  $(STAGE2_CONFIGURE_FLAGS)
+@endif libdemangle-msvc-bootstrap
+
+.PHONY: configure-stage3-libdemangle-msvc maybe-configure-stage3-libdemangle-msvc
+maybe-configure-stage3-libdemangle-msvc:
+@if libdemangle-msvc-bootstrap
+maybe-configure-stage3-libdemangle-msvc: configure-stage3-libdemangle-msvc
+configure-stage3-libdemangle-msvc:
+	@[ $(current_stage) = stage3 ] || $(MAKE) stage3-start
+	@$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	TFLAGS="$(STAGE3_TFLAGS)"; \
+	test ! -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile || exit 0; \
+	$(HOST_EXPORTS) \
+	$(POSTSTAGE1_HOST_EXPORTS) \
+	CFLAGS="$(STAGE3_CFLAGS)"; export CFLAGS; \
+	CXXFLAGS="$(STAGE3_CXXFLAGS)"; export CXXFLAGS; \
+	LIBCFLAGS="$(STAGE3_CFLAGS)"; export LIBCFLAGS;  \
+	echo Configuring stage 3 in $(HOST_SUBDIR)/libdemangle-msvc; \
+	$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc; \
+	cd $(HOST_SUBDIR)/libdemangle-msvc || exit 1; \
+	case $(srcdir) in \
+	  /* | [A-Za-z]:[\\/]*) topdir=$(srcdir) ;; \
+	  *) topdir=`echo $(HOST_SUBDIR)/libdemangle-msvc/ | \
+		sed -e 's,\./,,g' -e 's,[^/]*/,../,g' `$(srcdir) ;; \
+	esac; \
+	module_srcdir=libdemangle-msvc; \
+	$(SHELL) $$s/$$module_srcdir/configure \
+	  --srcdir=$${topdir}/$$module_srcdir \
+	  $(HOST_CONFIGARGS) --build=${build_alias} --host=${host_alias} \
+	  --target=${target_alias} \
+	  --with-build-libsubdir=$(HOST_SUBDIR) \
+	  $(STAGE3_CONFIGURE_FLAGS)
+@endif libdemangle-msvc-bootstrap
+
+.PHONY: configure-stage4-libdemangle-msvc maybe-configure-stage4-libdemangle-msvc
+maybe-configure-stage4-libdemangle-msvc:
+@if libdemangle-msvc-bootstrap
+maybe-configure-stage4-libdemangle-msvc: configure-stage4-libdemangle-msvc
+configure-stage4-libdemangle-msvc:
+	@[ $(current_stage) = stage4 ] || $(MAKE) stage4-start
+	@$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	TFLAGS="$(STAGE4_TFLAGS)"; \
+	test ! -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile || exit 0; \
+	$(HOST_EXPORTS) \
+	$(POSTSTAGE1_HOST_EXPORTS) \
+	CFLAGS="$(STAGE4_CFLAGS)"; export CFLAGS; \
+	CXXFLAGS="$(STAGE4_CXXFLAGS)"; export CXXFLAGS; \
+	LIBCFLAGS="$(STAGE4_CFLAGS)"; export LIBCFLAGS;  \
+	echo Configuring stage 4 in $(HOST_SUBDIR)/libdemangle-msvc; \
+	$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc; \
+	cd $(HOST_SUBDIR)/libdemangle-msvc || exit 1; \
+	case $(srcdir) in \
+	  /* | [A-Za-z]:[\\/]*) topdir=$(srcdir) ;; \
+	  *) topdir=`echo $(HOST_SUBDIR)/libdemangle-msvc/ | \
+		sed -e 's,\./,,g' -e 's,[^/]*/,../,g' `$(srcdir) ;; \
+	esac; \
+	module_srcdir=libdemangle-msvc; \
+	$(SHELL) $$s/$$module_srcdir/configure \
+	  --srcdir=$${topdir}/$$module_srcdir \
+	  $(HOST_CONFIGARGS) --build=${build_alias} --host=${host_alias} \
+	  --target=${target_alias} \
+	  --with-build-libsubdir=$(HOST_SUBDIR) \
+	  $(STAGE4_CONFIGURE_FLAGS)
+@endif libdemangle-msvc-bootstrap
+
+.PHONY: configure-stageprofile-libdemangle-msvc maybe-configure-stageprofile-libdemangle-msvc
+maybe-configure-stageprofile-libdemangle-msvc:
+@if libdemangle-msvc-bootstrap
+maybe-configure-stageprofile-libdemangle-msvc: configure-stageprofile-libdemangle-msvc
+configure-stageprofile-libdemangle-msvc:
+	@[ $(current_stage) = stageprofile ] || $(MAKE) stageprofile-start
+	@$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	TFLAGS="$(STAGEprofile_TFLAGS)"; \
+	test ! -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile || exit 0; \
+	$(HOST_EXPORTS) \
+	$(POSTSTAGE1_HOST_EXPORTS) \
+	CFLAGS="$(STAGEprofile_CFLAGS)"; export CFLAGS; \
+	CXXFLAGS="$(STAGEprofile_CXXFLAGS)"; export CXXFLAGS; \
+	LIBCFLAGS="$(STAGEprofile_CFLAGS)"; export LIBCFLAGS;  \
+	echo Configuring stage profile in $(HOST_SUBDIR)/libdemangle-msvc; \
+	$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc; \
+	cd $(HOST_SUBDIR)/libdemangle-msvc || exit 1; \
+	case $(srcdir) in \
+	  /* | [A-Za-z]:[\\/]*) topdir=$(srcdir) ;; \
+	  *) topdir=`echo $(HOST_SUBDIR)/libdemangle-msvc/ | \
+		sed -e 's,\./,,g' -e 's,[^/]*/,../,g' `$(srcdir) ;; \
+	esac; \
+	module_srcdir=libdemangle-msvc; \
+	$(SHELL) $$s/$$module_srcdir/configure \
+	  --srcdir=$${topdir}/$$module_srcdir \
+	  $(HOST_CONFIGARGS) --build=${build_alias} --host=${host_alias} \
+	  --target=${target_alias} \
+	  --with-build-libsubdir=$(HOST_SUBDIR) \
+	  $(STAGEprofile_CONFIGURE_FLAGS)
+@endif libdemangle-msvc-bootstrap
+
+.PHONY: configure-stagetrain-libdemangle-msvc maybe-configure-stagetrain-libdemangle-msvc
+maybe-configure-stagetrain-libdemangle-msvc:
+@if libdemangle-msvc-bootstrap
+maybe-configure-stagetrain-libdemangle-msvc: configure-stagetrain-libdemangle-msvc
+configure-stagetrain-libdemangle-msvc:
+	@[ $(current_stage) = stagetrain ] || $(MAKE) stagetrain-start
+	@$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	TFLAGS="$(STAGEtrain_TFLAGS)"; \
+	test ! -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile || exit 0; \
+	$(HOST_EXPORTS) \
+	$(POSTSTAGE1_HOST_EXPORTS) \
+	CFLAGS="$(STAGEtrain_CFLAGS)"; export CFLAGS; \
+	CXXFLAGS="$(STAGEtrain_CXXFLAGS)"; export CXXFLAGS; \
+	LIBCFLAGS="$(STAGEtrain_CFLAGS)"; export LIBCFLAGS;  \
+	echo Configuring stage train in $(HOST_SUBDIR)/libdemangle-msvc; \
+	$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc; \
+	cd $(HOST_SUBDIR)/libdemangle-msvc || exit 1; \
+	case $(srcdir) in \
+	  /* | [A-Za-z]:[\\/]*) topdir=$(srcdir) ;; \
+	  *) topdir=`echo $(HOST_SUBDIR)/libdemangle-msvc/ | \
+		sed -e 's,\./,,g' -e 's,[^/]*/,../,g' `$(srcdir) ;; \
+	esac; \
+	module_srcdir=libdemangle-msvc; \
+	$(SHELL) $$s/$$module_srcdir/configure \
+	  --srcdir=$${topdir}/$$module_srcdir \
+	  $(HOST_CONFIGARGS) --build=${build_alias} --host=${host_alias} \
+	  --target=${target_alias} \
+	  --with-build-libsubdir=$(HOST_SUBDIR) \
+	  $(STAGEtrain_CONFIGURE_FLAGS)
+@endif libdemangle-msvc-bootstrap
+
+.PHONY: configure-stagefeedback-libdemangle-msvc maybe-configure-stagefeedback-libdemangle-msvc
+maybe-configure-stagefeedback-libdemangle-msvc:
+@if libdemangle-msvc-bootstrap
+maybe-configure-stagefeedback-libdemangle-msvc: configure-stagefeedback-libdemangle-msvc
+configure-stagefeedback-libdemangle-msvc:
+	@[ $(current_stage) = stagefeedback ] || $(MAKE) stagefeedback-start
+	@$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	TFLAGS="$(STAGEfeedback_TFLAGS)"; \
+	test ! -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile || exit 0; \
+	$(HOST_EXPORTS) \
+	$(POSTSTAGE1_HOST_EXPORTS) \
+	CFLAGS="$(STAGEfeedback_CFLAGS)"; export CFLAGS; \
+	CXXFLAGS="$(STAGEfeedback_CXXFLAGS)"; export CXXFLAGS; \
+	LIBCFLAGS="$(STAGEfeedback_CFLAGS)"; export LIBCFLAGS;  \
+	echo Configuring stage feedback in $(HOST_SUBDIR)/libdemangle-msvc; \
+	$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc; \
+	cd $(HOST_SUBDIR)/libdemangle-msvc || exit 1; \
+	case $(srcdir) in \
+	  /* | [A-Za-z]:[\\/]*) topdir=$(srcdir) ;; \
+	  *) topdir=`echo $(HOST_SUBDIR)/libdemangle-msvc/ | \
+		sed -e 's,\./,,g' -e 's,[^/]*/,../,g' `$(srcdir) ;; \
+	esac; \
+	module_srcdir=libdemangle-msvc; \
+	$(SHELL) $$s/$$module_srcdir/configure \
+	  --srcdir=$${topdir}/$$module_srcdir \
+	  $(HOST_CONFIGARGS) --build=${build_alias} --host=${host_alias} \
+	  --target=${target_alias} \
+	  --with-build-libsubdir=$(HOST_SUBDIR) \
+	  $(STAGEfeedback_CONFIGURE_FLAGS)
+@endif libdemangle-msvc-bootstrap
+
+.PHONY: configure-stageautoprofile-libdemangle-msvc maybe-configure-stageautoprofile-libdemangle-msvc
+maybe-configure-stageautoprofile-libdemangle-msvc:
+@if libdemangle-msvc-bootstrap
+maybe-configure-stageautoprofile-libdemangle-msvc: configure-stageautoprofile-libdemangle-msvc
+configure-stageautoprofile-libdemangle-msvc:
+	@[ $(current_stage) = stageautoprofile ] || $(MAKE) stageautoprofile-start
+	@$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	TFLAGS="$(STAGEautoprofile_TFLAGS)"; \
+	test ! -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile || exit 0; \
+	$(HOST_EXPORTS) \
+	$(POSTSTAGE1_HOST_EXPORTS) \
+	CFLAGS="$(STAGEautoprofile_CFLAGS)"; export CFLAGS; \
+	CXXFLAGS="$(STAGEautoprofile_CXXFLAGS)"; export CXXFLAGS; \
+	LIBCFLAGS="$(STAGEautoprofile_CFLAGS)"; export LIBCFLAGS;  \
+	echo Configuring stage autoprofile in $(HOST_SUBDIR)/libdemangle-msvc; \
+	$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc; \
+	cd $(HOST_SUBDIR)/libdemangle-msvc || exit 1; \
+	case $(srcdir) in \
+	  /* | [A-Za-z]:[\\/]*) topdir=$(srcdir) ;; \
+	  *) topdir=`echo $(HOST_SUBDIR)/libdemangle-msvc/ | \
+		sed -e 's,\./,,g' -e 's,[^/]*/,../,g' `$(srcdir) ;; \
+	esac; \
+	module_srcdir=libdemangle-msvc; \
+	$(SHELL) $$s/$$module_srcdir/configure \
+	  --srcdir=$${topdir}/$$module_srcdir \
+	  $(HOST_CONFIGARGS) --build=${build_alias} --host=${host_alias} \
+	  --target=${target_alias} \
+	  --with-build-libsubdir=$(HOST_SUBDIR) \
+	  $(STAGEautoprofile_CONFIGURE_FLAGS)
+@endif libdemangle-msvc-bootstrap
+
+.PHONY: configure-stageautofeedback-libdemangle-msvc maybe-configure-stageautofeedback-libdemangle-msvc
+maybe-configure-stageautofeedback-libdemangle-msvc:
+@if libdemangle-msvc-bootstrap
+maybe-configure-stageautofeedback-libdemangle-msvc: configure-stageautofeedback-libdemangle-msvc
+configure-stageautofeedback-libdemangle-msvc:
+	@[ $(current_stage) = stageautofeedback ] || $(MAKE) stageautofeedback-start
+	@$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	TFLAGS="$(STAGEautofeedback_TFLAGS)"; \
+	test ! -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile || exit 0; \
+	$(HOST_EXPORTS) \
+	$(POSTSTAGE1_HOST_EXPORTS) \
+	CFLAGS="$(STAGEautofeedback_CFLAGS)"; export CFLAGS; \
+	CXXFLAGS="$(STAGEautofeedback_CXXFLAGS)"; export CXXFLAGS; \
+	LIBCFLAGS="$(STAGEautofeedback_CFLAGS)"; export LIBCFLAGS;  \
+	echo Configuring stage autofeedback in $(HOST_SUBDIR)/libdemangle-msvc; \
+	$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc; \
+	cd $(HOST_SUBDIR)/libdemangle-msvc || exit 1; \
+	case $(srcdir) in \
+	  /* | [A-Za-z]:[\\/]*) topdir=$(srcdir) ;; \
+	  *) topdir=`echo $(HOST_SUBDIR)/libdemangle-msvc/ | \
+		sed -e 's,\./,,g' -e 's,[^/]*/,../,g' `$(srcdir) ;; \
+	esac; \
+	module_srcdir=libdemangle-msvc; \
+	$(SHELL) $$s/$$module_srcdir/configure \
+	  --srcdir=$${topdir}/$$module_srcdir \
+	  $(HOST_CONFIGARGS) --build=${build_alias} --host=${host_alias} \
+	  --target=${target_alias} \
+	  --with-build-libsubdir=$(HOST_SUBDIR) \
+	  $(STAGEautofeedback_CONFIGURE_FLAGS)
+@endif libdemangle-msvc-bootstrap
+
+
+
+
+
+.PHONY: all-libdemangle-msvc maybe-all-libdemangle-msvc
+maybe-all-libdemangle-msvc:
+@if gcc-bootstrap
+all-libdemangle-msvc: stage_current
+@endif gcc-bootstrap
+@if libdemangle-msvc
+TARGET-libdemangle-msvc=all
+maybe-all-libdemangle-msvc: all-libdemangle-msvc
+all-libdemangle-msvc: configure-libdemangle-msvc
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS)  \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) $(EXTRA_HOST_FLAGS) $(STAGE1_FLAGS_TO_PASS)  \
+		$(TARGET-libdemangle-msvc))
+@endif libdemangle-msvc
+
+
+
+.PHONY: all-stage1-libdemangle-msvc maybe-all-stage1-libdemangle-msvc
+.PHONY: clean-stage1-libdemangle-msvc maybe-clean-stage1-libdemangle-msvc
+maybe-all-stage1-libdemangle-msvc:
+maybe-clean-stage1-libdemangle-msvc:
+@if libdemangle-msvc-bootstrap
+maybe-all-stage1-libdemangle-msvc: all-stage1-libdemangle-msvc
+all-stage1: all-stage1-libdemangle-msvc
+TARGET-stage1-libdemangle-msvc = $(TARGET-libdemangle-msvc)
+all-stage1-libdemangle-msvc: configure-stage1-libdemangle-msvc
+	@[ $(current_stage) = stage1 ] || $(MAKE) stage1-start
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	TFLAGS="$(STAGE1_TFLAGS)"; \
+	$(HOST_EXPORTS)  \
+	cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	 \
+	$(MAKE) $(BASE_FLAGS_TO_PASS) \
+		CFLAGS="$(STAGE1_CFLAGS)" \
+		GENERATOR_CFLAGS="$(STAGE1_GENERATOR_CFLAGS)" \
+		CXXFLAGS="$(STAGE1_CXXFLAGS)" \
+		LIBCFLAGS="$(LIBCFLAGS)" \
+		CFLAGS_FOR_TARGET="$(CFLAGS_FOR_TARGET)" \
+		CXXFLAGS_FOR_TARGET="$(CXXFLAGS_FOR_TARGET)" \
+		LIBCFLAGS_FOR_TARGET="$(LIBCFLAGS_FOR_TARGET)" \
+		$(EXTRA_HOST_FLAGS)  \
+		$(STAGE1_FLAGS_TO_PASS)  \
+		TFLAGS="$(STAGE1_TFLAGS)"  \
+		$(TARGET-stage1-libdemangle-msvc)
+
+maybe-clean-stage1-libdemangle-msvc: clean-stage1-libdemangle-msvc
+clean-stage1: clean-stage1-libdemangle-msvc
+clean-stage1-libdemangle-msvc:
+	@if [ $(current_stage) = stage1 ]; then \
+	  [ -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile ] || exit 0; \
+	else \
+	  [ -f $(HOST_SUBDIR)/stage1-libdemangle-msvc/Makefile ] || exit 0; \
+	  $(MAKE) stage1-start; \
+	fi; \
+	cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	$(MAKE) $(EXTRA_HOST_FLAGS)  \
+	$(STAGE1_FLAGS_TO_PASS)  clean
+@endif libdemangle-msvc-bootstrap
+
+
+.PHONY: all-stage2-libdemangle-msvc maybe-all-stage2-libdemangle-msvc
+.PHONY: clean-stage2-libdemangle-msvc maybe-clean-stage2-libdemangle-msvc
+maybe-all-stage2-libdemangle-msvc:
+maybe-clean-stage2-libdemangle-msvc:
+@if libdemangle-msvc-bootstrap
+maybe-all-stage2-libdemangle-msvc: all-stage2-libdemangle-msvc
+all-stage2: all-stage2-libdemangle-msvc
+TARGET-stage2-libdemangle-msvc = $(TARGET-libdemangle-msvc)
+all-stage2-libdemangle-msvc: configure-stage2-libdemangle-msvc
+	@[ $(current_stage) = stage2 ] || $(MAKE) stage2-start
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	TFLAGS="$(STAGE2_TFLAGS)"; \
+	$(HOST_EXPORTS) \
+	$(POSTSTAGE1_HOST_EXPORTS)  \
+	cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	 \
+	$(MAKE) $(BASE_FLAGS_TO_PASS) \
+		CFLAGS="$(STAGE2_CFLAGS)" \
+		GENERATOR_CFLAGS="$(STAGE2_GENERATOR_CFLAGS)" \
+		CXXFLAGS="$(STAGE2_CXXFLAGS)" \
+		LIBCFLAGS="$(STAGE2_CFLAGS)" \
+		CFLAGS_FOR_TARGET="$(CFLAGS_FOR_TARGET)" \
+		CXXFLAGS_FOR_TARGET="$(CXXFLAGS_FOR_TARGET)" \
+		LIBCFLAGS_FOR_TARGET="$(LIBCFLAGS_FOR_TARGET)" \
+		$(EXTRA_HOST_FLAGS) $(POSTSTAGE1_FLAGS_TO_PASS)  \
+		TFLAGS="$(STAGE2_TFLAGS)"  \
+		$(TARGET-stage2-libdemangle-msvc)
+
+maybe-clean-stage2-libdemangle-msvc: clean-stage2-libdemangle-msvc
+clean-stage2: clean-stage2-libdemangle-msvc
+clean-stage2-libdemangle-msvc:
+	@if [ $(current_stage) = stage2 ]; then \
+	  [ -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile ] || exit 0; \
+	else \
+	  [ -f $(HOST_SUBDIR)/stage2-libdemangle-msvc/Makefile ] || exit 0; \
+	  $(MAKE) stage2-start; \
+	fi; \
+	cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	$(MAKE) $(EXTRA_HOST_FLAGS) $(POSTSTAGE1_FLAGS_TO_PASS)  clean
+@endif libdemangle-msvc-bootstrap
+
+
+.PHONY: all-stage3-libdemangle-msvc maybe-all-stage3-libdemangle-msvc
+.PHONY: clean-stage3-libdemangle-msvc maybe-clean-stage3-libdemangle-msvc
+maybe-all-stage3-libdemangle-msvc:
+maybe-clean-stage3-libdemangle-msvc:
+@if libdemangle-msvc-bootstrap
+maybe-all-stage3-libdemangle-msvc: all-stage3-libdemangle-msvc
+all-stage3: all-stage3-libdemangle-msvc
+TARGET-stage3-libdemangle-msvc = $(TARGET-libdemangle-msvc)
+all-stage3-libdemangle-msvc: configure-stage3-libdemangle-msvc
+	@[ $(current_stage) = stage3 ] || $(MAKE) stage3-start
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	TFLAGS="$(STAGE3_TFLAGS)"; \
+	$(HOST_EXPORTS) \
+	$(POSTSTAGE1_HOST_EXPORTS)  \
+	cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	 \
+	$(MAKE) $(BASE_FLAGS_TO_PASS) \
+		CFLAGS="$(STAGE3_CFLAGS)" \
+		GENERATOR_CFLAGS="$(STAGE3_GENERATOR_CFLAGS)" \
+		CXXFLAGS="$(STAGE3_CXXFLAGS)" \
+		LIBCFLAGS="$(STAGE3_CFLAGS)" \
+		CFLAGS_FOR_TARGET="$(CFLAGS_FOR_TARGET)" \
+		CXXFLAGS_FOR_TARGET="$(CXXFLAGS_FOR_TARGET)" \
+		LIBCFLAGS_FOR_TARGET="$(LIBCFLAGS_FOR_TARGET)" \
+		$(EXTRA_HOST_FLAGS) $(POSTSTAGE1_FLAGS_TO_PASS)  \
+		TFLAGS="$(STAGE3_TFLAGS)"  \
+		$(TARGET-stage3-libdemangle-msvc)
+
+maybe-clean-stage3-libdemangle-msvc: clean-stage3-libdemangle-msvc
+clean-stage3: clean-stage3-libdemangle-msvc
+clean-stage3-libdemangle-msvc:
+	@if [ $(current_stage) = stage3 ]; then \
+	  [ -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile ] || exit 0; \
+	else \
+	  [ -f $(HOST_SUBDIR)/stage3-libdemangle-msvc/Makefile ] || exit 0; \
+	  $(MAKE) stage3-start; \
+	fi; \
+	cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	$(MAKE) $(EXTRA_HOST_FLAGS) $(POSTSTAGE1_FLAGS_TO_PASS)  clean
+@endif libdemangle-msvc-bootstrap
+
+
+.PHONY: all-stage4-libdemangle-msvc maybe-all-stage4-libdemangle-msvc
+.PHONY: clean-stage4-libdemangle-msvc maybe-clean-stage4-libdemangle-msvc
+maybe-all-stage4-libdemangle-msvc:
+maybe-clean-stage4-libdemangle-msvc:
+@if libdemangle-msvc-bootstrap
+maybe-all-stage4-libdemangle-msvc: all-stage4-libdemangle-msvc
+all-stage4: all-stage4-libdemangle-msvc
+TARGET-stage4-libdemangle-msvc = $(TARGET-libdemangle-msvc)
+all-stage4-libdemangle-msvc: configure-stage4-libdemangle-msvc
+	@[ $(current_stage) = stage4 ] || $(MAKE) stage4-start
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	TFLAGS="$(STAGE4_TFLAGS)"; \
+	$(HOST_EXPORTS) \
+	$(POSTSTAGE1_HOST_EXPORTS)  \
+	cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	 \
+	$(MAKE) $(BASE_FLAGS_TO_PASS) \
+		CFLAGS="$(STAGE4_CFLAGS)" \
+		GENERATOR_CFLAGS="$(STAGE4_GENERATOR_CFLAGS)" \
+		CXXFLAGS="$(STAGE4_CXXFLAGS)" \
+		LIBCFLAGS="$(STAGE4_CFLAGS)" \
+		CFLAGS_FOR_TARGET="$(CFLAGS_FOR_TARGET)" \
+		CXXFLAGS_FOR_TARGET="$(CXXFLAGS_FOR_TARGET)" \
+		LIBCFLAGS_FOR_TARGET="$(LIBCFLAGS_FOR_TARGET)" \
+		$(EXTRA_HOST_FLAGS) $(POSTSTAGE1_FLAGS_TO_PASS)  \
+		TFLAGS="$(STAGE4_TFLAGS)"  \
+		$(TARGET-stage4-libdemangle-msvc)
+
+maybe-clean-stage4-libdemangle-msvc: clean-stage4-libdemangle-msvc
+clean-stage4: clean-stage4-libdemangle-msvc
+clean-stage4-libdemangle-msvc:
+	@if [ $(current_stage) = stage4 ]; then \
+	  [ -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile ] || exit 0; \
+	else \
+	  [ -f $(HOST_SUBDIR)/stage4-libdemangle-msvc/Makefile ] || exit 0; \
+	  $(MAKE) stage4-start; \
+	fi; \
+	cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	$(MAKE) $(EXTRA_HOST_FLAGS) $(POSTSTAGE1_FLAGS_TO_PASS)  clean
+@endif libdemangle-msvc-bootstrap
+
+
+.PHONY: all-stageprofile-libdemangle-msvc maybe-all-stageprofile-libdemangle-msvc
+.PHONY: clean-stageprofile-libdemangle-msvc maybe-clean-stageprofile-libdemangle-msvc
+maybe-all-stageprofile-libdemangle-msvc:
+maybe-clean-stageprofile-libdemangle-msvc:
+@if libdemangle-msvc-bootstrap
+maybe-all-stageprofile-libdemangle-msvc: all-stageprofile-libdemangle-msvc
+all-stageprofile: all-stageprofile-libdemangle-msvc
+TARGET-stageprofile-libdemangle-msvc = $(TARGET-libdemangle-msvc)
+all-stageprofile-libdemangle-msvc: configure-stageprofile-libdemangle-msvc
+	@[ $(current_stage) = stageprofile ] || $(MAKE) stageprofile-start
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	TFLAGS="$(STAGEprofile_TFLAGS)"; \
+	$(HOST_EXPORTS) \
+	$(POSTSTAGE1_HOST_EXPORTS)  \
+	cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	 \
+	$(MAKE) $(BASE_FLAGS_TO_PASS) \
+		CFLAGS="$(STAGEprofile_CFLAGS)" \
+		GENERATOR_CFLAGS="$(STAGEprofile_GENERATOR_CFLAGS)" \
+		CXXFLAGS="$(STAGEprofile_CXXFLAGS)" \
+		LIBCFLAGS="$(STAGEprofile_CFLAGS)" \
+		CFLAGS_FOR_TARGET="$(CFLAGS_FOR_TARGET)" \
+		CXXFLAGS_FOR_TARGET="$(CXXFLAGS_FOR_TARGET)" \
+		LIBCFLAGS_FOR_TARGET="$(LIBCFLAGS_FOR_TARGET)" \
+		$(EXTRA_HOST_FLAGS) $(POSTSTAGE1_FLAGS_TO_PASS)  \
+		TFLAGS="$(STAGEprofile_TFLAGS)"  \
+		$(TARGET-stageprofile-libdemangle-msvc)
+
+maybe-clean-stageprofile-libdemangle-msvc: clean-stageprofile-libdemangle-msvc
+clean-stageprofile: clean-stageprofile-libdemangle-msvc
+clean-stageprofile-libdemangle-msvc:
+	@if [ $(current_stage) = stageprofile ]; then \
+	  [ -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile ] || exit 0; \
+	else \
+	  [ -f $(HOST_SUBDIR)/stageprofile-libdemangle-msvc/Makefile ] || exit 0; \
+	  $(MAKE) stageprofile-start; \
+	fi; \
+	cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	$(MAKE) $(EXTRA_HOST_FLAGS) $(POSTSTAGE1_FLAGS_TO_PASS)  clean
+@endif libdemangle-msvc-bootstrap
+
+
+.PHONY: all-stagetrain-libdemangle-msvc maybe-all-stagetrain-libdemangle-msvc
+.PHONY: clean-stagetrain-libdemangle-msvc maybe-clean-stagetrain-libdemangle-msvc
+maybe-all-stagetrain-libdemangle-msvc:
+maybe-clean-stagetrain-libdemangle-msvc:
+@if libdemangle-msvc-bootstrap
+maybe-all-stagetrain-libdemangle-msvc: all-stagetrain-libdemangle-msvc
+all-stagetrain: all-stagetrain-libdemangle-msvc
+TARGET-stagetrain-libdemangle-msvc = $(TARGET-libdemangle-msvc)
+all-stagetrain-libdemangle-msvc: configure-stagetrain-libdemangle-msvc
+	@[ $(current_stage) = stagetrain ] || $(MAKE) stagetrain-start
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	TFLAGS="$(STAGEtrain_TFLAGS)"; \
+	$(HOST_EXPORTS) \
+	$(POSTSTAGE1_HOST_EXPORTS)  \
+	cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	 \
+	$(MAKE) $(BASE_FLAGS_TO_PASS) \
+		CFLAGS="$(STAGEtrain_CFLAGS)" \
+		GENERATOR_CFLAGS="$(STAGEtrain_GENERATOR_CFLAGS)" \
+		CXXFLAGS="$(STAGEtrain_CXXFLAGS)" \
+		LIBCFLAGS="$(STAGEtrain_CFLAGS)" \
+		CFLAGS_FOR_TARGET="$(CFLAGS_FOR_TARGET)" \
+		CXXFLAGS_FOR_TARGET="$(CXXFLAGS_FOR_TARGET)" \
+		LIBCFLAGS_FOR_TARGET="$(LIBCFLAGS_FOR_TARGET)" \
+		$(EXTRA_HOST_FLAGS) $(POSTSTAGE1_FLAGS_TO_PASS)  \
+		TFLAGS="$(STAGEtrain_TFLAGS)"  \
+		$(TARGET-stagetrain-libdemangle-msvc)
+
+maybe-clean-stagetrain-libdemangle-msvc: clean-stagetrain-libdemangle-msvc
+clean-stagetrain: clean-stagetrain-libdemangle-msvc
+clean-stagetrain-libdemangle-msvc:
+	@if [ $(current_stage) = stagetrain ]; then \
+	  [ -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile ] || exit 0; \
+	else \
+	  [ -f $(HOST_SUBDIR)/stagetrain-libdemangle-msvc/Makefile ] || exit 0; \
+	  $(MAKE) stagetrain-start; \
+	fi; \
+	cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	$(MAKE) $(EXTRA_HOST_FLAGS) $(POSTSTAGE1_FLAGS_TO_PASS)  clean
+@endif libdemangle-msvc-bootstrap
+
+
+.PHONY: all-stagefeedback-libdemangle-msvc maybe-all-stagefeedback-libdemangle-msvc
+.PHONY: clean-stagefeedback-libdemangle-msvc maybe-clean-stagefeedback-libdemangle-msvc
+maybe-all-stagefeedback-libdemangle-msvc:
+maybe-clean-stagefeedback-libdemangle-msvc:
+@if libdemangle-msvc-bootstrap
+maybe-all-stagefeedback-libdemangle-msvc: all-stagefeedback-libdemangle-msvc
+all-stagefeedback: all-stagefeedback-libdemangle-msvc
+TARGET-stagefeedback-libdemangle-msvc = $(TARGET-libdemangle-msvc)
+all-stagefeedback-libdemangle-msvc: configure-stagefeedback-libdemangle-msvc
+	@[ $(current_stage) = stagefeedback ] || $(MAKE) stagefeedback-start
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	TFLAGS="$(STAGEfeedback_TFLAGS)"; \
+	$(HOST_EXPORTS) \
+	$(POSTSTAGE1_HOST_EXPORTS)  \
+	cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	 \
+	$(MAKE) $(BASE_FLAGS_TO_PASS) \
+		CFLAGS="$(STAGEfeedback_CFLAGS)" \
+		GENERATOR_CFLAGS="$(STAGEfeedback_GENERATOR_CFLAGS)" \
+		CXXFLAGS="$(STAGEfeedback_CXXFLAGS)" \
+		LIBCFLAGS="$(STAGEfeedback_CFLAGS)" \
+		CFLAGS_FOR_TARGET="$(CFLAGS_FOR_TARGET)" \
+		CXXFLAGS_FOR_TARGET="$(CXXFLAGS_FOR_TARGET)" \
+		LIBCFLAGS_FOR_TARGET="$(LIBCFLAGS_FOR_TARGET)" \
+		$(EXTRA_HOST_FLAGS) $(POSTSTAGE1_FLAGS_TO_PASS)  \
+		TFLAGS="$(STAGEfeedback_TFLAGS)"  \
+		$(TARGET-stagefeedback-libdemangle-msvc)
+
+maybe-clean-stagefeedback-libdemangle-msvc: clean-stagefeedback-libdemangle-msvc
+clean-stagefeedback: clean-stagefeedback-libdemangle-msvc
+clean-stagefeedback-libdemangle-msvc:
+	@if [ $(current_stage) = stagefeedback ]; then \
+	  [ -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile ] || exit 0; \
+	else \
+	  [ -f $(HOST_SUBDIR)/stagefeedback-libdemangle-msvc/Makefile ] || exit 0; \
+	  $(MAKE) stagefeedback-start; \
+	fi; \
+	cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	$(MAKE) $(EXTRA_HOST_FLAGS) $(POSTSTAGE1_FLAGS_TO_PASS)  clean
+@endif libdemangle-msvc-bootstrap
+
+
+.PHONY: all-stageautoprofile-libdemangle-msvc maybe-all-stageautoprofile-libdemangle-msvc
+.PHONY: clean-stageautoprofile-libdemangle-msvc maybe-clean-stageautoprofile-libdemangle-msvc
+maybe-all-stageautoprofile-libdemangle-msvc:
+maybe-clean-stageautoprofile-libdemangle-msvc:
+@if libdemangle-msvc-bootstrap
+maybe-all-stageautoprofile-libdemangle-msvc: all-stageautoprofile-libdemangle-msvc
+all-stageautoprofile: all-stageautoprofile-libdemangle-msvc
+TARGET-stageautoprofile-libdemangle-msvc = $(TARGET-libdemangle-msvc)
+all-stageautoprofile-libdemangle-msvc: configure-stageautoprofile-libdemangle-msvc
+	@[ $(current_stage) = stageautoprofile ] || $(MAKE) stageautoprofile-start
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	TFLAGS="$(STAGEautoprofile_TFLAGS)"; \
+	$(HOST_EXPORTS) \
+	$(POSTSTAGE1_HOST_EXPORTS)  \
+	cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	$$s/gcc/config/$(cpu_type)/$(AUTO_PROFILE) \
+	$(MAKE) $(BASE_FLAGS_TO_PASS) \
+		CFLAGS="$(STAGEautoprofile_CFLAGS)" \
+		GENERATOR_CFLAGS="$(STAGEautoprofile_GENERATOR_CFLAGS)" \
+		CXXFLAGS="$(STAGEautoprofile_CXXFLAGS)" \
+		LIBCFLAGS="$(STAGEautoprofile_CFLAGS)" \
+		CFLAGS_FOR_TARGET="$(CFLAGS_FOR_TARGET)" \
+		CXXFLAGS_FOR_TARGET="$(CXXFLAGS_FOR_TARGET)" \
+		LIBCFLAGS_FOR_TARGET="$(LIBCFLAGS_FOR_TARGET)" \
+		$(EXTRA_HOST_FLAGS) $(POSTSTAGE1_FLAGS_TO_PASS)  \
+		TFLAGS="$(STAGEautoprofile_TFLAGS)"  \
+		$(TARGET-stageautoprofile-libdemangle-msvc)
+
+maybe-clean-stageautoprofile-libdemangle-msvc: clean-stageautoprofile-libdemangle-msvc
+clean-stageautoprofile: clean-stageautoprofile-libdemangle-msvc
+clean-stageautoprofile-libdemangle-msvc:
+	@if [ $(current_stage) = stageautoprofile ]; then \
+	  [ -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile ] || exit 0; \
+	else \
+	  [ -f $(HOST_SUBDIR)/stageautoprofile-libdemangle-msvc/Makefile ] || exit 0; \
+	  $(MAKE) stageautoprofile-start; \
+	fi; \
+	cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	$(MAKE) $(EXTRA_HOST_FLAGS) $(POSTSTAGE1_FLAGS_TO_PASS)  clean
+@endif libdemangle-msvc-bootstrap
+
+
+.PHONY: all-stageautofeedback-libdemangle-msvc maybe-all-stageautofeedback-libdemangle-msvc
+.PHONY: clean-stageautofeedback-libdemangle-msvc maybe-clean-stageautofeedback-libdemangle-msvc
+maybe-all-stageautofeedback-libdemangle-msvc:
+maybe-clean-stageautofeedback-libdemangle-msvc:
+@if libdemangle-msvc-bootstrap
+maybe-all-stageautofeedback-libdemangle-msvc: all-stageautofeedback-libdemangle-msvc
+all-stageautofeedback: all-stageautofeedback-libdemangle-msvc
+TARGET-stageautofeedback-libdemangle-msvc = $(TARGET-libdemangle-msvc)
+all-stageautofeedback-libdemangle-msvc: configure-stageautofeedback-libdemangle-msvc
+	@[ $(current_stage) = stageautofeedback ] || $(MAKE) stageautofeedback-start
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	TFLAGS="$(STAGEautofeedback_TFLAGS)"; \
+	$(HOST_EXPORTS) \
+	$(POSTSTAGE1_HOST_EXPORTS)  \
+	cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	 \
+	$(MAKE) $(BASE_FLAGS_TO_PASS) \
+		CFLAGS="$(STAGEautofeedback_CFLAGS)" \
+		GENERATOR_CFLAGS="$(STAGEautofeedback_GENERATOR_CFLAGS)" \
+		CXXFLAGS="$(STAGEautofeedback_CXXFLAGS)" \
+		LIBCFLAGS="$(STAGEautofeedback_CFLAGS)" \
+		CFLAGS_FOR_TARGET="$(CFLAGS_FOR_TARGET)" \
+		CXXFLAGS_FOR_TARGET="$(CXXFLAGS_FOR_TARGET)" \
+		LIBCFLAGS_FOR_TARGET="$(LIBCFLAGS_FOR_TARGET)" \
+		$(EXTRA_HOST_FLAGS) $(POSTSTAGE1_FLAGS_TO_PASS)  \
+		TFLAGS="$(STAGEautofeedback_TFLAGS)" PERF_DATA=perf.data \
+		$(TARGET-stageautofeedback-libdemangle-msvc)
+
+maybe-clean-stageautofeedback-libdemangle-msvc: clean-stageautofeedback-libdemangle-msvc
+clean-stageautofeedback: clean-stageautofeedback-libdemangle-msvc
+clean-stageautofeedback-libdemangle-msvc:
+	@if [ $(current_stage) = stageautofeedback ]; then \
+	  [ -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile ] || exit 0; \
+	else \
+	  [ -f $(HOST_SUBDIR)/stageautofeedback-libdemangle-msvc/Makefile ] || exit 0; \
+	  $(MAKE) stageautofeedback-start; \
+	fi; \
+	cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	$(MAKE) $(EXTRA_HOST_FLAGS) $(POSTSTAGE1_FLAGS_TO_PASS)  clean
+@endif libdemangle-msvc-bootstrap
+
+
+
+
+
+.PHONY: check-libdemangle-msvc maybe-check-libdemangle-msvc
+maybe-check-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-check-libdemangle-msvc: check-libdemangle-msvc
+
+check-libdemangle-msvc:
+	@: $(MAKE); $(unstage)
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) $(EXTRA_HOST_EXPORTS) \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(FLAGS_TO_PASS)  $(EXTRA_BOOTSTRAP_FLAGS) check)
+
+@endif libdemangle-msvc
+
+.PHONY: install-libdemangle-msvc maybe-install-libdemangle-msvc
+maybe-install-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-install-libdemangle-msvc: install-libdemangle-msvc
+
+install-libdemangle-msvc: installdirs
+	@: $(MAKE); $(unstage)
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(FLAGS_TO_PASS)  install)
+
+@endif libdemangle-msvc
+
+.PHONY: install-strip-libdemangle-msvc maybe-install-strip-libdemangle-msvc
+maybe-install-strip-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-install-strip-libdemangle-msvc: install-strip-libdemangle-msvc
+
+install-strip-libdemangle-msvc: installdirs
+	@: $(MAKE); $(unstage)
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(FLAGS_TO_PASS)  install-strip)
+
+@endif libdemangle-msvc
+
+# Other targets (info, dvi, pdf, etc.)
+
+.PHONY: maybe-info-libdemangle-msvc info-libdemangle-msvc
+maybe-info-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-info-libdemangle-msvc: info-libdemangle-msvc
+
+info-libdemangle-msvc: \
+    configure-libdemangle-msvc 
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing info in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          info) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-dvi-libdemangle-msvc dvi-libdemangle-msvc
+maybe-dvi-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-dvi-libdemangle-msvc: dvi-libdemangle-msvc
+
+dvi-libdemangle-msvc: \
+    configure-libdemangle-msvc 
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing dvi in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          dvi) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-pdf-libdemangle-msvc pdf-libdemangle-msvc
+maybe-pdf-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-pdf-libdemangle-msvc: pdf-libdemangle-msvc
+
+pdf-libdemangle-msvc: \
+    configure-libdemangle-msvc 
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing pdf in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          pdf) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-html-libdemangle-msvc html-libdemangle-msvc
+maybe-html-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-html-libdemangle-msvc: html-libdemangle-msvc
+
+html-libdemangle-msvc: \
+    configure-libdemangle-msvc 
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing html in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          html) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-TAGS-libdemangle-msvc TAGS-libdemangle-msvc
+maybe-TAGS-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-TAGS-libdemangle-msvc: TAGS-libdemangle-msvc
+
+TAGS-libdemangle-msvc: \
+    configure-libdemangle-msvc 
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing TAGS in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          TAGS) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-install-info-libdemangle-msvc install-info-libdemangle-msvc
+maybe-install-info-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-install-info-libdemangle-msvc: install-info-libdemangle-msvc
+
+install-info-libdemangle-msvc: \
+    configure-libdemangle-msvc \
+    info-libdemangle-msvc 
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing install-info in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          install-info) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-install-dvi-libdemangle-msvc install-dvi-libdemangle-msvc
+maybe-install-dvi-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-install-dvi-libdemangle-msvc: install-dvi-libdemangle-msvc
+
+install-dvi-libdemangle-msvc: \
+    configure-libdemangle-msvc \
+    dvi-libdemangle-msvc 
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing install-dvi in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          install-dvi) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-install-pdf-libdemangle-msvc install-pdf-libdemangle-msvc
+maybe-install-pdf-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-install-pdf-libdemangle-msvc: install-pdf-libdemangle-msvc
+
+install-pdf-libdemangle-msvc: \
+    configure-libdemangle-msvc \
+    pdf-libdemangle-msvc 
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing install-pdf in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          install-pdf) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-install-html-libdemangle-msvc install-html-libdemangle-msvc
+maybe-install-html-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-install-html-libdemangle-msvc: install-html-libdemangle-msvc
+
+install-html-libdemangle-msvc: \
+    configure-libdemangle-msvc \
+    html-libdemangle-msvc 
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing install-html in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          install-html) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-installcheck-libdemangle-msvc installcheck-libdemangle-msvc
+maybe-installcheck-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-installcheck-libdemangle-msvc: installcheck-libdemangle-msvc
+
+installcheck-libdemangle-msvc: \
+    configure-libdemangle-msvc 
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing installcheck in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          installcheck) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-mostlyclean-libdemangle-msvc mostlyclean-libdemangle-msvc
+maybe-mostlyclean-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-mostlyclean-libdemangle-msvc: mostlyclean-libdemangle-msvc
+
+mostlyclean-libdemangle-msvc: 
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing mostlyclean in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          mostlyclean) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-clean-libdemangle-msvc clean-libdemangle-msvc
+maybe-clean-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-clean-libdemangle-msvc: clean-libdemangle-msvc
+
+clean-libdemangle-msvc: 
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing clean in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          clean) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-distclean-libdemangle-msvc distclean-libdemangle-msvc
+maybe-distclean-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-distclean-libdemangle-msvc: distclean-libdemangle-msvc
+
+distclean-libdemangle-msvc: 
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing distclean in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          distclean) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-maintainer-clean-libdemangle-msvc maintainer-clean-libdemangle-msvc
+maybe-maintainer-clean-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-maintainer-clean-libdemangle-msvc: maintainer-clean-libdemangle-msvc
+
+maintainer-clean-libdemangle-msvc: 
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing maintainer-clean in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          maintainer-clean) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+
+
 .PHONY: configure-gdbserver maybe-configure-gdbserver
 maybe-configure-gdbserver:
 @if gcc-bootstrap
@@ -64511,6 +65673,11 @@ stage1-start::
 	  mkdir stage1-zlib; \
 	mv stage1-zlib zlib
 @endif zlib
+@if libdemangle-msvc
+	@cd $(HOST_SUBDIR); [ -d stage1-libdemangle-msvc ] || \
+	  mkdir stage1-libdemangle-msvc; \
+	mv stage1-libdemangle-msvc libdemangle-msvc
+@endif libdemangle-msvc
 @if lto-plugin
 	@cd $(HOST_SUBDIR); [ -d stage1-lto-plugin ] || \
 	  mkdir stage1-lto-plugin; \
@@ -64641,6 +65808,11 @@ stage1-end::
 	  cd $(HOST_SUBDIR); mv zlib stage1-zlib; \
 	fi
 @endif zlib
+@if libdemangle-msvc
+	@if test -d $(HOST_SUBDIR)/libdemangle-msvc; then \
+	  cd $(HOST_SUBDIR); mv libdemangle-msvc stage1-libdemangle-msvc; \
+	fi
+@endif libdemangle-msvc
 @if lto-plugin
 	@if test -d $(HOST_SUBDIR)/lto-plugin; then \
 	  cd $(HOST_SUBDIR); mv lto-plugin stage1-lto-plugin; \
@@ -64835,6 +66007,12 @@ stage2-start::
 	mv stage2-zlib zlib; \
 	mv stage1-zlib prev-zlib || test -f stage1-lean 
 @endif zlib
+@if libdemangle-msvc
+	@cd $(HOST_SUBDIR); [ -d stage2-libdemangle-msvc ] || \
+	  mkdir stage2-libdemangle-msvc; \
+	mv stage2-libdemangle-msvc libdemangle-msvc; \
+	mv stage1-libdemangle-msvc prev-libdemangle-msvc || test -f stage1-lean 
+@endif libdemangle-msvc
 @if lto-plugin
 	@cd $(HOST_SUBDIR); [ -d stage2-lto-plugin ] || \
 	  mkdir stage2-lto-plugin; \
@@ -64991,6 +66169,12 @@ stage2-end::
 	  mv prev-zlib stage1-zlib; : ; \
 	fi
 @endif zlib
+@if libdemangle-msvc
+	@if test -d $(HOST_SUBDIR)/libdemangle-msvc; then \
+	  cd $(HOST_SUBDIR); mv libdemangle-msvc stage2-libdemangle-msvc; \
+	  mv prev-libdemangle-msvc stage1-libdemangle-msvc; : ; \
+	fi
+@endif libdemangle-msvc
 @if lto-plugin
 	@if test -d $(HOST_SUBDIR)/lto-plugin; then \
 	  cd $(HOST_SUBDIR); mv lto-plugin stage2-lto-plugin; \
@@ -65213,6 +66397,12 @@ stage3-start::
 	mv stage3-zlib zlib; \
 	mv stage2-zlib prev-zlib || test -f stage2-lean 
 @endif zlib
+@if libdemangle-msvc
+	@cd $(HOST_SUBDIR); [ -d stage3-libdemangle-msvc ] || \
+	  mkdir stage3-libdemangle-msvc; \
+	mv stage3-libdemangle-msvc libdemangle-msvc; \
+	mv stage2-libdemangle-msvc prev-libdemangle-msvc || test -f stage2-lean 
+@endif libdemangle-msvc
 @if lto-plugin
 	@cd $(HOST_SUBDIR); [ -d stage3-lto-plugin ] || \
 	  mkdir stage3-lto-plugin; \
@@ -65369,6 +66559,12 @@ stage3-end::
 	  mv prev-zlib stage2-zlib; : ; \
 	fi
 @endif zlib
+@if libdemangle-msvc
+	@if test -d $(HOST_SUBDIR)/libdemangle-msvc; then \
+	  cd $(HOST_SUBDIR); mv libdemangle-msvc stage3-libdemangle-msvc; \
+	  mv prev-libdemangle-msvc stage2-libdemangle-msvc; : ; \
+	fi
+@endif libdemangle-msvc
 @if lto-plugin
 	@if test -d $(HOST_SUBDIR)/lto-plugin; then \
 	  cd $(HOST_SUBDIR); mv lto-plugin stage3-lto-plugin; \
@@ -65647,6 +66843,12 @@ stage4-start::
 	mv stage4-zlib zlib; \
 	mv stage3-zlib prev-zlib || test -f stage3-lean 
 @endif zlib
+@if libdemangle-msvc
+	@cd $(HOST_SUBDIR); [ -d stage4-libdemangle-msvc ] || \
+	  mkdir stage4-libdemangle-msvc; \
+	mv stage4-libdemangle-msvc libdemangle-msvc; \
+	mv stage3-libdemangle-msvc prev-libdemangle-msvc || test -f stage3-lean 
+@endif libdemangle-msvc
 @if lto-plugin
 	@cd $(HOST_SUBDIR); [ -d stage4-lto-plugin ] || \
 	  mkdir stage4-lto-plugin; \
@@ -65803,6 +67005,12 @@ stage4-end::
 	  mv prev-zlib stage3-zlib; : ; \
 	fi
 @endif zlib
+@if libdemangle-msvc
+	@if test -d $(HOST_SUBDIR)/libdemangle-msvc; then \
+	  cd $(HOST_SUBDIR); mv libdemangle-msvc stage4-libdemangle-msvc; \
+	  mv prev-libdemangle-msvc stage3-libdemangle-msvc; : ; \
+	fi
+@endif libdemangle-msvc
 @if lto-plugin
 	@if test -d $(HOST_SUBDIR)/lto-plugin; then \
 	  cd $(HOST_SUBDIR); mv lto-plugin stage4-lto-plugin; \
@@ -66069,6 +67277,12 @@ stageprofile-start::
 	mv stageprofile-zlib zlib; \
 	mv stage1-zlib prev-zlib || test -f stage1-lean 
 @endif zlib
+@if libdemangle-msvc
+	@cd $(HOST_SUBDIR); [ -d stageprofile-libdemangle-msvc ] || \
+	  mkdir stageprofile-libdemangle-msvc; \
+	mv stageprofile-libdemangle-msvc libdemangle-msvc; \
+	mv stage1-libdemangle-msvc prev-libdemangle-msvc || test -f stage1-lean 
+@endif libdemangle-msvc
 @if lto-plugin
 	@cd $(HOST_SUBDIR); [ -d stageprofile-lto-plugin ] || \
 	  mkdir stageprofile-lto-plugin; \
@@ -66225,6 +67439,12 @@ stageprofile-end::
 	  mv prev-zlib stage1-zlib; : ; \
 	fi
 @endif zlib
+@if libdemangle-msvc
+	@if test -d $(HOST_SUBDIR)/libdemangle-msvc; then \
+	  cd $(HOST_SUBDIR); mv libdemangle-msvc stageprofile-libdemangle-msvc; \
+	  mv prev-libdemangle-msvc stage1-libdemangle-msvc; : ; \
+	fi
+@endif libdemangle-msvc
 @if lto-plugin
 	@if test -d $(HOST_SUBDIR)/lto-plugin; then \
 	  cd $(HOST_SUBDIR); mv lto-plugin stageprofile-lto-plugin; \
@@ -66424,6 +67644,12 @@ stagetrain-start::
 	mv stagetrain-zlib zlib; \
 	mv stageprofile-zlib prev-zlib || test -f stageprofile-lean 
 @endif zlib
+@if libdemangle-msvc
+	@cd $(HOST_SUBDIR); [ -d stagetrain-libdemangle-msvc ] || \
+	  mkdir stagetrain-libdemangle-msvc; \
+	mv stagetrain-libdemangle-msvc libdemangle-msvc; \
+	mv stageprofile-libdemangle-msvc prev-libdemangle-msvc || test -f stageprofile-lean 
+@endif libdemangle-msvc
 @if lto-plugin
 	@cd $(HOST_SUBDIR); [ -d stagetrain-lto-plugin ] || \
 	  mkdir stagetrain-lto-plugin; \
@@ -66580,6 +67806,12 @@ stagetrain-end::
 	  mv prev-zlib stageprofile-zlib; : ; \
 	fi
 @endif zlib
+@if libdemangle-msvc
+	@if test -d $(HOST_SUBDIR)/libdemangle-msvc; then \
+	  cd $(HOST_SUBDIR); mv libdemangle-msvc stagetrain-libdemangle-msvc; \
+	  mv prev-libdemangle-msvc stageprofile-libdemangle-msvc; : ; \
+	fi
+@endif libdemangle-msvc
 @if lto-plugin
 	@if test -d $(HOST_SUBDIR)/lto-plugin; then \
 	  cd $(HOST_SUBDIR); mv lto-plugin stagetrain-lto-plugin; \
@@ -66779,6 +68011,12 @@ stagefeedback-start::
 	mv stagefeedback-zlib zlib; \
 	mv stagetrain-zlib prev-zlib || test -f stagetrain-lean 
 @endif zlib
+@if libdemangle-msvc
+	@cd $(HOST_SUBDIR); [ -d stagefeedback-libdemangle-msvc ] || \
+	  mkdir stagefeedback-libdemangle-msvc; \
+	mv stagefeedback-libdemangle-msvc libdemangle-msvc; \
+	mv stagetrain-libdemangle-msvc prev-libdemangle-msvc || test -f stagetrain-lean 
+@endif libdemangle-msvc
 @if lto-plugin
 	@cd $(HOST_SUBDIR); [ -d stagefeedback-lto-plugin ] || \
 	  mkdir stagefeedback-lto-plugin; \
@@ -66935,6 +68173,12 @@ stagefeedback-end::
 	  mv prev-zlib stagetrain-zlib; : ; \
 	fi
 @endif zlib
+@if libdemangle-msvc
+	@if test -d $(HOST_SUBDIR)/libdemangle-msvc; then \
+	  cd $(HOST_SUBDIR); mv libdemangle-msvc stagefeedback-libdemangle-msvc; \
+	  mv prev-libdemangle-msvc stagetrain-libdemangle-msvc; : ; \
+	fi
+@endif libdemangle-msvc
 @if lto-plugin
 	@if test -d $(HOST_SUBDIR)/lto-plugin; then \
 	  cd $(HOST_SUBDIR); mv lto-plugin stagefeedback-lto-plugin; \
@@ -67157,6 +68401,12 @@ stageautoprofile-start::
 	mv stageautoprofile-zlib zlib; \
 	mv stage1-zlib prev-zlib || test -f stage1-lean 
 @endif zlib
+@if libdemangle-msvc
+	@cd $(HOST_SUBDIR); [ -d stageautoprofile-libdemangle-msvc ] || \
+	  mkdir stageautoprofile-libdemangle-msvc; \
+	mv stageautoprofile-libdemangle-msvc libdemangle-msvc; \
+	mv stage1-libdemangle-msvc prev-libdemangle-msvc || test -f stage1-lean 
+@endif libdemangle-msvc
 @if lto-plugin
 	@cd $(HOST_SUBDIR); [ -d stageautoprofile-lto-plugin ] || \
 	  mkdir stageautoprofile-lto-plugin; \
@@ -67313,6 +68563,12 @@ stageautoprofile-end::
 	  mv prev-zlib stage1-zlib; : ; \
 	fi
 @endif zlib
+@if libdemangle-msvc
+	@if test -d $(HOST_SUBDIR)/libdemangle-msvc; then \
+	  cd $(HOST_SUBDIR); mv libdemangle-msvc stageautoprofile-libdemangle-msvc; \
+	  mv prev-libdemangle-msvc stage1-libdemangle-msvc; : ; \
+	fi
+@endif libdemangle-msvc
 @if lto-plugin
 	@if test -d $(HOST_SUBDIR)/lto-plugin; then \
 	  cd $(HOST_SUBDIR); mv lto-plugin stageautoprofile-lto-plugin; \
@@ -67512,6 +68768,12 @@ stageautofeedback-start::
 	mv stageautofeedback-zlib zlib; \
 	mv stageautoprofile-zlib prev-zlib || test -f stageautoprofile-lean 
 @endif zlib
+@if libdemangle-msvc
+	@cd $(HOST_SUBDIR); [ -d stageautofeedback-libdemangle-msvc ] || \
+	  mkdir stageautofeedback-libdemangle-msvc; \
+	mv stageautofeedback-libdemangle-msvc libdemangle-msvc; \
+	mv stageautoprofile-libdemangle-msvc prev-libdemangle-msvc || test -f stageautoprofile-lean 
+@endif libdemangle-msvc
 @if lto-plugin
 	@cd $(HOST_SUBDIR); [ -d stageautofeedback-lto-plugin ] || \
 	  mkdir stageautofeedback-lto-plugin; \
@@ -67668,6 +68930,12 @@ stageautofeedback-end::
 	  mv prev-zlib stageautoprofile-zlib; : ; \
 	fi
 @endif zlib
+@if libdemangle-msvc
+	@if test -d $(HOST_SUBDIR)/libdemangle-msvc; then \
+	  cd $(HOST_SUBDIR); mv libdemangle-msvc stageautofeedback-libdemangle-msvc; \
+	  mv prev-libdemangle-msvc stageautoprofile-libdemangle-msvc; : ; \
+	fi
+@endif libdemangle-msvc
 @if lto-plugin
 	@if test -d $(HOST_SUBDIR)/lto-plugin; then \
 	  cd $(HOST_SUBDIR); mv lto-plugin stageautofeedback-lto-plugin; \
@@ -68537,6 +69805,16 @@ all-stagetrain-bfd: maybe-all-stagetrain-libsframe
 all-stagefeedback-bfd: maybe-all-stagefeedback-libsframe
 all-stageautoprofile-bfd: maybe-all-stageautoprofile-libsframe
 all-stageautofeedback-bfd: maybe-all-stageautofeedback-libsframe
+all-bfd: maybe-all-libdemangle-msvc
+all-stage1-bfd: maybe-all-stage1-libdemangle-msvc
+all-stage2-bfd: maybe-all-stage2-libdemangle-msvc
+all-stage3-bfd: maybe-all-stage3-libdemangle-msvc
+all-stage4-bfd: maybe-all-stage4-libdemangle-msvc
+all-stageprofile-bfd: maybe-all-stageprofile-libdemangle-msvc
+all-stagetrain-bfd: maybe-all-stagetrain-libdemangle-msvc
+all-stagefeedback-bfd: maybe-all-stagefeedback-libdemangle-msvc
+all-stageautoprofile-bfd: maybe-all-stageautoprofile-libdemangle-msvc
+all-stageautofeedback-bfd: maybe-all-stageautofeedback-libdemangle-msvc
 configure-opcodes: configure-libiberty
 configure-stage1-opcodes: configure-stage1-libiberty
 configure-stage2-opcodes: configure-stage2-libiberty
@@ -68597,6 +69875,16 @@ all-stagetrain-binutils: maybe-all-stagetrain-bfd
 all-stagefeedback-binutils: maybe-all-stagefeedback-bfd
 all-stageautoprofile-binutils: maybe-all-stageautoprofile-bfd
 all-stageautofeedback-binutils: maybe-all-stageautofeedback-bfd
+all-binutils: maybe-all-libdemangle-msvc
+all-stage1-binutils: maybe-all-stage1-libdemangle-msvc
+all-stage2-binutils: maybe-all-stage2-libdemangle-msvc
+all-stage3-binutils: maybe-all-stage3-libdemangle-msvc
+all-stage4-binutils: maybe-all-stage4-libdemangle-msvc
+all-stageprofile-binutils: maybe-all-stageprofile-libdemangle-msvc
+all-stagetrain-binutils: maybe-all-stagetrain-libdemangle-msvc
+all-stagefeedback-binutils: maybe-all-stagefeedback-libdemangle-msvc
+all-stageautoprofile-binutils: maybe-all-stageautoprofile-libdemangle-msvc
+all-stageautofeedback-binutils: maybe-all-stageautofeedback-libdemangle-msvc
 all-binutils: maybe-all-build-flex
 all-stage1-binutils: maybe-all-build-flex
 all-stage2-binutils: maybe-all-build-flex
@@ -68677,6 +69965,8 @@ install-strip-ld: maybe-install-strip-bfd
 install-strip-ld: maybe-install-strip-libctf
 install-bfd: maybe-install-libsframe
 install-strip-bfd: maybe-install-strip-libsframe
+install-bfd: maybe-install-libdemangle-msvc
+install-strip-bfd: maybe-install-strip-libdemangle-msvc
 configure-opcodes: all-bfd
 configure-stage1-opcodes: all-stage1-bfd
 configure-stage2-opcodes: all-stage2-bfd
@@ -69207,6 +70497,7 @@ configure-gdb: maybe-all-bfd
 configure-gdb: maybe-all-libiconv
 all-gdb: maybe-all-libiberty
 all-gdb: maybe-all-libiconv
+all-gdb: maybe-all-libdemangle-msvc
 all-gdb: maybe-all-opcodes
 all-gdb: maybe-all-libdecnumber
 all-gdb: maybe-all-libctf

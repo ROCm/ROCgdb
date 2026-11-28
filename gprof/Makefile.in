@@ -158,10 +158,6 @@ am_gprof_OBJECTS = $(am__objects_1) flat_bl.$(OBJEXT) \
 	bsd_callg_bl.$(OBJEXT) fsf_callg_bl.$(OBJEXT)
 gprof_OBJECTS = $(am_gprof_OBJECTS)
 am__DEPENDENCIES_1 =
-AM_V_lt = $(am__v_lt_@AM_V@)
-am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
-am__v_lt_0 = --silent
-am__v_lt_1 = 
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -180,6 +176,10 @@ am__depfiles_maybe = depfiles
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+AM_V_lt = $(am__v_lt_@AM_V@)
+am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
+am__v_lt_0 = --silent
+am__v_lt_1 = 
 LTCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) \
 	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
@@ -325,6 +325,10 @@ CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
+CXX = @CXX@
+CXXCPP = @CXXCPP@
+CXXDEPMODE = @CXXDEPMODE@
+CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DATADIRNAME = @DATADIRNAME@
 DEFS = @DEFS@
@@ -402,6 +406,7 @@ abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
 ac_ct_CC = @ac_ct_CC@
+ac_ct_CXX = @ac_ct_CXX@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
@@ -473,6 +478,14 @@ sources = basic_blocks.c call_graph.c cg_arcs.c cg_dfn.c \
 gprof_SOURCES = $(sources) flat_bl.c bsd_callg_bl.c fsf_callg_bl.c
 gprof_DEPENDENCIES = ../bfd/libbfd.la ../libiberty/libiberty.a $(LIBINTL_DEP)
 gprof_LDADD = ../bfd/libbfd.la ../libiberty/libiberty.a $(LIBINTL)
+@ENABLE_MSVC_DEMANGLER_FALSE@gprof_LINK = $(LINK)
+
+# libbfd links libdemangle-msvc, a C++ library, so gprof needs C++
+# linking when it is enabled.
+@ENABLE_MSVC_DEMANGLER_TRUE@gprof_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+@ENABLE_MSVC_DEMANGLER_TRUE@	$(LIBTOOLFLAGS) --mode=link $(CXX) $(AM_CXXFLAGS) $(CXXFLAGS) \
+@ENABLE_MSVC_DEMANGLER_TRUE@	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+
 noinst_HEADERS = \
 	basic_blocks.h call_graph.h cg_arcs.h cg_dfn.h cg_print.h \
 	corefile.h gmon.h gmon_io.h gmon_out.h gprof.h hertz.h hist.h \
@@ -602,7 +615,7 @@ clean-binPROGRAMS:
 
 gprof$(EXEEXT): $(gprof_OBJECTS) $(gprof_DEPENDENCIES) $(EXTRA_gprof_DEPENDENCIES) 
 	@rm -f gprof$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(gprof_OBJECTS) $(gprof_LDADD) $(LIBS)
+	$(AM_V_GEN)$(gprof_LINK) $(gprof_OBJECTS) $(gprof_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
